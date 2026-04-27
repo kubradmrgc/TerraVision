@@ -1,0 +1,17 @@
+bin/
+obj/
+**/bin/
+**/obj/
+**/node_modules/
+**/.next/
+**/tsconfig.tsbuildinfo
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+*.log
+build_errors.txt
+build_out.txt
+run_error*.txt
+desktop.ini

@@ -1,0 +1,6 @@
+@TerraVision.Api_HostAddress = http://localhost:5090
+
+GET {{TerraVision.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
