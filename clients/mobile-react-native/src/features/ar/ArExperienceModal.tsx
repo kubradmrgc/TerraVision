@@ -30,7 +30,7 @@ export function ArExperienceModal({
       const message =
         error instanceof Error
           ? error.message
-          : 'Native AR bridge unavailable. Implement TerraVisionAr module on iOS/Android.';
+          : 'Native AR launch failed.';
       Alert.alert('AR Launch Error', message);
     } finally {
       setIsLaunching(false);
