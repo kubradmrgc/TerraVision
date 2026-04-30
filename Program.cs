@@ -18,11 +18,21 @@ builder.Services.AddOpenApi();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var redisConnection = builder.Configuration.GetConnectionString("Redis");
 
-// Entity Framework ve DbContext
-builder.Services.AddDbContext<TerraVisionDbContext>(options =>
-    options.UseSqlServer(connectionString));
+// Entity Framework — integration tests use InMemory only (single provider).
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<TerraVisionDbContext>(options =>
+        options.UseInMemoryDatabase("TerraVisionIntegrationTests"));
+}
+else
+{
+    builder.Services.AddDbContext<TerraVisionDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
 builder.Services.AddMemoryCache();
-if (!string.IsNullOrWhiteSpace(redisConnection))
+var useRedis = !builder.Environment.IsEnvironment("Testing") &&
+               !string.IsNullOrWhiteSpace(redisConnection);
+if (useRedis)
 {
     builder.Services.AddStackExchangeRedisCache(options =>
     {
@@ -96,11 +106,14 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-// Initialize DB schema with migrations
-using (var scope = app.Services.CreateScope())
+// Initialize DB schema with migrations (skip in integration tests / alternate hosts)
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    var db = scope.ServiceProvider.GetRequiredService<TerraVisionDbContext>();
-    db.Database.Migrate();
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<TerraVisionDbContext>();
+        db.Database.Migrate();
+    }
 }
 
 if (!app.Environment.IsDevelopment())
@@ -114,3 +127,5 @@ app.MapControllers();
 app.MapHub<TerraVisionHub>("/hubs/terravision");
 
 app.Run();
+
+public partial class Program { }

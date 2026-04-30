@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TerraVision.Api.Data;
 
@@ -11,9 +12,11 @@ using TerraVision.Api.Data;
 namespace TerraVision.Api.Migrations
 {
     [DbContext(typeof(TerraVisionDbContext))]
-    partial class TerraVisionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260430125754_ProductionOrderEnhancements")]
+    partial class ProductionOrderEnhancements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -15,6 +15,7 @@ namespace TerraVision.Api.Data
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -87,6 +88,23 @@ namespace TerraVision.Api.Data
             modelBuilder.Entity<OrderItem>()
                 .Property(oi => oi.UnitPrice)
                 .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Order>()
+                .Property(o => o.Notes)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .HasOne(h => h.Order)
+                .WithMany(o => o.StatusHistory)
+                .HasForeignKey(h => h.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .HasIndex(h => new { h.OrderId, h.CreatedDate });
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .Property(h => h.Reason)
+                .HasMaxLength(500);
 
             SeedData.ApplyConfiguration(modelBuilder);
         }

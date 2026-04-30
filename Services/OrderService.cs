@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using TerraVision.Api.Data;
 using TerraVision.Api.Entities;
 using TerraVision.Api.Enums;
@@ -26,6 +27,8 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
             if (cart == null)
             {
@@ -47,26 +50,33 @@ namespace TerraVision.Api.Services
 
             foreach (var item in cartItems)
             {
+                if (item.CartItem.Quantity <= 0)
+                {
+                    throw new InvalidOperationException($"Invalid quantity for product: {item.Product.Name}");
+                }
+
                 if (item.Product.StockQuantity < item.CartItem.Quantity)
                 {
                     throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
                 }
             }
 
+            var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+
             var order = new Order
             {
                 UserId = userId,
-                TotalAmount = cartItems.Sum(x => x.Product.Price * x.CartItem.Quantity)
+                TotalAmount = cartItems.Sum(x => x.Product.Price * x.CartItem.Quantity),
+                Notes = notes
             };
 
             await _dbContext.Orders.AddAsync(order);
-            await _unitOfWork.CommitAsync();
 
             foreach (var item in cartItems)
             {
                 await _dbContext.OrderItems.AddAsync(new OrderItem
                 {
-                    OrderId = order.Id,
+                    Order = order,
                     ProductId = item.Product.Id,
                     UnitPrice = item.Product.Price,
                     Quantity = item.CartItem.Quantity
@@ -79,6 +89,7 @@ namespace TerraVision.Api.Services
             }
 
             await _unitOfWork.CommitAsync();
+            await transaction.CommitAsync();
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,
@@ -123,10 +134,12 @@ namespace TerraVision.Api.Services
                 UserId = order.UserId,
                 Status = order.Status,
                 TotalAmount = order.TotalAmount,
+                Notes = order.Notes,
                 CreatedDate = order.CreatedDate,
                 UpdatedByUserId = order.UpdatedByUserId,
                 UpdatedReason = order.UpdatedReason,
-                Items = itemRows.Where(x => x.OrderId == order.Id).Select(x => x.Item).ToList()
+                Items = itemRows.Where(x => x.OrderId == order.Id).Select(x => x.Item).ToList(),
+                StatusHistory = []
             });
         }
 
@@ -195,10 +208,12 @@ namespace TerraVision.Api.Services
                 UserId = order.UserId,
                 Status = order.Status,
                 TotalAmount = order.TotalAmount,
+                Notes = order.Notes,
                 CreatedDate = order.CreatedDate,
                 UpdatedByUserId = order.UpdatedByUserId,
                 UpdatedReason = order.UpdatedReason,
-                Items = itemRows.Where(x => x.OrderId == order.Id).Select(x => x.Item).ToList()
+                Items = itemRows.Where(x => x.OrderId == order.Id).Select(x => x.Item).ToList(),
+                StatusHistory = []
             }).ToList();
 
             return new PagedResult<OrderDto>
@@ -233,21 +248,41 @@ namespace TerraVision.Api.Services
                     })
                 .ToListAsync();
 
+            var history = await _dbContext.OrderStatusHistories
+                .Where(h => h.OrderId == order.Id && !h.IsDeleted)
+                .OrderByDescending(h => h.CreatedDate)
+                .Select(h => new OrderStatusHistoryDto
+                {
+                    PreviousStatus = h.PreviousStatus,
+                    NewStatus = h.NewStatus,
+                    ChangedByUserId = h.ChangedByUserId,
+                    Reason = h.Reason,
+                    OccurredAtUtc = h.CreatedDate
+                })
+                .ToListAsync();
+
             return new OrderDto
             {
                 Id = order.Id,
                 UserId = order.UserId,
                 Status = order.Status,
                 TotalAmount = order.TotalAmount,
+                Notes = order.Notes,
                 CreatedDate = order.CreatedDate,
                 UpdatedByUserId = order.UpdatedByUserId,
                 UpdatedReason = order.UpdatedReason,
-                Items = items
+                Items = items,
+                StatusHistory = history
             };
         }
 
         public async Task<OrderDto> UpdateOrderStatusAsync(int orderId, int updatedByUserId, UpdateOrderStatusRequest request)
         {
+            if (request.Status == OrderStatus.Cancelled && string.IsNullOrWhiteSpace(request.Reason))
+            {
+                throw new ArgumentException("Reason is required when cancelling an order.");
+            }
+
             var order = await _dbContext.Orders
                 .SingleOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
             if (order == null)
@@ -265,6 +300,20 @@ namespace TerraVision.Api.Services
             order.UpdatedByUserId = updatedByUserId;
             order.UpdatedReason = request.Reason;
             order.UpdatedDate = DateTime.UtcNow;
+
+            if (previousStatus != request.Status)
+            {
+                await _dbContext.OrderStatusHistories.AddAsync(new OrderStatusHistory
+                {
+                    OrderId = order.Id,
+                    PreviousStatus = previousStatus,
+                    NewStatus = request.Status,
+                    ChangedByUserId = updatedByUserId,
+                    Reason = request.Reason,
+                    CreatedDate = DateTime.UtcNow
+                });
+            }
+
             await _unitOfWork.CommitAsync();
 
             await _realtimeSyncService.BroadcastOrderStatusChangedAsync(new OrderStatusChangedEvent
@@ -292,16 +341,31 @@ namespace TerraVision.Api.Services
                     })
                 .ToListAsync();
 
+            var history = await _dbContext.OrderStatusHistories
+                .Where(h => h.OrderId == order.Id && !h.IsDeleted)
+                .OrderByDescending(h => h.CreatedDate)
+                .Select(h => new OrderStatusHistoryDto
+                {
+                    PreviousStatus = h.PreviousStatus,
+                    NewStatus = h.NewStatus,
+                    ChangedByUserId = h.ChangedByUserId,
+                    Reason = h.Reason,
+                    OccurredAtUtc = h.CreatedDate
+                })
+                .ToListAsync();
+
             return new OrderDto
             {
                 Id = order.Id,
                 UserId = order.UserId,
                 Status = order.Status,
                 TotalAmount = order.TotalAmount,
+                Notes = order.Notes,
                 CreatedDate = order.CreatedDate,
                 UpdatedByUserId = order.UpdatedByUserId,
                 UpdatedReason = order.UpdatedReason,
-                Items = items
+                Items = items,
+                StatusHistory = history
             };
         }
 

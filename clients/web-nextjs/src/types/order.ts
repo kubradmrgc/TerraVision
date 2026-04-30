@@ -1,14 +1,24 @@
 import { CartItemDto } from './cart';
 
+export interface OrderStatusHistoryDto {
+  previousStatus?: number;
+  newStatus: number;
+  changedByUserId: number;
+  reason?: string;
+  occurredAtUtc: string;
+}
+
 export interface OrderDto {
   id: number;
   userId: number;
   status: number;
   totalAmount: number;
+  notes?: string;
   createdDate: string;
   updatedByUserId?: number;
   updatedReason?: string;
   items: CartItemDto[];
+  statusHistory?: OrderStatusHistoryDto[];
 }
 
 export interface UpdateOrderStatusRequest {

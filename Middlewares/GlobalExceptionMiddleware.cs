@@ -8,11 +8,16 @@ namespace TerraVision.Api.Middlewares
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<GlobalExceptionMiddleware> _logger;
+        private readonly IHostEnvironment _environment;
 
-        public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+        public GlobalExceptionMiddleware(
+            RequestDelegate next,
+            ILogger<GlobalExceptionMiddleware> logger,
+            IHostEnvironment environment)
         {
             _next = next;
             _logger = logger;
+            _environment = environment;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -28,20 +33,34 @@ namespace TerraVision.Api.Middlewares
             }
         }
 
-        private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+        private Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
             context.Response.ContentType = "application/json";
-            
-            // Özelleşmiş iş mantığı hatalarını ayrıştırmak isterseniz (örneğin UnauthorizedAccessException, NotFoundException vs.)
-            // Bu blok içerisinde statü kodu belirleyebilirsiniz.
+
             var statusCode = (int)HttpStatusCode.InternalServerError;
             var message = "Sunucu hatası oluştu, lütfen daha sonra tekrar deneyin.";
+            object? errors = null;
 
-            // Örnek: Basitçe ArgumentException veya bilinen Exception tiplerini 400 Bad Request yapabilirsiniz.
-            if (exception is ArgumentException || exception is InvalidOperationException)
+            switch (exception)
             {
-                statusCode = (int)HttpStatusCode.BadRequest;
-                message = exception.Message;
+                case KeyNotFoundException:
+                    statusCode = (int)HttpStatusCode.NotFound;
+                    message = exception.Message;
+                    break;
+                case UnauthorizedAccessException:
+                    statusCode = (int)HttpStatusCode.Unauthorized;
+                    message = exception.Message;
+                    break;
+                case ArgumentException:
+                case InvalidOperationException:
+                    statusCode = (int)HttpStatusCode.BadRequest;
+                    message = exception.Message;
+                    break;
+            }
+
+            if (_environment.IsDevelopment())
+            {
+                errors = exception.Message;
             }
 
             context.Response.StatusCode = statusCode;
@@ -51,7 +70,7 @@ namespace TerraVision.Api.Middlewares
                 Success = false,
                 StatusCode = statusCode,
                 Message = message,
-                Errors = exception.Message // Geliştirme aşamasında hatanın kendisi gösterilebilir. Prod ortamında silinmelidir.
+                Errors = errors
             };
 
             var jsonResult = JsonSerializer.Serialize(response);

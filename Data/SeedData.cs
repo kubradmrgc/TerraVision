@@ -16,7 +16,10 @@ namespace TerraVision.Api.Data
                 new Category { Id = 4, Name = "Bahçe Mobilyaları", IsActive = true, IsDeleted = false, CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
             );
 
-            // Seed user
+            // Seed admin — bcrypt(workFactor 11) for password "admin123" (matches AuthService.Verify)
+            var adminPasswordHash =
+                Encoding.UTF8.GetBytes("$2a$11$kQsHod4IMJ9h4sOxi2Nt.uofrxLaFz.f8ABxwJFo3.SvY1ngpGmwG");
+
             modelBuilder.Entity<User>().HasData(
                 new User 
                 { 
@@ -24,8 +27,8 @@ namespace TerraVision.Api.Data
                     FirstName = "Admin", 
                     LastName = "User", 
                     Email = "admin@terravision.com", 
-                    PasswordHash = Encoding.UTF8.GetBytes("admin123"),
-                    PasswordSalt = Encoding.UTF8.GetBytes("salt"),
+                    PasswordHash = adminPasswordHash,
+                    PasswordSalt = Array.Empty<byte>(),
                     Role = UserRole.Admin,
                     IsActive = true, 
                     IsDeleted = false, 

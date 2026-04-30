@@ -1,4 +1,5 @@
 using TerraVision.Api.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace TerraVision.Api.Models.DTOs
 {
@@ -11,35 +12,52 @@ namespace TerraVision.Api.Models.DTOs
         public decimal LineTotal => UnitPrice * Quantity;
     }
 
+    public class OrderStatusHistoryDto
+    {
+        public OrderStatus? PreviousStatus { get; set; }
+        public OrderStatus NewStatus { get; set; }
+        public int ChangedByUserId { get; set; }
+        public string? Reason { get; set; }
+        public DateTime OccurredAtUtc { get; set; }
+    }
+
     public class OrderDto
     {
         public int Id { get; set; }
         public int UserId { get; set; }
         public OrderStatus Status { get; set; }
         public decimal TotalAmount { get; set; }
+        public string? Notes { get; set; }
         public DateTime CreatedDate { get; set; }
         public int? UpdatedByUserId { get; set; }
         public string? UpdatedReason { get; set; }
         public List<OrderItemDto> Items { get; set; } = [];
+        public List<OrderStatusHistoryDto> StatusHistory { get; set; } = [];
     }
 
     public class PlaceOrderRequest
     {
+        [MaxLength(500)]
         public string Notes { get; set; } = string.Empty;
     }
 
     public class UpdateOrderStatusRequest
     {
+        [Required]
         public OrderStatus Status { get; set; }
+        [MaxLength(500)]
         public string? Reason { get; set; }
     }
 
     public class AdminOrderListQuery
     {
+        [Range(1, int.MaxValue)]
         public int Page { get; set; } = 1;
+        [Range(1, 100)]
         public int PageSize { get; set; } = 20;
         public OrderStatus? Status { get; set; }
         public int? OrderId { get; set; }
+        [Range(1, 365)]
         public int? RangeDays { get; set; }
     }
 
