@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using TerraVision.Api.Data;
 using TerraVision.Api.Entities;
 using TerraVision.Api.Enums;
@@ -26,6 +27,8 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
             if (cart == null)
             {
@@ -60,13 +63,11 @@ namespace TerraVision.Api.Services
             };
 
             await _dbContext.Orders.AddAsync(order);
-            await _unitOfWork.CommitAsync();
 
             foreach (var item in cartItems)
             {
-                await _dbContext.OrderItems.AddAsync(new OrderItem
+                order.Items.Add(new OrderItem
                 {
-                    OrderId = order.Id,
                     ProductId = item.Product.Id,
                     UnitPrice = item.Product.Price,
                     Quantity = item.CartItem.Quantity
@@ -79,6 +80,8 @@ namespace TerraVision.Api.Services
             }
 
             await _unitOfWork.CommitAsync();
+            await transaction.CommitAsync();
+
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,
