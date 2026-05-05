@@ -6,7 +6,6 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
-import java.net.URLEncoder
 
 class TerraVisionArModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
@@ -27,11 +26,16 @@ class TerraVisionArModule(private val reactContext: ReactApplicationContext) :
                 return
             }
 
-            val encodedFile = URLEncoder.encode(modelUrl, "UTF-8")
-            val sceneViewerIntentUrl =
-                "intent://arvr.google.com/scene-viewer/1.0?file=$encodedFile&mode=ar_only#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=$encodedFile;end;"
+            val sceneViewerUri = Uri.Builder()
+                .scheme("https")
+                .authority("arvr.google.com")
+                .path("scene-viewer/1.0")
+                .appendQueryParameter("file", modelUrl)
+                .appendQueryParameter("mode", "ar_only")
+                .build()
 
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(sceneViewerIntentUrl))
+            val intent = Intent(Intent.ACTION_VIEW, sceneViewerUri)
+            intent.setPackage("com.google.ar.core")
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             reactContext.startActivity(intent)
             promise.resolve(null)
