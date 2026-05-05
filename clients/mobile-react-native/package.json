@@ -7,14 +7,16 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "test": "jest"
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@react-native/new-app-screen": "0.85.2",
     "@microsoft/signalr": "^9.0.4",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-documents/picker": "^12.0.1",
     "@react-native-picker/picker": "^2.11.4",
+    "@react-native/new-app-screen": "0.85.2",
+    "@tanstack/react-query": "^5.100.9",
     "axios": "^1.12.2",
     "react": "19.2.3",
     "react-native": "0.85.2",

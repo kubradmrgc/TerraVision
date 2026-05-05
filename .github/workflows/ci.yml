@@ -41,4 +41,5 @@ jobs:
         working-directory: clients/mobile-react-native
         run: |
           npm ci
-          npx tsc --noEmit
+          npm run typecheck
+          npm run test -- --watch=false

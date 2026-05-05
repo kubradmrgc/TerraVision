@@ -8,6 +8,11 @@ export const apiClient = axios.create({
 });
 
 let refreshPromise: Promise<string> | null = null;
+let unauthorizedHandler: (() => void) | null = null;
+
+export function onUnauthorized(handler: () => void) {
+  unauthorizedHandler = handler;
+}
 
 async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
@@ -52,6 +57,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch {
         await tokenStore.clearToken();
+        unauthorizedHandler?.();
       }
     }
 

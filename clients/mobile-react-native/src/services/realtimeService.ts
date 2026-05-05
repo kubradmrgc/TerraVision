@@ -14,35 +14,55 @@ type OrderStatusChangedHandler = (event: OrderStatusChangedEvent) => void;
 
 class RealtimeService {
   private connection: HubConnection | null = null;
+  private connecting = false;
   private cartChangedHandlers: CartChangedHandler[] = [];
   private orderCreatedHandlers: OrderCreatedHandler[] = [];
   private orderStatusChangedHandlers: OrderStatusChangedHandler[] = [];
 
-  async connect(): Promise<void> {
-    if (this.connection?.state === 'Connected') {
-      return;
-    }
-
-    this.connection = new HubConnectionBuilder()
+  private createConnection(transport: HttpTransportType): HubConnection {
+    const connection = new HubConnectionBuilder()
       .withUrl(SIGNALR_HUB_URL, {
         accessTokenFactory: async () => (await tokenStore.getToken()) ?? '',
-        transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling
+        transport
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Information)
+      .configureLogging(LogLevel.Warning)
       .build();
 
-    this.connection.on('cart.changed', (event: CartChangedEvent) => {
+    connection.on('cart.changed', (event: CartChangedEvent) => {
       this.cartChangedHandlers.forEach((handler) => handler(event));
     });
-    this.connection.on('order.created', (event: OrderCreatedEvent) => {
+    connection.on('order.created', (event: OrderCreatedEvent) => {
       this.orderCreatedHandlers.forEach((handler) => handler(event));
     });
-    this.connection.on('order.status.changed', (event: OrderStatusChangedEvent) => {
+    connection.on('order.status.changed', (event: OrderStatusChangedEvent) => {
       this.orderStatusChangedHandlers.forEach((handler) => handler(event));
     });
 
-    await this.connection.start();
+    return connection;
+  }
+
+  async connect(): Promise<void> {
+    if (this.connection?.state === 'Connected' || this.connecting) {
+      return;
+    }
+    this.connecting = true;
+    try {
+      if (this.connection) {
+        await this.connection.stop();
+      }
+
+      this.connection = this.createConnection(HttpTransportType.WebSockets);
+      try {
+        await this.connection.start();
+      } catch {
+        await this.connection.stop();
+        this.connection = this.createConnection(HttpTransportType.LongPolling);
+        await this.connection.start();
+      }
+    } finally {
+      this.connecting = false;
+    }
   }
 
   async disconnect(): Promise<void> {
