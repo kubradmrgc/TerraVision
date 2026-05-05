@@ -29,3 +29,16 @@ jobs:
         run: |
           npm ci
           npm run build
+
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install and type-check React Native client
+        working-directory: clients/mobile-react-native
+        run: |
+          npm ci
+          npx tsc --noEmit

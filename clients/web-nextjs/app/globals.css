@@ -2,15 +2,35 @@
   box-sizing: border-box;
 }
 
+:root {
+  --tv-bg: #f4f4f5;
+  --tv-text: #18181b;
+  --tv-header-bg: #ffffff;
+  --tv-border: #e4e4e7;
+  --tv-link: #166534;
+  --tv-btn-bg: #166534;
+  --tv-btn-text: #ffffff;
+}
+
+html.dark {
+  --tv-bg: #0f172a;
+  --tv-text: #e2e8f0;
+  --tv-header-bg: #111827;
+  --tv-border: #334155;
+  --tv-link: #86efac;
+  --tv-btn-bg: #86efac;
+  --tv-btn-text: #14532d;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: #f4f4f5;
-  color: #18181b;
+  background: var(--tv-bg);
+  color: var(--tv-text);
 }
 
 a {
-  color: #166534;
+  color: var(--tv-link);
   text-decoration: none;
 }
 
@@ -25,4 +45,35 @@ button {
 
 input {
   font: inherit;
+}
+
+.tv-header {
+  background: var(--tv-header-bg);
+  border-bottom: 1px solid var(--tv-border);
+  padding: 12px 20px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.tv-nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.tv-theme-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--tv-btn-bg);
+  color: var(--tv-btn-text);
+  font-weight: 600;
+}
+
+.tv-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px;
 }

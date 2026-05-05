@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import { productService } from '@/services/productService';
 import { cartService } from '@/services/cartService';
 import { tokenStore } from '@/services/tokenStore';
@@ -25,8 +26,16 @@ export default function ProductsPage() {
     try {
       const list = await productService.getProducts();
       setProducts(list);
-    } catch {
-      setError('Ürünler yüklenemedi. Oturum süresi dolmuş olabilir.');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        tokenStore.clearTokens();
+        setError('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+        router.replace('/login');
+      } else if (axios.isAxiosError(err) && err.response?.status === 403) {
+        setError('Bu sayfayı görüntüleme yetkiniz bulunmuyor.');
+      } else {
+        setError('Ürünler yüklenemedi. Lütfen tekrar deneyin.');
+      }
     } finally {
       setLoading(false);
     }
@@ -41,8 +50,18 @@ export default function ProductsPage() {
     try {
       await cartService.addItem(productId, 1);
       router.push('/cart');
-    } catch {
-      setError('Sepete eklenemedi.');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        tokenStore.clearTokens();
+        setError('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+        router.replace('/login');
+      } else if (axios.isAxiosError(err) && err.response?.status === 400) {
+        setError('Sepete ekleme isteği geçersiz. Adet veya ürün bilgisini kontrol edin.');
+      } else if (axios.isAxiosError(err) && err.response?.status === 404) {
+        setError('Ürün bulunamadı veya kaldırılmış olabilir.');
+      } else {
+        setError('Sepete eklenemedi. Lütfen tekrar deneyin.');
+      }
     } finally {
       setAddingId(null);
     }

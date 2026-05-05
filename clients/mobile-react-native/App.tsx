@@ -36,6 +36,9 @@ const orderStatusLabels: Record<number, string> = {
 
 const getOrderStatusLabel = (status: number): string => orderStatusLabels[status] ?? `Unknown(${status})`;
 
+type ThemeMode = 'light' | 'dark';
+type MobileSection = 'products' | 'cart' | 'orders' | 'events';
+
 function App(): React.JSX.Element {
   const [email, setEmail] = useState('admin@terravision.com');
   const [password, setPassword] = useState('admin123');
@@ -52,6 +55,8 @@ function App(): React.JSX.Element {
   const [isArExperienceVisible, setIsArExperienceVisible] = useState(false);
   const [selectedUploadProductId, setSelectedUploadProductId] = useState<number | null>(null);
   const [selectedUploadFile, setSelectedUploadFile] = useState<UploadFileInput | null>(null);
+  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
+  const [activeSection, setActiveSection] = useState<MobileSection>('products');
 
   const isLoginDisabled = useMemo(() => !email || !password, [email, password]);
   const arPendingProducts = useMemo(
@@ -64,6 +69,37 @@ function App(): React.JSX.Element {
   const canUploadArModel = useMemo(
     () => isAdmin && arPendingProducts.length > 0 && selectedUploadProductId !== null && selectedUploadFile !== null,
     [isAdmin, arPendingProducts.length, selectedUploadProductId, selectedUploadFile]
+  );
+  const palette = useMemo(
+    () =>
+      themeMode === 'dark'
+        ? {
+            bg: '#0f172a',
+            card: '#111827',
+            text: '#e2e8f0',
+            subText: '#94a3b8',
+            border: '#334155',
+            button: '#86efac',
+            buttonText: '#14532d'
+          }
+        : {
+            bg: '#f7f7f7',
+            card: '#ffffff',
+            text: '#111827',
+            subText: '#4b5563',
+            border: '#d1d5db',
+            button: '#2f7d32',
+            buttonText: '#ffffff'
+          },
+    [themeMode]
+  );
+  const activePillStyle = useMemo(
+    () => ({ backgroundColor: palette.button, borderColor: palette.button }),
+    [palette.button]
+  );
+  const activePillTextStyle = useMemo(
+    () => ({ color: palette.buttonText }),
+    [palette.buttonText]
   );
 
   const handleLogin = async () => {
@@ -227,64 +263,119 @@ function App(): React.JSX.Element {
 
   if (!loggedIn) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>TerraVision Mobile</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: palette.bg }]}>
+        <View style={styles.topBar}>
+          <Text style={[styles.title, { color: palette.text }]}>TerraVision Mobile</Text>
+          <TouchableOpacity
+            style={[styles.secondaryButton, { borderColor: palette.border, marginBottom: 0 }]}
+            onPress={() => setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+          >
+            <Text style={[styles.secondaryButtonText, { color: palette.text }]}>
+              {themeMode === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: palette.card, borderColor: palette.border, color: palette.text }]}
           placeholder="Email"
+          placeholderTextColor={palette.subText}
           autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: palette.card, borderColor: palette.border, color: palette.text }]}
           placeholder="Password"
+          placeholderTextColor={palette.subText}
           secureTextEntry
           value={password}
           onChangeText={setPassword}
         />
         <TouchableOpacity
-          style={[styles.button, isLoginDisabled && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            { backgroundColor: palette.button },
+            isLoginDisabled && styles.buttonDisabled
+          ]}
           disabled={isLoginDisabled}
           onPress={handleLogin}
         >
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={[styles.buttonText, { color: palette.buttonText }]}>Login</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: palette.bg }]}>
       <ScrollView>
-        <Text style={styles.title}>Products</Text>
-        <FlatList
-          data={products}
-          scrollEnabled={false}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{item.name}</Text>
-              <Text>{item.price} TL</Text>
-              <TouchableOpacity style={styles.button} onPress={() => handleAddToCart(item.id)}>
-                <Text style={styles.buttonText}>Add To Cart</Text>
-              </TouchableOpacity>
-              {item.isArCompatible && (
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={() => handlePreviewAr(item)}
-                >
-                  <Text style={styles.secondaryButtonText}>View In AR</Text>
+        <View style={styles.topBar}>
+          <Text style={[styles.title, { color: palette.text }]}>TerraVision Mobile</Text>
+          <TouchableOpacity
+            style={[styles.secondaryButton, { borderColor: palette.border, marginBottom: 0 }]}
+            onPress={() => setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+          >
+            <Text style={[styles.secondaryButtonText, { color: palette.text }]}>
+              {themeMode === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.mobileNav}>
+          <TouchableOpacity
+            style={[styles.navButton, activeSection === 'products' && activePillStyle]}
+            onPress={() => setActiveSection('products')}
+          >
+            <Text style={[styles.navButtonText, { color: palette.subText }, activeSection === 'products' && activePillTextStyle]}>Products</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navButton, activeSection === 'cart' && activePillStyle]}
+            onPress={() => setActiveSection('cart')}
+          >
+            <Text style={[styles.navButtonText, { color: palette.subText }, activeSection === 'cart' && activePillTextStyle]}>Cart</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navButton, activeSection === 'orders' && activePillStyle]}
+            onPress={() => setActiveSection('orders')}
+          >
+            <Text style={[styles.navButtonText, { color: palette.subText }, activeSection === 'orders' && activePillTextStyle]}>Orders</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navButton, activeSection === 'events' && activePillStyle]}
+            onPress={() => setActiveSection('events')}
+          >
+            <Text style={[styles.navButtonText, { color: palette.subText }, activeSection === 'events' && activePillTextStyle]}>Events</Text>
+          </TouchableOpacity>
+        </View>
+        {activeSection === 'products' && <Text style={[styles.title, { color: palette.text }]}>Products</Text>}
+        {activeSection === 'products' && (
+          <FlatList
+            data={products}
+            scrollEnabled={false}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => (
+              <View style={[styles.card, { backgroundColor: palette.card }]}>
+                <Text style={[styles.cardTitle, { color: palette.text }]}>{item.name}</Text>
+                <Text style={{ color: palette.subText }}>{item.price} TL</Text>
+                <TouchableOpacity style={[styles.button, { backgroundColor: palette.button }]} onPress={() => handleAddToCart(item.id)}>
+                  <Text style={[styles.buttonText, { color: palette.buttonText }]}>Add To Cart</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          )}
-        />
+                {item.isArCompatible && (
+                  <TouchableOpacity
+                    style={[styles.secondaryButton, { borderColor: palette.border }]}
+                    onPress={() => handlePreviewAr(item)}
+                  >
+                    <Text style={[styles.secondaryButtonText, { color: palette.text }]}>View In AR</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          />
+        )}
 
-        {isAdmin && (
+        {activeSection === 'products' && isAdmin && (
           <>
-            <Text style={styles.title}>Admin AR Model Upload</Text>
-            <View style={styles.card}>
+            <Text style={[styles.title, { color: palette.text }]}>Admin AR Model Upload</Text>
+            <View style={[styles.card, { backgroundColor: palette.card }]}>
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={selectedUploadProductId}
@@ -311,7 +402,7 @@ function App(): React.JSX.Element {
               >
                 <Text style={styles.secondaryButtonText}>Pick AR Model File</Text>
               </TouchableOpacity>
-              <Text style={styles.eventText}>
+              <Text style={[styles.eventText, { color: palette.subText }]}>
                 {selectedUploadFile
                   ? `Selected: ${selectedUploadFile.name}`
                   : 'No file selected'}
@@ -327,8 +418,8 @@ function App(): React.JSX.Element {
           </>
         )}
 
-        <Text style={styles.title}>My Cart</Text>
-        <View style={styles.card}>
+        {activeSection === 'cart' && <Text style={[styles.title, { color: palette.text }]}>My Cart</Text>}
+        {activeSection === 'cart' && <View style={[styles.card, { backgroundColor: palette.card }]}>
           <Text style={styles.cardTitle}>Total: {cart?.totalAmount ?? 0} TL</Text>
           <TouchableOpacity style={styles.button} onPress={handlePlaceOrder}>
             <Text style={styles.buttonText}>Place Order</Text>
@@ -363,10 +454,10 @@ function App(): React.JSX.Element {
               </View>
             </View>
           ))}
-        </View>
+        </View>}
 
-        <Text style={styles.title}>My Orders</Text>
-        <View style={styles.card}>
+        {activeSection === 'orders' && <Text style={[styles.title, { color: palette.text }]}>My Orders</Text>}
+        {activeSection === 'orders' && <View style={[styles.card, { backgroundColor: palette.card }]}>
           {(orders ?? []).length === 0 ? (
             <Text style={styles.eventText}>No orders yet.</Text>
           ) : (
@@ -376,10 +467,10 @@ function App(): React.JSX.Element {
               </Text>
             ))
           )}
-        </View>
+        </View>}
 
-        <Text style={styles.title}>Realtime Events</Text>
-        <FlatList
+        {activeSection === 'events' && <Text style={[styles.title, { color: palette.text }]}>Realtime Events</Text>}
+        {activeSection === 'events' && <FlatList
           data={events}
           scrollEnabled={false}
           keyExtractor={(_, idx) => String(idx)}
@@ -388,9 +479,9 @@ function App(): React.JSX.Element {
               {item.action} product:{item.productId} qty:{item.quantity}
             </Text>
           )}
-        />
-        <Text style={styles.title}>Order Created Events</Text>
-        <FlatList
+        />}
+        {activeSection === 'events' && <Text style={[styles.title, { color: palette.text }]}>Order Created Events</Text>}
+        {activeSection === 'events' && <FlatList
           data={orderCreatedEvents}
           scrollEnabled={false}
           keyExtractor={(_, idx) => `oc-${idx}`}
@@ -399,10 +490,10 @@ function App(): React.JSX.Element {
               order #{item.orderId} status:{getOrderStatusLabel(item.status)} total:{item.totalAmount}
             </Text>
           )}
-        />
+        />}
 
-        <Text style={styles.title}>Order Status Events</Text>
-        <FlatList
+        {activeSection === 'events' && <Text style={[styles.title, { color: palette.text }]}>Order Status Events</Text>}
+        {activeSection === 'events' && <FlatList
           data={orderStatusEvents}
           scrollEnabled={false}
           keyExtractor={(_, idx) => `os-${idx}`}
@@ -411,7 +502,7 @@ function App(): React.JSX.Element {
               order #{item.orderId} {getOrderStatusLabel(item.previousStatus)}→{getOrderStatusLabel(item.newStatus)}
             </Text>
           )}
-        />
+        />}
       </ScrollView>
       <ArPreviewModal
         visible={isArPreviewVisible}
@@ -433,6 +524,31 @@ function App(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f7f7f7' },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 10
+  },
+  mobileNav: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12
+  },
+  navButton: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#ffffff'
+  },
+  navButtonText: {
+    fontWeight: '600',
+    color: '#374151'
+  },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 12 },
   input: {
     borderWidth: 1,

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,200..900;1,7..72,200..900&amp;family=Nunito+Sans:ital,wght@0,200..1000;1,200..1000&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#c4c8bc",
+                    "surface": "#faf6f0",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-bright": "#faf6f0",
+                    "secondary-fixed": "#f0e8db",
+                    "tertiary-container": "#c4a66a",
+                    "error": "#b83230",
+                    "tertiary-fixed-dim": "#dcc48e",
+                    "on-surface": "#2e3230",
+                    "on-background": "#2e3230",
+                    "surface-variant": "#e4e0d8",
+                    "error-container": "#ffdad8",
+                    "on-tertiary-container": "#554020",
+                    "primary-container": "#78a886",
+                    "surface-container-highest": "#e4e0d8",
+                    "on-primary-fixed-variant": "#2a6038",
+                    "on-tertiary-fixed-variant": "#554020",
+                    "surface-container": "#f0ece4",
+                    "secondary-fixed-dim": "#d4ccbf",
+                    "on-secondary-fixed-variant": "#4a4538",
+                    "on-secondary-container": "#5e5548",
+                    "on-primary": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "outline": "#74796e",
+                    "on-error-container": "#690005",
+                    "on-tertiary": "#ffffff",
+                    "inverse-on-surface": "#f5f0e8",
+                    "primary": "#4a7c59",
+                    "on-error": "#ffffff",
+                    "on-primary-fixed": "#002110",
+                    "on-primary-container": "#d8f0de",
+                    "background": "#faf6f0",
+                    "surface-container-low": "#f5f1ea",
+                    "primary-fixed-dim": "#8ecf9e",
+                    "on-surface-variant": "#4a4e4a",
+                    "surface-container-high": "#eae6de",
+                    "on-tertiary-fixed": "#221a05",
+                    "on-secondary-fixed": "#1e1a13",
+                    "surface-dim": "#dbd7cf",
+                    "tertiary": "#705c30",
+                    "inverse-surface": "#2e3230",
+                    "inverse-primary": "#8ecf9e",
+                    "secondary": "#6b6358",
+                    "tertiary-fixed": "#f8e0a8",
+                    "surface-tint": "#4a7c59",
+                    "primary-fixed": "#c8e8d0",
+                    "secondary-container": "#f0e8db"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "1rem",
+                    "xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Literata"],
+                    "display": ["Literata"],
+                    "body": ["Nunito Sans"],
+                    "label": ["Nunito Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Nunito Sans', sans-serif; }
+        .font-headline { font-family: 'Literata', serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-stone-950 text-stone-200 antialiased min-h-screen">
+<aside class="flex flex-col h-screen fixed left-0 top-0 z-40 p-4 gap-2 h-screen w-64 border-r border-stone-800 bg-stone-950 font-['Nunito_Sans'] text-sm">
+<div class="flex items-center gap-3 px-4 mb-8">
+<div class="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-stone-950 shadow-lg">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">eco</span>
+</div>
+<div>
+<h1 class="font-['Literata'] text-lg font-black text-emerald-400 leading-none">TerraVision</h1>
+<p class="text-[10px] text-stone-500 uppercase tracking-widest mt-1">Management Suite</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="bg-emerald-600 text-stone-950 rounded-xl font-bold px-4 py-3 flex items-center gap-3 cursor-pointer active:opacity-70 duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="text-stone-400 px-4 py-3 flex items-center gap-3 cursor-pointer active:opacity-70 duration-200 hover:bg-stone-900 rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="text-stone-400 px-4 py-3 flex items-center gap-3 cursor-pointer active:opacity-70 duration-200 hover:bg-stone-900 rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span>Orders</span>
+</a>
+</nav>
+</aside>
+<main class="ml-64 min-h-screen">
+<header class="flex justify-between items-center px-8 py-2 w-full h-16 sticky top-0 bg-stone-900/80 backdrop-blur-md z-30 border-b border-stone-800 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-500">search</span>
+<input class="bg-stone-950 border-stone-800 rounded-full pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none" placeholder="Search resources..." type="text"/>
+</div>
+</div>
+</header>
+<div class="p-8 max-w-7xl mx-auto space-y-8">
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h2 class="font-headline text-3xl font-bold text-emerald-400">Inventory Dashboard</h2>
+<p class="text-stone-400 mt-1">Real-time oversight of TerraVision global ecosystem performance.</p>
+</div>
+</section>
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-stone-900 p-6 rounded-xl border border-stone-800/50">
+<p class="text-stone-400 text-sm font-medium">Total Revenue</p>
+<h3 class="text-2xl font-bold text-stone-100 mt-1">$124,500.00</h3>
+</div>
+<div class="bg-stone-900 p-6 rounded-xl border border-stone-800/50">
+<p class="text-stone-400 text-sm font-medium">Active Orders</p>
+<h3 class="text-2xl font-bold text-stone-100 mt-1">842</h3>
+</div>
+<div class="bg-stone-900 p-6 rounded-xl border border-stone-800/50">
+<p class="text-stone-400 text-sm font-medium">Total Products</p>
+<h3 class="text-2xl font-bold text-stone-100 mt-1">2.4k</h3>
+</div>
+<div class="bg-stone-900 p-6 rounded-xl border border-stone-800/50">
+<p class="text-stone-400 text-sm font-medium">Global Stock Value</p>
+<h3 class="text-2xl font-bold text-stone-100 mt-1">$1.2M</h3>
+</div>
+</section>
+</div>
+</main>
+</body></html>
