@@ -38,3 +38,18 @@ Admin urun secimi icin `@react-native-picker/picker` kullanilir.
 - Native AR baslatma icin Android ve iOS tarafinda `TerraVisionAr.launchArSession(...)` native module'u implement edilmelidir.
 - Admin kullanicilar App icindeki "Admin AR Model Upload" panelinde dosya secip `POST /api/media/ar-models?productId=...` akisini test edebilir.
 - Varsayilan olarak mevcut AR modeli olan urun overwrite edilmez. Gerekirse backend endpoint'inde `overwrite=true` parametresi kullanilabilir.
+
+## Release Hazirlik (Gün 7)
+
+Release oncesinde mobil istemci icin kalite kapisini tek komutla dogrulayabilirsiniz:
+
+```bash
+npm run release:check
+```
+
+Bu komut sirasiyla:
+- TypeScript tip kontrolu
+- ESLint kontrolu
+- Jest testleri (`--watch=false --runInBand`)
+
+detaylarini calistirir.

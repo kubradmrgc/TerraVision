@@ -8,7 +8,8 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release:check": "npm run typecheck && npm run lint && npm run test -- --watch=false --runInBand"
   },
   "dependencies": {
     "@microsoft/signalr": "^9.0.4",
