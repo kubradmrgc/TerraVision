@@ -1,4 +1,4 @@
-import { validateArUploadFile } from '../src/features/ar/arUploadValidation';
+import { AR_UPLOAD_HELP_TEXT, validateArUploadFile } from '../src/features/ar/arUploadValidation';
 
 describe('arUploadValidation', () => {
   it('accepts supported extension and reasonable size', () => {
@@ -26,5 +26,10 @@ describe('arUploadValidation', () => {
       size: 30 * 1024 * 1024
     });
     expect(error).toContain('25MB');
+  });
+
+  it('exposes upload help text for UI', () => {
+    expect(AR_UPLOAD_HELP_TEXT).toContain('.gltf');
+    expect(AR_UPLOAD_HELP_TEXT).toContain('25MB');
   });
 });

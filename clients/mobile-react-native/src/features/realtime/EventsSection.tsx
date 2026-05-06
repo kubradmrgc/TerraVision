@@ -23,7 +23,7 @@ export function EventsSection(props: Props): React.JSX.Element {
           scrollEnabled={false}
           keyExtractor={(_, idx) => String(idx)}
           renderItem={({ item }) => (
-            <Text style={styles.eventText}>
+            <Text style={[styles.eventText, { color: props.textColor }]}>
               {item.action} product:{item.productId} qty:{item.quantity}
             </Text>
           )}
@@ -35,7 +35,7 @@ export function EventsSection(props: Props): React.JSX.Element {
         scrollEnabled={false}
         keyExtractor={(_, idx) => `oc-${idx}`}
         renderItem={({ item }) => (
-          <Text style={styles.eventText}>
+          <Text style={[styles.eventText, { color: props.textColor }]}>
             order #{item.orderId} status:{getOrderStatusLabel(item.status)} total:{item.totalAmount}
           </Text>
         )}
@@ -46,7 +46,7 @@ export function EventsSection(props: Props): React.JSX.Element {
         scrollEnabled={false}
         keyExtractor={(_, idx) => `os-${idx}`}
         renderItem={({ item }) => (
-          <Text style={styles.eventText}>
+          <Text style={[styles.eventText, { color: props.textColor }]}>
             order #{item.orderId} {getOrderStatusLabel(item.previousStatus)}→{getOrderStatusLabel(item.newStatus)}
           </Text>
         )}
@@ -57,5 +57,5 @@ export function EventsSection(props: Props): React.JSX.Element {
 
 const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', marginBottom: 2 },
-  eventText: { fontSize: 13, marginBottom: 6, color: '#1f2937' }
+  eventText: { fontSize: 13, marginBottom: 6 }
 });

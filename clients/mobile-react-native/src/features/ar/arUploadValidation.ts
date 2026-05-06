@@ -1,6 +1,7 @@
 const MAX_AR_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = ['.gltf', '.glb', '.usdz'];
 const ALLOWED_MIME_TYPES = ['model/gltf+json', 'model/gltf-binary', 'model/vnd.usdz+zip', 'application/octet-stream'];
+export const AR_UPLOAD_HELP_TEXT = 'Desteklenen formatlar: .gltf, .glb, .usdz (Maksimum 25MB)';
 
 export type CandidateArFile = {
   name?: string | null;

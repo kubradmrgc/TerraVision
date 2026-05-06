@@ -4,6 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import type { ProductDto } from '../../types/product';
 import type { UploadFileInput } from '../../services/mediaService';
 import { StateMessage } from '../../ui/StateMessage';
+import { AR_UPLOAD_HELP_TEXT } from '../ar/arUploadValidation';
 
 type Props = {
   products: ProductDto[];
@@ -12,6 +13,10 @@ type Props = {
   selectedUploadProductId: number | null;
   selectedUploadFile: UploadFileInput | null;
   canUploadArModel: boolean;
+  isArUploading: boolean;
+  arUploadProgress: number;
+  arUploadErrorMessage: string | null;
+  arUploadSuccessMessage: string | null;
   palette: {
     card: string;
     text: string;
@@ -25,6 +30,7 @@ type Props = {
   onPreviewAr: (productId: number) => void;
   onPickArFile: () => void;
   onUploadArModel: () => void;
+  onClearSelectedArFile: () => void;
   onSelectUploadProduct: (value: number | null) => void;
 };
 
@@ -84,12 +90,29 @@ export function ProductsSection(props: Props): React.JSX.Element {
             <Text style={[styles.eventText, { color: props.palette.subText }]}>
               {props.selectedUploadFile ? `Selected: ${props.selectedUploadFile.name}` : 'No file selected'}
             </Text>
+            {props.selectedUploadFile && (
+              <TouchableOpacity style={[styles.secondaryButton, { borderColor: props.palette.border }]} onPress={props.onClearSelectedArFile}>
+                <Text style={[styles.secondaryButtonText, { color: props.palette.text }]}>Clear Selected File</Text>
+              </TouchableOpacity>
+            )}
+            <Text style={[styles.helpText, { color: props.palette.subText }]}>{AR_UPLOAD_HELP_TEXT}</Text>
+            {props.isArUploading && (
+              <StateMessage text={`Yukleniyor... ${props.arUploadProgress}%`} color={props.palette.subText} />
+            )}
+            {props.arUploadErrorMessage && <StateMessage tone="error" text={props.arUploadErrorMessage} />}
+            {props.arUploadSuccessMessage && <StateMessage text={props.arUploadSuccessMessage} color={props.palette.subText} />}
             <TouchableOpacity
-              style={[styles.button, !props.canUploadArModel && styles.buttonDisabled]}
-              disabled={!props.canUploadArModel}
+              style={[styles.button, (!props.canUploadArModel || props.isArUploading) && styles.buttonDisabled]}
+              disabled={!props.canUploadArModel || props.isArUploading}
               onPress={props.onUploadArModel}
             >
-              <Text style={styles.buttonText}>Upload And Bind Model</Text>
+              <Text style={styles.buttonText}>
+                {props.isArUploading
+                  ? `Uploading ${props.arUploadProgress}%`
+                  : props.arUploadErrorMessage
+                    ? 'Retry Upload'
+                    : 'Upload And Bind Model'}
+              </Text>
             </TouchableOpacity>
           </View>
         </>
@@ -110,5 +133,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: { color: '#2f7d32', fontWeight: '600', textAlign: 'center' },
   pickerContainer: { borderWidth: 1, borderColor: '#d0d0d0', borderRadius: 8, marginBottom: 10, overflow: 'hidden' },
   eventText: { fontSize: 13, marginBottom: 6, color: '#1f2937' },
+  helpText: { fontSize: 12, marginBottom: 8 },
   buttonDisabled: { backgroundColor: '#9fb89f' }
 });

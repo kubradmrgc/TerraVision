@@ -31,6 +31,7 @@ else
 }
 builder.Services.AddMemoryCache();
 var useRedis = !builder.Environment.IsEnvironment("Testing") &&
+               !builder.Environment.IsDevelopment() &&
                !string.IsNullOrWhiteSpace(redisConnection);
 if (useRedis)
 {
@@ -64,6 +65,7 @@ var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,

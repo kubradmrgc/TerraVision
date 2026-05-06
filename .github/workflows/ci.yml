@@ -42,4 +42,5 @@ jobs:
         run: |
           npm ci
           npm run typecheck
-          npm run test -- --watch=false
+          npm run lint
+          npm run test -- --watch=false --runInBand

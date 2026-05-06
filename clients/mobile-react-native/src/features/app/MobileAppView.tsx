@@ -24,6 +24,15 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
     activePillTextStyle,
     isCommerceLoading,
     commerceError,
+    isCartMutating,
+    isOrderMutating,
+    cartErrorMessage,
+    orderErrorMessage,
+    orderSuccessMessage,
+    arUploadErrorMessage,
+    arUploadSuccessMessage,
+    arUploadProgress,
+    isArUploading,
     realtimeStatus
   } = controller;
 
@@ -106,7 +115,8 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
           status={realtimeStatus}
           borderColor={palette.border}
           backgroundColor={palette.card}
-          textColor={palette.subText}
+          titleColor={palette.text}
+          detailColor={palette.subText}
         />
 
         <View style={[styles.mobileNav, { backgroundColor: palette.card, borderColor: palette.border }]}>
@@ -131,6 +141,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
 
         {isCommerceLoading && <StateMessage text="Yukleniyor..." color={palette.subText} />}
         {commerceError && <StateMessage tone="error" text="Veri alinamadi. Lutfen tekrar deneyin." />}
+        {orderSuccessMessage && <StateMessage text={orderSuccessMessage} color={palette.text} />}
 
         {state.activeSection === 'products' && (
           <ProductsSection
@@ -140,11 +151,16 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             selectedUploadProductId={state.selectedUploadProductId}
             selectedUploadFile={state.selectedUploadFile}
             canUploadArModel={canUploadArModel}
+            isArUploading={isArUploading}
+            arUploadProgress={arUploadProgress}
+            arUploadErrorMessage={arUploadErrorMessage}
+            arUploadSuccessMessage={arUploadSuccessMessage}
             palette={palette}
             onAddToCart={controller.handleAddToCart}
             onPreviewAr={controller.handlePreviewAr}
             onPickArFile={controller.handlePickArFile}
             onUploadArModel={controller.handleUploadArModel}
+            onClearSelectedArFile={controller.handleClearSelectedArFile}
             onSelectUploadProduct={controller.setSelectedUploadProductId}
           />
         )}
@@ -152,6 +168,9 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
           <CartSection
             cart={state.cart}
             palette={palette}
+            isLoading={isCommerceLoading}
+            isMutating={isCartMutating || isOrderMutating}
+            errorMessage={cartErrorMessage}
             onPlaceOrder={controller.handlePlaceOrder}
             onClearCart={controller.handleClearCart}
             onDecrease={controller.handleDecreaseQuantity}
@@ -159,7 +178,14 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             onRemove={controller.handleRemoveItem}
           />
         )}
-        {state.activeSection === 'orders' && <OrdersSection orders={state.orders} palette={palette} />}
+        {state.activeSection === 'orders' && (
+          <OrdersSection
+            orders={state.orders}
+            palette={palette}
+            isLoading={isCommerceLoading}
+            errorMessage={orderErrorMessage ?? (commerceError ? 'Siparis verileri alinamadi.' : null)}
+          />
+        )}
         {state.activeSection === 'events' && (
           <EventsSection
             events={state.events}

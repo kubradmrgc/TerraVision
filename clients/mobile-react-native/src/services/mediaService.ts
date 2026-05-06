@@ -20,8 +20,16 @@ export interface UploadFileInput {
   type: string;
 }
 
+type UploadOptions = {
+  onProgress?: (percent: number) => void;
+};
+
 export const mediaService = {
-  async uploadArModelForProduct(productId: number, file: UploadFileInput): Promise<UploadArModelResult> {
+  async uploadArModelForProduct(
+    productId: number,
+    file: UploadFileInput,
+    options?: UploadOptions
+  ): Promise<UploadArModelResult> {
     const formData = new FormData();
     formData.append('file', {
       uri: file.uri,
@@ -35,6 +43,13 @@ export const mediaService = {
       {
         headers: {
           'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (event) => {
+          if (!options?.onProgress || !event.total) {
+            return;
+          }
+          const percent = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+          options.onProgress(percent);
         }
       }
     );

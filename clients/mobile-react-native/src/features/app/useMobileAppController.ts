@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { errorCodes, isErrorWithCode, pick } from '@react-native-documents/picker';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,7 +12,9 @@ import { MobileSection, MobileAppState, ThemeMode } from './types';
 import { getPalette } from '../../theme/mobileTheme';
 import { useCommerceQueries } from './useCommerceQueries';
 import { validateArUploadFile } from '../ar/arUploadValidation';
-import { hasStoredSession } from '../auth/session';
+import { AUTH_UI_MESSAGES, buildPostLogoutState, getSessionRestoreStatus } from '../auth/session';
+import { pushUniqueEvent } from '../realtime/eventDedup';
+import { toStatusMessage } from '../../ui/httpError';
 
 const initialState: MobileAppState = {
   email: 'admin@terravision.com',
@@ -37,6 +39,20 @@ const initialState: MobileAppState = {
 export function useMobileAppController() {
   const [state, setState] = useState<MobileAppState>(initialState);
   const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'degraded' | 'offline'>('offline');
+  const [cartErrorMessage, setCartErrorMessage] = useState<string | null>(null);
+  const [orderErrorMessage, setOrderErrorMessage] = useState<string | null>(null);
+  const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+  const [arUploadErrorMessage, setArUploadErrorMessage] = useState<string | null>(null);
+  const [arUploadSuccessMessage, setArUploadSuccessMessage] = useState<string | null>(null);
+  const [arUploadProgress, setArUploadProgress] = useState(0);
+  const [isArUploading, setIsArUploading] = useState(false);
+  const unauthorizedAlertShownRef = useRef(false);
+  const cartEventSeenRef = useRef(new Set<string>());
+  const cartEventOrderRef = useRef<string[]>([]);
+  const orderCreatedSeenRef = useRef(new Set<string>());
+  const orderCreatedOrderRef = useRef<string[]>([]);
+  const orderStatusSeenRef = useRef(new Set<string>());
+  const orderStatusOrderRef = useRef<string[]>([]);
   const queryClient = useQueryClient();
   const { productsQuery, cartQuery, ordersQuery, addItemMutation, updateItemMutation, removeItemMutation, clearCartMutation, placeOrderMutation } =
     useCommerceQueries(state.loggedIn);
@@ -63,7 +79,10 @@ export function useMobileAppController() {
 
   const setEmail = (email: string) => setState((prev) => ({ ...prev, email }));
   const setPassword = (password: string) => setState((prev) => ({ ...prev, password }));
-  const setActiveSection = (activeSection: MobileSection) => setState((prev) => ({ ...prev, activeSection }));
+  const setActiveSection = (activeSection: MobileSection) => {
+    setOrderSuccessMessage(null);
+    setState((prev) => ({ ...prev, activeSection }));
+  };
   const toggleTheme = () =>
     setState((prev) => ({ ...prev, themeMode: prev.themeMode === 'dark' ? ('light' as ThemeMode) : ('dark' as ThemeMode) }));
   const setIsArPreviewVisible = (isArPreviewVisible: boolean) =>
@@ -71,22 +90,52 @@ export function useMobileAppController() {
   const setIsArExperienceVisible = (isArExperienceVisible: boolean) =>
     setState((prev) => ({ ...prev, isArExperienceVisible }));
   const syncRealtimeSubscriptions = useCallback(() => {
+    const unsubscribeStatus = realtimeService.onStatusChanged((status) => {
+      setRealtimeStatus(status);
+    });
     const unsubscribeCart = realtimeService.onCartChanged((event) => {
-      setState((prev) => ({ ...prev, events: [event, ...prev.events].slice(0, 25) }));
+      const key = `${event.action}:${event.productId}:${event.quantity}`;
+      setState((prev) => ({
+        ...prev,
+        events: pushUniqueEvent(prev.events, event, key, cartEventSeenRef.current, cartEventOrderRef.current, 25)
+      }));
       queryClient.invalidateQueries({ queryKey: ['cart'] }).catch(() => undefined);
     });
     const unsubscribeCreated = realtimeService.onOrderCreated((event) => {
-      setState((prev) => ({ ...prev, orderCreatedEvents: [event, ...prev.orderCreatedEvents].slice(0, 25) }));
+      const key = `${event.orderId}:${event.status}:${event.totalAmount}`;
+      setState((prev) => ({
+        ...prev,
+        orderCreatedEvents: pushUniqueEvent(
+          prev.orderCreatedEvents,
+          event,
+          key,
+          orderCreatedSeenRef.current,
+          orderCreatedOrderRef.current,
+          25
+        )
+      }));
       queryClient.invalidateQueries({ queryKey: ['orders'] }).catch(() => undefined);
     });
-    const unsubscribeStatus = realtimeService.onOrderStatusChanged((event) => {
-      setState((prev) => ({ ...prev, orderStatusEvents: [event, ...prev.orderStatusEvents].slice(0, 25) }));
+    const unsubscribeOrderStatus = realtimeService.onOrderStatusChanged((event) => {
+      const key = `${event.orderId}:${event.previousStatus}:${event.newStatus}`;
+      setState((prev) => ({
+        ...prev,
+        orderStatusEvents: pushUniqueEvent(
+          prev.orderStatusEvents,
+          event,
+          key,
+          orderStatusSeenRef.current,
+          orderStatusOrderRef.current,
+          25
+        )
+      }));
       queryClient.invalidateQueries({ queryKey: ['orders'] }).catch(() => undefined);
     });
     return () => {
+      unsubscribeStatus();
       unsubscribeCart();
       unsubscribeCreated();
-      unsubscribeStatus();
+      unsubscribeOrderStatus();
     };
   }, [queryClient]);
 
@@ -106,8 +155,11 @@ export function useMobileAppController() {
           unsubscribe = syncRealtimeSubscriptions();
         }
       } catch {
-        setRealtimeStatus('degraded');
-        Alert.alert('Realtime', 'Canli baglanti kurulamadi, veriler elle yenilenecek.');
+        setRealtimeStatus('offline');
+        Alert.alert(
+          'Realtime',
+          'Birkac yeniden denemeden sonra canli kanal acilamadi. Veriler REST ile gelmeye devam eder; ag duzelince cikis yapip tekrar giris deneyebilirsiniz.'
+        );
       }
     })();
 
@@ -121,14 +173,25 @@ export function useMobileAppController() {
 
   useEffect(() => {
     onUnauthorized(() => {
+      if (!unauthorizedAlertShownRef.current) {
+        Alert.alert('Session', AUTH_UI_MESSAGES.sessionExpired);
+        unauthorizedAlertShownRef.current = true;
+      }
+      queryClient.clear();
+      realtimeService.disconnect().catch(() => undefined);
+      setRealtimeStatus('offline');
       setState((prev) => ({ ...prev, loggedIn: false }));
     });
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     (async () => {
-      const hasSession = await hasStoredSession();
-      if (!hasSession) {
+      const status = await getSessionRestoreStatus();
+      if (status === 'none') {
+        return;
+      }
+      if (status === 'partial') {
+        Alert.alert('Session', AUTH_UI_MESSAGES.sessionPartial);
         return;
       }
       setState((prev) => ({ ...prev, loggedIn: true }));
@@ -156,7 +219,7 @@ export function useMobileAppController() {
         queryClient.invalidateQueries({ queryKey: ['orders'] })
       ]);
     } catch {
-      Alert.alert('Login failed', 'Email veya sifre gecersiz olabilir.');
+      Alert.alert('Login failed', AUTH_UI_MESSAGES.loginFailed);
     }
   };
 
@@ -165,59 +228,106 @@ export function useMobileAppController() {
     await realtimeService.disconnect();
     queryClient.clear();
     setRealtimeStatus('offline');
-    setState((prev) => ({
-      ...initialState,
-      themeMode: prev.themeMode,
-      email: prev.email
-    }));
+    unauthorizedAlertShownRef.current = false;
+    setState((prev) => buildPostLogoutState(initialState, prev));
   };
 
   const handleAddToCart = async (productId: number) => {
+    setCartErrorMessage(null);
     try {
       await addItemMutation.mutateAsync(productId);
-    } catch {
-      Alert.alert('Error', 'Sepete ekleme basarisiz.');
+    } catch (error) {
+      setCartErrorMessage(
+        toStatusMessage(error, 'Sepete ekleme basarisiz.', {
+          400: 'Gecersiz sepet istegi. Urun veya adet bilgisini kontrol edin.',
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          404: 'Urun bulunamadi.',
+          409: 'Stok yeterli degil.'
+        })
+      );
     }
   };
 
   const handleIncreaseQuantity = async (productId: number, currentQuantity: number) => {
+    setCartErrorMessage(null);
     try {
       await updateItemMutation.mutateAsync({ productId, quantity: currentQuantity + 1 });
-    } catch {
-      Alert.alert('Error', 'Adet artirilamadi.');
+    } catch (error) {
+      setCartErrorMessage(
+        toStatusMessage(error, 'Adet artirilamadi.', {
+          400: 'Adet guncellenemedi. Gecerli miktar girin.',
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          404: 'Sepet urunu bulunamadi.',
+          409: 'Stok siniri asildi.'
+        })
+      );
     }
   };
 
   const handleDecreaseQuantity = async (productId: number, currentQuantity: number) => {
+    setCartErrorMessage(null);
     try {
       await updateItemMutation.mutateAsync({ productId, quantity: Math.max(currentQuantity - 1, 0) });
-    } catch {
-      Alert.alert('Error', 'Adet azaltilamadi.');
+    } catch (error) {
+      setCartErrorMessage(
+        toStatusMessage(error, 'Adet azaltilamadi.', {
+          400: 'Adet guncellenemedi.',
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          404: 'Sepet urunu bulunamadi.'
+        })
+      );
     }
   };
 
   const handleRemoveItem = async (productId: number) => {
+    setCartErrorMessage(null);
     try {
       await removeItemMutation.mutateAsync(productId);
-    } catch {
-      Alert.alert('Error', 'Urun sepetten kaldirilamadi.');
+    } catch (error) {
+      setCartErrorMessage(
+        toStatusMessage(error, 'Urun sepetten kaldirilamadi.', {
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          404: 'Kaldirilacak urun bulunamadi.'
+        })
+      );
     }
   };
 
   const handleClearCart = async () => {
+    setCartErrorMessage(null);
     try {
       await clearCartMutation.mutateAsync();
-    } catch {
-      Alert.alert('Error', 'Sepet temizlenemedi.');
+    } catch (error) {
+      setCartErrorMessage(
+        toStatusMessage(error, 'Sepet temizlenemedi.', {
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          500: 'Sunucu hatasi nedeniyle sepet temizlenemedi.'
+        })
+      );
     }
   };
 
   const handlePlaceOrder = async () => {
+    setOrderErrorMessage(null);
+    setOrderSuccessMessage(null);
     try {
       const order = await placeOrderMutation.mutateAsync('');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['orders'] }),
+        queryClient.invalidateQueries({ queryKey: ['cart'] })
+      ]);
+      setOrderSuccessMessage(`Siparis #${order.id} olusturuldu.`);
+      setState((prev) => ({ ...prev, activeSection: 'orders' }));
       Alert.alert('Order Created', `Order #${order.id} created successfully.`);
-    } catch {
-      Alert.alert('Order Error', 'Siparis olusturulamadi.');
+    } catch (error) {
+      setOrderErrorMessage(
+        toStatusMessage(error, 'Siparis olusturulamadi.', {
+          400: 'Siparis olusturulamadi: Sepet bos olabilir.',
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          409: 'Siparis olusturulamadi: Stok yetersiz.',
+          500: 'Sunucu hatasi nedeniyle siparis olusturulamadi.'
+        })
+      );
     }
   };
 
@@ -225,12 +335,21 @@ export function useMobileAppController() {
     try {
       const preview = await arService.getProductPreview(productId);
       setState((prev) => ({ ...prev, arPreview: preview, isArPreviewVisible: true }));
-    } catch {
-      Alert.alert('Error', 'AR onizleme bilgisi alinamadi.');
+    } catch (error) {
+      Alert.alert(
+        'AR Preview',
+        toStatusMessage(error, 'AR onizleme bilgisi alinamadi.', {
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          404: 'Bu urun icin AR modeli bulunamadi.',
+          500: 'Sunucu hatasi nedeniyle AR onizleme acilamadi.'
+        })
+      );
     }
   };
 
   const handleUploadArModel = async () => {
+    setArUploadErrorMessage(null);
+    setArUploadSuccessMessage(null);
     try {
       if (!state.selectedUploadProductId || state.selectedUploadProductId <= 0) {
         Alert.alert('Validation', 'Once bir urun secin.');
@@ -241,7 +360,11 @@ export function useMobileAppController() {
         return;
       }
 
-      const result = await mediaService.uploadArModelForProduct(state.selectedUploadProductId, state.selectedUploadFile);
+      setIsArUploading(true);
+      setArUploadProgress(0);
+      const result = await mediaService.uploadArModelForProduct(state.selectedUploadProductId, state.selectedUploadFile, {
+        onProgress: (percent) => setArUploadProgress(percent)
+      });
       await queryClient.invalidateQueries({ queryKey: ['products'] });
       const refreshedProducts = await productService.getProducts();
       const pendingProduct = refreshedProducts.filter((x) => !x.isArCompatible).sort((a, b) => a.name.localeCompare(b.name))[0];
@@ -252,18 +375,44 @@ export function useMobileAppController() {
         selectedUploadFile: null
       }));
 
+      setArUploadProgress(100);
+      setArUploadSuccessMessage(`Model baglandi: ${result.uploaded.fileName}`);
       Alert.alert('Upload Successful', `File: ${result.uploaded.fileName}\nProduct: ${result.product?.name ?? 'N/A'}`);
-    } catch {
-      Alert.alert('Upload Error', 'AR model upload basarisiz.');
+    } catch (error) {
+      setArUploadErrorMessage(
+        toStatusMessage(error, 'AR model upload basarisiz.', {
+          400: 'Yukleme reddedildi. Dosya formati veya boyutu gecerli olmayabilir.',
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          403: 'Bu islem icin admin yetkisi gerekiyor.',
+          404: 'URun bulunamadi.',
+          413: 'Dosya cok buyuk. Maksimum 25MB yukleyebilirsiniz.',
+          415: 'Desteklenmeyen dosya tipi.',
+          500: 'Sunucu hatasi nedeniyle AR modeli yuklenemedi.'
+        })
+      );
+    } finally {
+      setIsArUploading(false);
     }
+  };
+
+  const handleClearSelectedArFile = () => {
+    setArUploadErrorMessage(null);
+    setArUploadSuccessMessage(null);
+    setArUploadProgress(0);
+    setState((prev) => ({ ...prev, selectedUploadFile: null }));
   };
 
   const handlePickArFile = async () => {
     try {
+      setArUploadErrorMessage(null);
+      setArUploadSuccessMessage(null);
       const pickedFiles = await pick({
         type: ['model/gltf+json', 'model/vnd.usdz+zip', 'application/octet-stream']
       });
       const pickedFile = pickedFiles[0];
+      if (!pickedFile) {
+        return;
+      }
       const validationError = validateArUploadFile({
         name: pickedFile.name,
         type: pickedFile.type,
@@ -271,6 +420,7 @@ export function useMobileAppController() {
       });
       if (validationError) {
         Alert.alert('File Validation', validationError);
+        setArUploadErrorMessage(validationError);
         return;
       }
       setState((prev) => ({
@@ -306,6 +456,19 @@ export function useMobileAppController() {
     canUploadArModel,
     isCommerceLoading: productsQuery.isLoading || cartQuery.isLoading || ordersQuery.isLoading,
     commerceError: productsQuery.error ?? cartQuery.error ?? ordersQuery.error ?? null,
+    isCartMutating:
+      addItemMutation.isPending ||
+      updateItemMutation.isPending ||
+      removeItemMutation.isPending ||
+      clearCartMutation.isPending,
+    isOrderMutating: placeOrderMutation.isPending,
+    cartErrorMessage,
+    orderErrorMessage,
+    orderSuccessMessage,
+    arUploadErrorMessage,
+    arUploadSuccessMessage,
+    arUploadProgress,
+    isArUploading,
     realtimeStatus,
     activePillStyle,
     activePillTextStyle,
@@ -326,6 +489,7 @@ export function useMobileAppController() {
     handlePlaceOrder,
     handlePreviewAr,
     handleUploadArModel,
-    handlePickArFile
+    handlePickArFile,
+    handleClearSelectedArFile
   };
 }
