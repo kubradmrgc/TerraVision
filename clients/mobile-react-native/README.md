@@ -41,15 +41,12 @@ Admin urun secimi icin `@react-native-picker/picker` kullanilir.
 
 ## Release Hazirlik (Gün 7)
 
-Release oncesinde mobil istemci icin kalite kapisini tek komutla dogrulayabilirsiniz:
+Mobil kalite kapisi (bu klasorde):
 
 ```bash
 npm run release:check
 ```
 
-Bu komut sirasiyla:
-- TypeScript tip kontrolu
-- ESLint kontrolu
-- Jest testleri (`--watch=false --runInBand`)
+Bu komut sirasiyla TypeScript, ESLint ve Jest (`--watch=false --runInBand`) calistirir.
 
-detaylarini calistirir.
+Tam stack release oncesi: repo kokunden `pwsh ./scripts/release-check.ps1` ( `dotnet test` + bu klasorde `npm run release:check` ); manuel auth/randevu/API smoke ve diger maddeler `docs/mobile-day7-release-prep.md` dosyasinda (Scalar + PowerShell ornegi dahil).

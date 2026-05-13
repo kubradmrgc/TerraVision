@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { appointmentService } from '../../services/appointmentService';
 import { cartService } from '../../services/cartService';
 import { orderService } from '../../services/orderService';
 import { productService } from '../../services/productService';
 
-export function useCommerceQueries(enabled: boolean) {
+export function useCommerceQueries(enabled: boolean, role: number | null) {
   const queryClient = useQueryClient();
 
   const productsQuery = useQuery({
@@ -22,6 +23,25 @@ export function useCommerceQueries(enabled: boolean) {
     queryKey: ['orders'],
     queryFn: orderService.getMyOrders,
     enabled
+  });
+
+  const appointmentsQuery = useQuery({
+    queryKey: ['appointments', role],
+    queryFn: () => appointmentService.getMyAppointments(role ?? 1),
+    enabled: enabled && role !== null
+  });
+
+  const createAppointmentMutation = useMutation({
+    mutationFn: appointmentService.create,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    }
+  });
+  const updateAppointmentStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: 1 | 2 | 3 | 4 }) => appointmentService.updateStatus(id, status),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    }
   });
 
   const addItemMutation = useMutation({
@@ -56,6 +76,9 @@ export function useCommerceQueries(enabled: boolean) {
     productsQuery,
     cartQuery,
     ordersQuery,
+    appointmentsQuery,
+    createAppointmentMutation,
+    updateAppointmentStatusMutation,
     addItemMutation,
     updateItemMutation,
     removeItemMutation,

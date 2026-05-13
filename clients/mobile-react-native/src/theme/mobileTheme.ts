@@ -12,6 +12,7 @@ export const sectionLabels: Record<MobileSection, string> = {
   products: 'Products',
   cart: 'Cart',
   orders: 'Orders',
+  appointments: 'Appointments',
   events: 'Events'
 };
 
@@ -19,6 +20,7 @@ export const sectionIcons: Record<MobileSection, string> = {
   products: '🧩',
   cart: '🛒',
   orders: '📦',
+  appointments: '🗓️',
   events: '⚡'
 };
 

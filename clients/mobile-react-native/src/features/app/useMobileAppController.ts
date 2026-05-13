@@ -15,15 +15,18 @@ import { validateArUploadFile } from '../ar/arUploadValidation';
 import { AUTH_UI_MESSAGES, buildPostLogoutState, getSessionRestoreStatus } from '../auth/session';
 import { pushUniqueEvent } from '../realtime/eventDedup';
 import { toStatusMessage } from '../../ui/httpError';
+import { AppointmentStatus } from '../../types/appointment';
 
 const initialState: MobileAppState = {
   email: 'admin@terravision.com',
   password: 'admin123',
   loggedIn: false,
   isAdmin: false,
+  role: null,
   products: [],
   cart: null,
   orders: [],
+  appointments: [],
   events: [],
   orderCreatedEvents: [],
   orderStatusEvents: [],
@@ -42,6 +45,12 @@ export function useMobileAppController() {
   const [cartErrorMessage, setCartErrorMessage] = useState<string | null>(null);
   const [orderErrorMessage, setOrderErrorMessage] = useState<string | null>(null);
   const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+  const [appointmentConsultantId, setAppointmentConsultantId] = useState('2');
+  const [appointmentDateTime, setAppointmentDateTime] = useState('');
+  const [appointmentNotes, setAppointmentNotes] = useState('');
+  const [appointmentErrorMessage, setAppointmentErrorMessage] = useState<string | null>(null);
+  const [appointmentSuccessMessage, setAppointmentSuccessMessage] = useState<string | null>(null);
+  const [appointmentFilterStatus, setAppointmentFilterStatus] = useState<'all' | AppointmentStatus>('all');
   const [arUploadErrorMessage, setArUploadErrorMessage] = useState<string | null>(null);
   const [arUploadSuccessMessage, setArUploadSuccessMessage] = useState<string | null>(null);
   const [arUploadProgress, setArUploadProgress] = useState(0);
@@ -54,8 +63,19 @@ export function useMobileAppController() {
   const orderStatusSeenRef = useRef(new Set<string>());
   const orderStatusOrderRef = useRef<string[]>([]);
   const queryClient = useQueryClient();
-  const { productsQuery, cartQuery, ordersQuery, addItemMutation, updateItemMutation, removeItemMutation, clearCartMutation, placeOrderMutation } =
-    useCommerceQueries(state.loggedIn);
+  const {
+    productsQuery,
+    cartQuery,
+    ordersQuery,
+    appointmentsQuery,
+    createAppointmentMutation,
+    updateAppointmentStatusMutation,
+    addItemMutation,
+    updateItemMutation,
+    removeItemMutation,
+    clearCartMutation,
+    placeOrderMutation
+  } = useCommerceQueries(state.loggedIn, state.role);
 
   const isLoginDisabled = useMemo(() => !state.email || !state.password, [state.email, state.password]);
   const arPendingProducts = useMemo(
@@ -76,11 +96,20 @@ export function useMobileAppController() {
     [palette.button]
   );
   const activePillTextStyle = useMemo(() => ({ color: palette.buttonText }), [palette.buttonText]);
+  const filteredAppointments = useMemo(() => {
+    const items = appointmentsQuery.data ?? [];
+    if (appointmentFilterStatus === 'all') {
+      return items;
+    }
+    return items.filter((x) => x.status === appointmentFilterStatus);
+  }, [appointmentsQuery.data, appointmentFilterStatus]);
 
   const setEmail = (email: string) => setState((prev) => ({ ...prev, email }));
   const setPassword = (password: string) => setState((prev) => ({ ...prev, password }));
   const setActiveSection = (activeSection: MobileSection) => {
     setOrderSuccessMessage(null);
+    setAppointmentSuccessMessage(null);
+    setAppointmentErrorMessage(null);
     setState((prev) => ({ ...prev, activeSection }));
   };
   const toggleTheme = () =>
@@ -180,7 +209,7 @@ export function useMobileAppController() {
       queryClient.clear();
       realtimeService.disconnect().catch(() => undefined);
       setRealtimeStatus('offline');
-      setState((prev) => ({ ...prev, loggedIn: false }));
+      setState((prev) => buildPostLogoutState(initialState, prev));
     });
   }, [queryClient]);
 
@@ -211,12 +240,14 @@ export function useMobileAppController() {
       setState((prev) => ({
         ...prev,
         isAdmin: auth.role === 3,
+        role: auth.role,
         loggedIn: true
       }));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['products'] }),
         queryClient.invalidateQueries({ queryKey: ['cart'] }),
-        queryClient.invalidateQueries({ queryKey: ['orders'] })
+        queryClient.invalidateQueries({ queryKey: ['orders'] }),
+        queryClient.invalidateQueries({ queryKey: ['appointments'] })
       ]);
     } catch {
       Alert.alert('Login failed', AUTH_UI_MESSAGES.loginFailed);
@@ -326,6 +357,69 @@ export function useMobileAppController() {
           401: AUTH_UI_MESSAGES.sessionExpired,
           409: 'Siparis olusturulamadi: Stok yetersiz.',
           500: 'Sunucu hatasi nedeniyle siparis olusturulamadi.'
+        })
+      );
+    }
+  };
+
+  const handleCreateAppointment = async () => {
+    setAppointmentErrorMessage(null);
+    setAppointmentSuccessMessage(null);
+    if (state.role !== 1) {
+      setAppointmentErrorMessage('Randevu olusturma yalnizca musteri hesabi ile yapilabilir.');
+      return;
+    }
+    const consultantId = Number(appointmentConsultantId);
+    if (!Number.isInteger(consultantId) || consultantId <= 0) {
+      setAppointmentErrorMessage('Gecerli bir consultant ID girin.');
+      return;
+    }
+    const appointmentDate = appointmentDateTime.trim();
+    if (!appointmentDate) {
+      setAppointmentErrorMessage('Randevu tarihi gereklidir.');
+      return;
+    }
+
+    try {
+      const created = await createAppointmentMutation.mutateAsync({
+        consultantId,
+        appointmentDate,
+        notes: appointmentNotes.trim()
+      });
+      setAppointmentSuccessMessage(`Randevu #${created.id} olusturuldu.`);
+      setAppointmentDateTime('');
+      setAppointmentNotes('');
+      await queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    } catch (error) {
+      setAppointmentErrorMessage(
+        toStatusMessage(error, 'Randevu olusturulamadi.', {
+          400: 'Gecersiz randevu istegi. Tarih ve consultant bilgisini kontrol edin.',
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          403: 'Bu islem icin musteri yetkisi gerekiyor.',
+          404: 'Consultant bulunamadi.'
+        })
+      );
+    }
+  };
+
+  const handleUpdateAppointmentStatus = async (id: number, status: AppointmentStatus) => {
+    setAppointmentErrorMessage(null);
+    setAppointmentSuccessMessage(null);
+    if (state.role !== 2 && state.role !== 3) {
+      setAppointmentErrorMessage('Durum guncelleme sadece consultant veya admin hesaplarinda aciktir.');
+      return;
+    }
+    try {
+      const updated = await updateAppointmentStatusMutation.mutateAsync({ id, status });
+      setAppointmentSuccessMessage(`Randevu #${updated.id} durumu guncellendi.`);
+      await queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    } catch (error) {
+      setAppointmentErrorMessage(
+        toStatusMessage(error, 'Randevu durumu guncellenemedi.', {
+          400: 'Durum guncelleme istegi gecersiz.',
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          403: 'Bu islem icin consultant veya admin yetkisi gerekiyor.',
+          404: 'Randevu bulunamadi.'
         })
       );
     }
@@ -448,20 +542,29 @@ export function useMobileAppController() {
       ...state,
       products: productsQuery.data ?? [],
       cart: cartQuery.data ?? null,
-      orders: ordersQuery.data ?? []
+      orders: ordersQuery.data ?? [],
+      appointments: filteredAppointments
     },
     palette,
     isLoginDisabled,
     arPendingProducts,
     canUploadArModel,
-    isCommerceLoading: productsQuery.isLoading || cartQuery.isLoading || ordersQuery.isLoading,
-    commerceError: productsQuery.error ?? cartQuery.error ?? ordersQuery.error ?? null,
+    isCommerceLoading:
+      productsQuery.isLoading || cartQuery.isLoading || ordersQuery.isLoading || (state.role !== null && appointmentsQuery.isLoading),
+    commerceError: productsQuery.error ?? cartQuery.error ?? ordersQuery.error ?? appointmentsQuery.error ?? null,
     isCartMutating:
       addItemMutation.isPending ||
       updateItemMutation.isPending ||
       removeItemMutation.isPending ||
       clearCartMutation.isPending,
     isOrderMutating: placeOrderMutation.isPending,
+    isAppointmentMutating: createAppointmentMutation.isPending || updateAppointmentStatusMutation.isPending,
+    appointmentConsultantId,
+    appointmentDateTime,
+    appointmentNotes,
+    appointmentFilterStatus,
+    appointmentErrorMessage,
+    appointmentSuccessMessage,
     cartErrorMessage,
     orderErrorMessage,
     orderSuccessMessage,
@@ -487,6 +590,12 @@ export function useMobileAppController() {
     handleRemoveItem,
     handleClearCart,
     handlePlaceOrder,
+    setAppointmentConsultantId,
+    setAppointmentDateTime,
+    setAppointmentNotes,
+    setAppointmentFilterStatus,
+    handleCreateAppointment,
+    handleUpdateAppointmentStatus,
     handlePreviewAr,
     handleUploadArModel,
     handlePickArFile,

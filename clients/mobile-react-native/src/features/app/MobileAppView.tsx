@@ -7,6 +7,7 @@ import { StateMessage } from '../../ui/StateMessage';
 import { ProductsSection } from '../products/ProductsSection';
 import { CartSection } from '../cart/CartSection';
 import { OrdersSection } from '../orders/OrdersSection';
+import { AppointmentsSection } from '../appointments/AppointmentsSection';
 import { EventsSection } from '../realtime/EventsSection';
 
 type Props = {
@@ -184,6 +185,28 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             palette={palette}
             isLoading={isCommerceLoading}
             errorMessage={orderErrorMessage ?? (commerceError ? 'Siparis verileri alinamadi.' : null)}
+          />
+        )}
+        {state.activeSection === 'appointments' && (
+          <AppointmentsSection
+            appointments={state.appointments}
+            role={state.role}
+            palette={palette}
+            isLoading={isCommerceLoading}
+            isMutating={controller.isAppointmentMutating}
+            consultantIdInput={controller.appointmentConsultantId}
+            appointmentDateInput={controller.appointmentDateTime}
+            appointmentNotesInput={controller.appointmentNotes}
+            appointmentFilterStatus={controller.appointmentFilterStatus}
+            appointmentErrorMessage={controller.appointmentErrorMessage}
+            appointmentSuccessMessage={controller.appointmentSuccessMessage}
+            onConsultantIdChange={controller.setAppointmentConsultantId}
+            onAppointmentDateChange={controller.setAppointmentDateTime}
+            onAppointmentNotesChange={controller.setAppointmentNotes}
+            onAppointmentFilterChange={controller.setAppointmentFilterStatus}
+            onCreateAppointment={controller.handleCreateAppointment}
+            onUpdateStatus={controller.handleUpdateAppointmentStatus}
+            errorMessage={commerceError ? 'Randevu verileri alinamadi.' : null}
           />
         )}
         {state.activeSection === 'events' && (

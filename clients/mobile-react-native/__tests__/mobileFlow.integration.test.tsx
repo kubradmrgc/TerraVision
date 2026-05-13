@@ -6,6 +6,7 @@ import { useMobileAppController } from '../src/features/app/useMobileAppControll
 
 const mockAddItem = jest.fn();
 const mockPlaceOrder = jest.fn();
+const mockUpdateAppointmentStatus = jest.fn();
 const mockOnUnauthorized = jest.fn();
 const mockOnStatusChanged = jest.fn((_handler?: unknown) => () => undefined);
 const mockConnect = jest.fn(async () => undefined);
@@ -35,6 +36,16 @@ jest.mock('../src/features/app/useCommerceQueries', () => ({
     productsQuery: { data: [{ id: 1, name: 'P1', isArCompatible: false }], isLoading: false, error: null },
     cartQuery: { data: { totalAmount: 0, items: [] }, isLoading: false, error: null },
     ordersQuery: { data: [], isLoading: false, error: null },
+    appointmentsQuery: {
+      data: [
+        { id: 201, customerId: 10, consultantId: 2, appointmentDate: '2026-05-20T10:30:00Z', notes: 'n1', status: 1 },
+        { id: 202, customerId: 10, consultantId: 2, appointmentDate: '2026-05-21T11:00:00Z', notes: 'n2', status: 2 }
+      ],
+      isLoading: false,
+      error: null
+    },
+    createAppointmentMutation: { mutateAsync: jest.fn(), isPending: false },
+    updateAppointmentStatusMutation: { mutateAsync: mockUpdateAppointmentStatus, isPending: false },
     addItemMutation: { mutateAsync: mockAddItem, isPending: false },
     updateItemMutation: { mutateAsync: jest.fn(), isPending: false },
     removeItemMutation: { mutateAsync: jest.fn(), isPending: false },
@@ -186,6 +197,63 @@ describe('mobile integration scenarios', () => {
 
     expect(latest!.state.loggedIn).toBe(false);
     expect(Alert.alert).toHaveBeenCalled();
+    renderer!.unmount();
+  });
+
+  it('updates appointment status successfully for consultant/admin role', async () => {
+    mockUpdateAppointmentStatus.mockResolvedValueOnce({ id: 202, status: 3 });
+
+    let renderer: ReturnType<typeof renderHookHarness>;
+    await act(async () => {
+      renderer = renderHookHarness();
+    });
+    await act(async () => {
+      await latest!.handleLogin();
+    });
+    await act(async () => {
+      await latest!.handleUpdateAppointmentStatus(202, 3);
+    });
+
+    expect(latest!.appointmentSuccessMessage).toContain('#202');
+    expect(latest!.appointmentErrorMessage).toBeNull();
+    renderer!.unmount();
+  });
+
+  it('maps appointment status update errors by status code', async () => {
+    mockUpdateAppointmentStatus.mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } });
+
+    let renderer: ReturnType<typeof renderHookHarness>;
+    await act(async () => {
+      renderer = renderHookHarness();
+    });
+    await act(async () => {
+      await latest!.handleLogin();
+    });
+    await act(async () => {
+      await latest!.handleUpdateAppointmentStatus(999, 4);
+    });
+
+    expect(latest!.appointmentErrorMessage).toContain('Randevu bulunamadi');
+    renderer!.unmount();
+  });
+
+  it('filters appointments by selected status', async () => {
+    let renderer: ReturnType<typeof renderHookHarness>;
+    await act(async () => {
+      renderer = renderHookHarness();
+    });
+
+    expect(latest!.state.appointments).toHaveLength(2);
+    await act(async () => {
+      latest!.setAppointmentFilterStatus(2);
+    });
+    expect(latest!.state.appointments).toHaveLength(1);
+    expect(latest!.state.appointments[0]?.id).toBe(202);
+
+    await act(async () => {
+      latest!.setAppointmentFilterStatus('all');
+    });
+    expect(latest!.state.appointments).toHaveLength(2);
     renderer!.unmount();
   });
 });

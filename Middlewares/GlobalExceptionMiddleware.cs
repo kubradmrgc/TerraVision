@@ -28,7 +28,8 @@ namespace TerraVision.Api.Middlewares
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Sunucu işlem sırasında beklenmeyen bir hatayla karşılaştı.");
+                var correlationId = context.Items[CorrelationIdMiddleware.ItemKey]?.ToString();
+                _logger.LogError(ex, "Sunucu işlem sırasında beklenmeyen bir hatayla karşılaştı. {CorrelationId}", correlationId);
                 await HandleExceptionAsync(context, ex);
             }
         }

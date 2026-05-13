@@ -37,10 +37,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install and type-check React Native client
+      - name: Mobile release gate (typecheck, lint, test)
         working-directory: clients/mobile-react-native
         run: |
           npm ci
-          npm run typecheck
-          npm run lint
-          npm run test -- --watch=false --runInBand
+          npm run release:check

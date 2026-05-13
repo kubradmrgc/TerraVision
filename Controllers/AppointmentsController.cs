@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TerraVision.Api.Enums;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
 
@@ -22,11 +23,7 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> Create([FromBody] CreateAppointmentRequest request)
         {
-            // Extract logged-in customer's ID from JWT Claims
-            var customerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(customerIdStr, out int customerId))
-                return Unauthorized();
-
+            var customerId = GetCurrentUserId();
             var appointment = await _appointmentService.CreateAppointmentAsync(customerId, request);
             return CreatedAtAction(nameof(GetById), new { id = appointment.Id }, appointment);
         }
@@ -34,7 +31,9 @@ namespace TerraVision.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var appointment = await _appointmentService.GetAppointmentByIdAsync(id);
+            var userId = GetCurrentUserId();
+            var userRole = GetCurrentUserRole();
+            var appointment = await _appointmentService.GetAppointmentByIdForUserAsync(userId, userRole, id);
             return Ok(appointment);
         }
 
@@ -42,9 +41,7 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> GetMyCustomerAppointments()
         {
-            var customerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(customerIdStr, out int customerId)) return Unauthorized();
-
+            var customerId = GetCurrentUserId();
             var appointments = await _appointmentService.GetCustomerAppointmentsAsync(customerId);
             return Ok(appointments);
         }
@@ -53,9 +50,7 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Consultant,Admin")]
         public async Task<IActionResult> GetMyConsultantAppointments()
         {
-            var consultantIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(consultantIdStr, out int consultantId)) return Unauthorized();
-
+            var consultantId = GetCurrentUserId();
             var appointments = await _appointmentService.GetConsultantAppointmentsAsync(consultantId);
             return Ok(appointments);
         }
@@ -66,11 +61,33 @@ namespace TerraVision.Api.Controllers
         {
             if (id != request.Id) return BadRequest("ID mismatch");
 
-            var consultantIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(consultantIdStr, out int consultantId)) return Unauthorized();
-
-            var appointment = await _appointmentService.UpdateAppointmentStatusAsync(consultantId, request);
+            var userId = GetCurrentUserId();
+            var userRole = GetCurrentUserRole();
+            var appointment = await _appointmentService.UpdateAppointmentStatusAsync(userId, userRole, request);
             return Ok(appointment);
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst("sub")?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Invalid user identity.");
+            }
+
+            return userId;
+        }
+
+        private UserRole GetCurrentUserRole()
+        {
+            // JWT bearer with MapInboundClaims=false exposes short claim type "role", not ClaimTypes.Role.
+            var roleClaim = User.FindFirst("role")?.Value ?? User.FindFirst(ClaimTypes.Role)?.Value;
+            if (!Enum.TryParse<UserRole>(roleClaim, ignoreCase: true, out var userRole))
+            {
+                throw new UnauthorizedAccessException("Invalid user role.");
+            }
+
+            return userRole;
         }
     }
 }
