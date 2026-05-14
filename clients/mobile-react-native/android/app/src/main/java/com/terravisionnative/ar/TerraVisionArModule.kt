@@ -1,7 +1,6 @@
 package com.terravisionnative.ar
 
 import android.content.Intent
-import android.net.Uri
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -31,7 +30,7 @@ class TerraVisionArModule(private val reactContext: ReactApplicationContext) :
             val sceneViewerIntentUrl =
                 "intent://arvr.google.com/scene-viewer/1.0?file=$encodedFile&mode=ar_only#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=$encodedFile;end;"
 
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(sceneViewerIntentUrl))
+            val intent = Intent.parseUri(sceneViewerIntentUrl, Intent.URI_INTENT_SCHEME)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             reactContext.startActivity(intent)
             promise.resolve(null)
