@@ -11,6 +11,22 @@ Admin urun secimi icin `@react-native-picker/picker` kullanilir.
 3. Android emulator veya gercek cihazdan API'ye ulasilabildigini dogrulayin.
 4. `npx react-native run-android` veya `npx react-native run-ios`
 
+## Android Studio + emülatör (Windows)
+
+1. **Android Studio** kurulu olsun; **SDK Manager** ile en az bir **Android Platform** (compileSdk ile uyumlu, bkz. `android/build.gradle` icindeki `compileSdkVersion`) ve **Android SDK Build-Tools** yuklu olsun.
+2. **Device Manager** ile bir **Virtual Device (AVD)** olusturup emülatörü bir kez acin.
+3. Proje kokunde (bu klasorde) bir kez SDK yolunu yazdirin (Gradle icin `android/local.properties` uretir):
+   - `npm run setup:android`
+4. **Android Studio** ile acmak icin: **File → Open** → su klasoru secin:
+   - `clients/mobile-react-native/android`
+   Gradle sync tamamlaninca **Run** ile uygulamayi secili emülatore yukleyebilirsiniz (Metro ayri calisiyorsa daha hizli olur; asagiya bakin).
+5. **Terminalden** calistirmak icin (Windows’ta eski `JAVA_HOME` JDK 8 ise Gradle 17 ister):
+   - Bir terminal: `npm start` (Metro bundler)
+   - Ikinci terminal: `npm run android:win` (Android Studio’nun **JBR / JDK 17** yolunu kullanir; `android/local.properties` icindeki SDK altinda **adb** icin `platform-tools` ve `emulator` klasorlerini PATH’e ekler)
+   - Alternatif: Kalici olarak `JAVA_HOME`’u Android Studio JBR’ye yonlendirin, sonra `npm run android` yeterli olur.
+   - **Gradle:** Bu projede wrapper **8.13** kullanilir (React Native’in **AGP 8.12** ile uyumu). Gradle **9.x** kullanildiginda `IBM_SEMERU` toolchain hatasi olusabilir; bu yuzden 8.13 sabitlendi.
+6. Emülatorden bilgisayardaki API’ye baglanmak icin `env.ts` icinde cogu durumda `10.0.2.2` + port kullanilir (`localhost` emülatorde kendini gosterir).
+
 ## Icerik
 
 - `src/services/apiClient.ts`: Axios istemcisi ve JWT header otomasyonu

@@ -19,6 +19,38 @@ export type MobilePalette = {
   buttonText: string;
   header: string;
   mutedCard: string;
+  /** M3-style tokens (Stitch / product dashboard light) */
+  brandTitle: string;
+  outlineVariant: string;
+  surfaceDim: string;
+  secondaryContainer: string;
+  onSecondaryContainer: string;
+  primaryContainer: string;
+  onPrimaryContainer: string;
+  bottomNav: string;
+  navInactive: string;
+  imagePlaceholder: string;
+  /** Product dashboard (Stitch dark / bento) */
+  elevatedSurface: string;
+  surfaceLowest: string;
+  stockPillBg: string;
+  stockPillBorder: string;
+  stockPillText: string;
+  stockLowPillBg: string;
+  stockLowPillBorder: string;
+  stockLowPillText: string;
+  arPillBg: string;
+  arPillBorder: string;
+  arPillText: string;
+  productCtaBg: string;
+  productCtaFg: string;
+  productCtaBorder: string;
+  /** Dark: outline “Add to cart”; light: solid primary */
+  productUseOutlineAddToCart: boolean;
+  realtimeCapsuleBg: string;
+  realtimeCapsuleBorder: string;
+  realtimeCapsuleLabelColor: string;
+  realtimeCapsuleDotColor: string;
 };
 
 export type MobileAppState = {

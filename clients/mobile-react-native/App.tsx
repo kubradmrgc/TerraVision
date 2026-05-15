@@ -1,4 +1,5 @@
 import React from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ArPreviewModal } from './src/features/ar/ArPreviewModal';
 import { ArExperienceModal } from './src/features/ar/ArExperienceModal';
@@ -15,6 +16,8 @@ function AppContent(): React.JSX.Element {
       <ArPreviewModal
         visible={controller.state.isArPreviewVisible}
         preview={controller.state.arPreview}
+        themeMode={controller.state.themeMode}
+        palette={controller.palette}
         onStartAr={() => {
           controller.setIsArPreviewVisible(false);
           controller.setIsArExperienceVisible(true);
@@ -32,9 +35,11 @@ function AppContent(): React.JSX.Element {
 
 function App(): React.JSX.Element {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppContent />
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <AppContent />
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
 

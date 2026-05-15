@@ -9,15 +9,22 @@ type Props = {
   backgroundColor: string;
   titleColor: string;
   detailColor: string;
+  /** Compact pill for app header (Stitch-style) */
+  variant?: 'default' | 'compact';
+  compactBackground?: string;
+  compactText?: string;
+  compactBorderColor?: string;
+  compactDotColor?: string;
 };
 
 const STATUS_COPY: Record<
   RealtimeBadgeStatus,
-  { title: string; subtitle: string; accent: string; accessibility: string; showSpinner: boolean }
+  { title: string; subtitle: string; shortTitle: string; accent: string; accessibility: string; showSpinner: boolean }
 > = {
   connected: {
     title: 'Canli baglanti',
     subtitle: 'Olaylar aninda guncellenir; sepet/siparis otomatik yenilenir.',
+    shortTitle: 'Connected',
     accent: '#16a34a',
     accessibility: 'Realtime baglanti durumu: bagli. Olaylar canli akmaya devam ediyor.',
     showSpinner: false
@@ -25,6 +32,7 @@ const STATUS_COPY: Record<
   connecting: {
     title: 'Sunucuya baglaniliyor',
     subtitle: 'Hub aciliyor... Kisa sure icinde hazir olur.',
+    shortTitle: 'Connecting',
     accent: '#ca8a04',
     accessibility: 'Realtime baglanti durumu: baglaniyor.',
     showSpinner: true
@@ -32,6 +40,7 @@ const STATUS_COPY: Record<
   degraded: {
     title: 'Yeniden baglaniyor veya yedek kanal',
     subtitle: 'Mobil ag kesintisi: WebSocket sonrasi uzun yoklama kullanilabilir.',
+    shortTitle: 'Degraded',
     accent: '#ea580c',
     accessibility:
       'Realtime baglanti durumu: zayif veya yeniden baglaniyor. Veriler yine de REST ile guncellenebilir.',
@@ -40,15 +49,54 @@ const STATUS_COPY: Record<
   offline: {
     title: 'Realtime kapali',
     subtitle: 'Giris yok veya baglanti kapandi. Liste asagida cache/elle yenile ile calisir.',
+    shortTitle: 'Offline',
     accent: '#dc2626',
     accessibility: 'Realtime baglanti durumu: cevrimdisi.',
     showSpinner: false
   }
 };
 
-export function RealtimeStatusBadge({ status, borderColor, backgroundColor, titleColor, detailColor }: Props): React.JSX.Element {
+export function RealtimeStatusBadge({
+  status,
+  borderColor,
+  backgroundColor,
+  titleColor,
+  detailColor,
+  variant = 'default',
+  compactBackground,
+  compactText,
+  compactBorderColor,
+  compactDotColor
+}: Props): React.JSX.Element {
   const meta = STATUS_COPY[status];
   const spinnerColor = meta.accent;
+
+  if (variant === 'compact') {
+    const pillBg = compactBackground ?? '#8cf5b2';
+    const pillText = compactText ?? '#007241';
+    const pillBorder = compactBorderColor ?? pillBg;
+    const dotColor = compactDotColor ?? pillText;
+    return (
+      <View
+        style={[
+          styles.compactOuter,
+          {
+            backgroundColor: pillBg,
+            borderColor: pillBorder
+          }
+        ]}
+        accessibilityRole="text"
+        accessibilityLabel={meta.accessibility}
+      >
+        {meta.showSpinner ? (
+          <ActivityIndicator size="small" color={spinnerColor} style={styles.compactSpinner} accessibilityLabel="Baglaniyor" />
+        ) : (
+          <View style={[styles.compactDot, { backgroundColor: dotColor }]} />
+        )}
+        <Text style={[styles.compactLabel, { color: pillText }]}>{meta.shortTitle}</Text>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -77,6 +125,17 @@ export function RealtimeStatusBadge({ status, borderColor, backgroundColor, titl
 }
 
 const styles = StyleSheet.create({
+  compactOuter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1
+  },
+  compactDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+  compactSpinner: { marginRight: 6 },
+  compactLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
   container: {
     borderWidth: 1,
     borderLeftWidth: 4,

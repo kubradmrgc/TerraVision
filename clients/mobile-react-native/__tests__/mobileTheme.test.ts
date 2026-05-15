@@ -5,10 +5,13 @@ describe('mobileTheme', () => {
     const light = getPalette('light');
     const dark = getPalette('dark');
 
-    expect(light.bg).toBe('#f4f4f5');
-    expect(dark.bg).toBe('#0f172a');
-    expect(light.button).toBe('#166534');
+    expect(light.bg).toBe('#fbf8fc');
+    expect(dark.bg).toBe('#051426');
+    expect(light.button).toBe('#004c22');
     expect(dark.button).toBe('#86efac');
+    expect(dark.elevatedSurface).toBe('#1c2b3e');
+    expect(dark.productUseOutlineAddToCart).toBe(true);
+    expect(light.productUseOutlineAddToCart).toBe(false);
   });
 
   it('resolves known and unknown order statuses', () => {
