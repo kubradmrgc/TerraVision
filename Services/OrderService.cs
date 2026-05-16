@@ -260,10 +260,28 @@ namespace TerraVision.Api.Services
                 throw new InvalidOperationException($"Invalid status transition: {previousStatus} -> {request.Status}");
             }
 
+            var updatedAtUtc = DateTime.UtcNow;
+            if (request.Status == OrderStatus.Cancelled && previousStatus != OrderStatus.Cancelled)
+            {
+                var cancellationItems = await _dbContext.OrderItems
+                    .Where(oi => oi.OrderId == order.Id && !oi.IsDeleted)
+                    .Join(_dbContext.Products,
+                        oi => oi.ProductId,
+                        p => p.Id,
+                        (oi, p) => new { OrderItem = oi, Product = p })
+                    .ToListAsync();
+
+                foreach (var item in cancellationItems)
+                {
+                    item.Product.StockQuantity += item.OrderItem.Quantity;
+                    item.Product.UpdatedDate = updatedAtUtc;
+                }
+            }
+
             order.Status = request.Status;
             order.UpdatedByUserId = updatedByUserId;
             order.UpdatedReason = request.Reason;
-            order.UpdatedDate = DateTime.UtcNow;
+            order.UpdatedDate = updatedAtUtc;
             await _unitOfWork.CommitAsync();
 
             await _realtimeSyncService.BroadcastOrderStatusChangedAsync(new OrderStatusChangedEvent
