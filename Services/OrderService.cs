@@ -60,13 +60,12 @@ namespace TerraVision.Api.Services
             };
 
             await _dbContext.Orders.AddAsync(order);
-            await _unitOfWork.CommitAsync();
 
             foreach (var item in cartItems)
             {
                 await _dbContext.OrderItems.AddAsync(new OrderItem
                 {
-                    OrderId = order.Id,
+                    Order = order,
                     ProductId = item.Product.Id,
                     UnitPrice = item.Product.Price,
                     Quantity = item.CartItem.Quantity
