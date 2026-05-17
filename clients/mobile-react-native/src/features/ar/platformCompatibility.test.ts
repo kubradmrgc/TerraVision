@@ -1,8 +1,12 @@
+jest.mock('react-native', () => ({
+  Platform: { OS: 'ios' }
+}));
+
 import {
   isArUploadFileNameSupported,
   isProductArAvailableOnPlatform
 } from './platformCompatibility';
-import { ProductDto } from '../../types/product';
+import type { ProductDto } from '../../types/product';
 
 const product = (overrides: Partial<ProductDto>): ProductDto => ({
   id: 1,
