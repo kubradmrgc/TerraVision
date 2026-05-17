@@ -26,14 +26,20 @@ namespace TerraVision.Api.Controllers
                 return NotFound("AR-compatible product not found.");
             }
 
-            var normalizedPlatform = platform.Trim().ToLowerInvariant();
-            var modelFormat = normalizedPlatform == "ios" ? "usdz" : "gltf";
+            var normalizedPlatform = NormalizePlatform(platform);
+            var requiredModelFormat = GetRequiredModelFormat(normalizedPlatform);
+            var modelFormat = requiredModelFormat;
             string modelUrl;
 
             if (!string.IsNullOrWhiteSpace(product.ArModelFileName))
             {
                 modelUrl = $"/assets/ar-models/{product.ArModelFileName}";
                 modelFormat = Path.GetExtension(product.ArModelFileName).TrimStart('.').ToLowerInvariant();
+                if (modelFormat != requiredModelFormat)
+                {
+                    return Conflict(
+                        $"Product AR model format '{modelFormat}' is not supported on {normalizedPlatform}. Upload a .{requiredModelFormat} model for this platform.");
+                }
             }
             else
             {
@@ -51,6 +57,18 @@ namespace TerraVision.Api.Controllers
             };
 
             return Ok(response);
+        }
+
+        private static string NormalizePlatform(string? platform)
+        {
+            return string.Equals(platform?.Trim(), "ios", StringComparison.OrdinalIgnoreCase)
+                ? "ios"
+                : "android";
+        }
+
+        private static string GetRequiredModelFormat(string platform)
+        {
+            return platform == "ios" ? "usdz" : "gltf";
         }
     }
 }

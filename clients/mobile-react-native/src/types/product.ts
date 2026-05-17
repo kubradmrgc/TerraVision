@@ -7,5 +7,6 @@ export interface ProductDto {
   sku: string;
   imageUrl: string;
   isArCompatible: boolean;
+  arModelFileName?: string;
   categoryId: number;
 }

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -25,6 +26,12 @@ import { ArPreviewResponse } from './src/types/ar';
 import { CartDto } from './src/types/cart';
 import { OrderDto } from './src/types/order';
 import { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from './src/types/realtime';
+import {
+  getArUploadDocumentTypes,
+  getSupportedArModelExtension,
+  isArUploadFileNameSupported,
+  isProductArAvailableOnPlatform
+} from './src/features/ar/platformCompatibility';
 
 const orderStatusLabels: Record<number, string> = {
   1: 'Pending',
@@ -205,16 +212,25 @@ function App(): React.JSX.Element {
   const handlePickArFile = async () => {
     try {
       const pickedFiles = await pick({
-        type: ['model/gltf+json', 'model/vnd.usdz+zip', 'application/octet-stream']
+        type: getArUploadDocumentTypes()
       });
       const pickedFile = pickedFiles[0];
+      const pickedFileName = pickedFile.name ?? `model-${Date.now()}`;
+
+      if (!isArUploadFileNameSupported(pickedFileName)) {
+        Alert.alert(
+          'File Error',
+          `${Platform.OS === 'ios' ? 'iOS' : 'Android'} AR requires a .${getSupportedArModelExtension()} model.`
+        );
+        return;
+      }
 
       setSelectedUploadFile({
         uri: pickedFile.uri,
-        name: pickedFile.name ?? `model-${Date.now()}`,
+        name: pickedFileName,
         type:
           pickedFile.type ??
-          (pickedFile.name?.toLowerCase().endsWith('.usdz')
+          (pickedFileName.toLowerCase().endsWith('.usdz')
             ? 'model/vnd.usdz+zip'
             : 'model/gltf+json')
       });
@@ -269,7 +285,7 @@ function App(): React.JSX.Element {
               <TouchableOpacity style={styles.button} onPress={() => handleAddToCart(item.id)}>
                 <Text style={styles.buttonText}>Add To Cart</Text>
               </TouchableOpacity>
-              {item.isArCompatible && (
+              {isProductArAvailableOnPlatform(item) && (
                 <TouchableOpacity
                   style={styles.secondaryButton}
                   onPress={() => handlePreviewAr(item)}
