@@ -1,3 +1,4 @@
+import { API_ROUTES } from '@terravision/shared';
 import { apiClient } from './apiClient';
 import { OrderDto } from '../types/order';
 import { UpdateOrderStatusRequest } from '../types/order';
@@ -13,7 +14,7 @@ export interface AdminOrderListQuery {
 
 export const orderService = {
   async placeFromCart(notes = ''): Promise<OrderDto> {
-    const { data } = await apiClient.post<OrderDto>('/api/orders/from-cart', { notes });
+    const { data } = await apiClient.post<OrderDto>(API_ROUTES.ordersFromCart, { notes });
     return data;
   },
 
@@ -23,12 +24,12 @@ export const orderService = {
   },
 
   async getAllOrders(query: AdminOrderListQuery): Promise<PagedResult<OrderDto>> {
-    const { data } = await apiClient.get<PagedResult<OrderDto>>('/api/orders', { params: query });
+    const { data } = await apiClient.get<PagedResult<OrderDto>>(API_ROUTES.ordersAdmin, { params: query });
     return data;
   },
 
   async updateOrderStatus(orderId: number, request: UpdateOrderStatusRequest): Promise<OrderDto> {
-    const { data } = await apiClient.patch<OrderDto>(`/api/orders/${orderId}/status`, request);
+    const { data } = await apiClient.patch<OrderDto>(API_ROUTES.orderStatus(orderId), request);
     return data;
   }
 };

@@ -1,4 +1,5 @@
 import { HubConnection, HubConnectionBuilder, HttpTransportType, LogLevel } from '@microsoft/signalr';
+import { SIGNALR_EVENTS } from '@terravision/shared';
 import { SIGNALR_HUB_URL } from '../config/env';
 import { tokenStore } from './tokenStore';
 import { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '../types/realtime';
@@ -24,13 +25,13 @@ class RealtimeService {
       .configureLogging(LogLevel.Warning)
       .build();
 
-    connection.on('cart.changed', (event: CartChangedEvent) => {
+    connection.on(SIGNALR_EVENTS.cartChanged, (event: CartChangedEvent) => {
       this.cartHandlers.forEach((handler) => handler(event));
     });
-    connection.on('order.created', (event: OrderCreatedEvent) => {
+    connection.on(SIGNALR_EVENTS.orderCreated, (event: OrderCreatedEvent) => {
       this.orderCreatedHandlers.forEach((handler) => handler(event));
     });
-    connection.on('order.status.changed', (event: OrderStatusChangedEvent) => {
+    connection.on(SIGNALR_EVENTS.orderStatusChanged, (event: OrderStatusChangedEvent) => {
       this.orderStatusChangedHandlers.forEach((handler) => handler(event));
     });
 

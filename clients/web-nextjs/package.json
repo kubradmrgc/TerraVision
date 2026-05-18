@@ -5,9 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test ../shared/test/apiContract.test.mjs"
   },
   "dependencies": {
+    "@terravision/shared": "file:../shared",
     "@microsoft/signalr": "^9.0.4",
     "axios": "^1.12.2",
     "next": "^15.5.6",

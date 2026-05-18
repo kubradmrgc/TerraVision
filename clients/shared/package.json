@@ -1,0 +1,12 @@
+{
+  "name": "@terravision/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared API contract, DTOs, and route constants for TerraVision web and mobile clients.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/apiContract.test.mjs"
+  }
+}

@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { sectionIcons, sectionLabels } from '../../theme/mobileTheme';
+import { sectionLabels } from '../../theme/mobileTheme';
+import { mobileTypography } from '../../theme/mobileTypography';
 import type { MobileSection } from './types';
 import { useMobileAppController } from './useMobileAppController';
 import { RealtimeStatusBadge } from '../realtime/RealtimeStatusBadge';
 import { StateMessage } from '../../ui/StateMessage';
+import { BrandMark } from '../../ui/BrandMark';
+import { FormField } from '../../ui/FormField';
+import { PrimaryButton } from '../../ui/PrimaryButton';
+import { NavTabIcon } from '../../ui/NavTabIcon';
 import { ProductsSection } from '../products/ProductsSection';
 import { CartSection } from '../cart/CartSection';
 import { OrdersSection } from '../orders/OrdersSection';
@@ -43,7 +48,6 @@ type Props = {
 
 export function MobileAppView({ controller }: Props): React.JSX.Element {
   const insets = useSafeAreaInsets();
-  const [loginShowPassword, setLoginShowPassword] = useState(false);
   const {
     state,
     palette,
@@ -91,18 +95,15 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
               <View style={styles.darkAdminHeroScrim} />
               <View style={styles.darkAdminHeroFade} />
               <View style={[styles.darkAdminHeroHeader, { paddingTop: Math.max(insets.top, 10) }]}>
-                <View style={styles.darkAdminHeaderBrand}>
-                  <Text style={[styles.darkAdminHeaderIcon, { color: d.mint }]}>📡</Text>
-                  <Text style={[styles.darkAdminHeaderTitle, { color: d.mint }]}>TerraVision Mobile</Text>
-                </View>
+                <BrandMark accentColor={d.ctaMint} markColor={d.mint} subtitleColor={d.muted} size="sm" />
                 <TouchableOpacity
                   onPress={controller.toggleTheme}
                   accessibilityRole="button"
                   accessibilityLabel="Switch to light theme"
-                  style={styles.darkAdminThemeHit}
+                  style={[styles.themeChip, { borderColor: d.borderIndustrial }]}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 >
-                  <Text style={[styles.darkAdminThemeGlyph, { color: d.inputIcon }]}>☀</Text>
+                  <Text style={[styles.themeChipText, { color: d.muted }]}>Light</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -116,88 +117,59 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
               >
                 <View style={styles.darkAdminCardHeader}>
                   <View style={[styles.darkAdminPill, { backgroundColor: d.pillBg, borderColor: d.pillBorder }]}>
-                    <Text style={[styles.darkAdminPillText, { color: d.mint }]}>
-                      Administrator access / Yönetici oturumu
+                    <Text style={[styles.darkAdminPillText, mobileTypography.pill, { color: d.mint }]}>
+                      Administrator access
                     </Text>
                   </View>
-                  <Text style={[styles.darkAdminCardTitle, { color: d.white }]}>System Login</Text>
-                  <Text style={[styles.darkAdminCardSubtitle, { color: d.muted }]}>
+                  <Text style={[styles.darkAdminCardTitle, mobileTypography.cardTitle, { color: d.white }]}>
+                    System Login
+                  </Text>
+                  <Text style={[styles.darkAdminCardSubtitle, mobileTypography.bodySm, { color: d.muted }]}>
                     Authenticate to access environmental data streams.
                   </Text>
                 </View>
 
-                <View style={styles.loginFieldGroup}>
-                  <Text style={[styles.darkAdminFieldLabel, { color: d.muted }]}>Work email</Text>
-                  <View style={styles.inputIconRow}>
-                    <Text style={[styles.darkAdminInputLeading, { color: d.inputIcon }]}>✉</Text>
-                    <TextInput
-                      style={[
-                        styles.darkAdminInput,
-                        {
-                          borderColor: d.borderIndustrial,
-                          color: d.text,
-                          backgroundColor: d.inputBg
-                        }
-                      ]}
-                      placeholder="admin@terravision.corp"
-                      placeholderTextColor={d.inputIcon}
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                      autoCorrect={false}
-                      value={state.email}
-                      onChangeText={controller.setEmail}
-                    />
-                  </View>
-                </View>
+                <FormField
+                  label="Work email"
+                  borderColor={d.borderIndustrial}
+                  backgroundColor={d.inputBg}
+                  textColor={d.text}
+                  labelColor={d.muted}
+                  placeholderColor={d.inputIcon}
+                  accentColor={d.ctaMint}
+                  secureToggleColor={d.inputIcon}
+                  placeholder="admin@terravision.corp"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoCorrect={false}
+                  value={state.email}
+                  onChangeText={controller.setEmail}
+                />
 
-                <View style={styles.loginFieldGroup}>
-                  <Text style={[styles.darkAdminFieldLabel, { color: d.muted }]}>Password</Text>
-                  <View style={styles.inputIconRow}>
-                    <Text style={[styles.darkAdminInputLeading, { color: d.inputIcon }]}>🔒</Text>
-                    <TextInput
-                      style={[
-                        styles.darkAdminInput,
-                        styles.darkAdminInputWithEye,
-                        {
-                          borderColor: d.borderIndustrial,
-                          color: d.text,
-                          backgroundColor: d.inputBg
-                        }
-                      ]}
-                      placeholder="••••••••"
-                      placeholderTextColor={d.muted}
-                      secureTextEntry={!loginShowPassword}
-                      value={state.password}
-                      onChangeText={controller.setPassword}
-                    />
-                    <TouchableOpacity
-                      style={styles.darkAdminPwEye}
-                      onPress={() => setLoginShowPassword((v) => !v)}
-                      accessibilityRole="button"
-                      accessibilityLabel={loginShowPassword ? 'Hide password' : 'Show password'}
-                    >
-                      <Text style={[styles.darkAdminPwEyeText, { color: d.inputIcon }]}>
-                        {loginShowPassword ? '🙈' : '👁'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                <FormField
+                  label="Password"
+                  borderColor={d.borderIndustrial}
+                  backgroundColor={d.inputBg}
+                  textColor={d.text}
+                  labelColor={d.muted}
+                  placeholderColor={d.muted}
+                  accentColor={d.ctaMint}
+                  secureToggleColor={d.muted}
+                  placeholder="Enter your password"
+                  secureTextEntry
+                  value={state.password}
+                  onChangeText={controller.setPassword}
+                />
 
                 <View style={styles.darkAdminActions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.darkAdminCta,
-                      { backgroundColor: d.ctaMint },
-                      isLoginDisabled && styles.buttonDisabled
-                    ]}
-                    disabled={isLoginDisabled}
+                  <PrimaryButton
+                    label="Sign in as admin"
+                    trailing="→"
                     onPress={controller.handleLogin}
-                    accessibilityRole="button"
-                    accessibilityLabel="Sign in as admin"
-                  >
-                    <Text style={[styles.darkAdminCtaLabel, { color: d.ctaNavy }]}>Sign in as admin</Text>
-                    <Text style={[styles.darkAdminCtaArrow, { color: d.ctaNavy }]}>→</Text>
-                  </TouchableOpacity>
+                    backgroundColor={d.ctaMint}
+                    textColor={d.ctaNavy}
+                    disabled={isLoginDisabled}
+                  />
                   <TouchableOpacity
                     onPress={() =>
                       Alert.alert(
@@ -208,14 +180,15 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Forgot password"
                   >
-                    <Text style={[styles.darkAdminForgot, { color: d.muted }]}>Forgot password</Text>
+                    <Text style={[styles.darkAdminForgot, mobileTypography.label, { color: d.muted }]}>
+                      Forgot password
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
-              <View style={styles.darkAdminDisclaimer}>
-                <Text style={[styles.darkAdminDisclaimerIcon, { color: d.muted }]}>ⓘ</Text>
-                <Text style={[styles.darkAdminDisclaimerText, { color: d.muted }]}>
+              <View style={[styles.proNotice, { backgroundColor: 'rgba(18, 32, 51, 0.85)', borderColor: d.borderIndustrial }]}>
+                <Text style={[styles.proNoticeText, mobileTypography.caption, { color: d.muted }]}>
                   Restricted to TerraVision administrators. Unauthorized access is monitored.
                 </Text>
               </View>
@@ -226,8 +199,8 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             style={[styles.darkAdminFooterBar, { paddingBottom: Math.max(insets.bottom, 12) }]}
             pointerEvents="box-none"
           >
-            <Text style={[styles.darkAdminFooterText, { color: d.inputIcon }]}>
-              Restricted access / Yetkili erişimi
+            <Text style={[styles.darkAdminFooterText, mobileTypography.caption, { color: d.inputIcon }]}>
+              Restricted access
             </Text>
           </View>
         </SafeAreaView>
@@ -236,110 +209,115 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
 
     return (
       <SafeAreaView style={[styles.loginShell, { backgroundColor: palette.bg }]} edges={['top', 'bottom']}>
-        <View style={styles.adminLightHeroWrap} pointerEvents="none">
-          <Image source={{ uri: ADMIN_LIGHT_HERO_URI }} style={styles.adminLightHeroImage} resizeMode="cover" />
-          <View style={styles.adminLightHeroOverlay} />
-        </View>
-        <TouchableOpacity
-          style={[styles.loginThemeFab, { top: Math.max(insets.top, 12) + 4, borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
-          onPress={controller.toggleTheme}
-          accessibilityRole="button"
-          accessibilityLabel="Toggle color theme"
-        >
-          <Text style={[styles.loginThemeFabText, { color: palette.text }]}>☾</Text>
-        </TouchableOpacity>
         <ScrollView
+          style={styles.darkAdminScroll}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.loginScrollContent, { paddingBottom: Math.max(insets.bottom, 12) + 56 }]}
+          contentContainerStyle={[
+            styles.darkAdminScrollContent,
+            { paddingBottom: Math.max(insets.bottom, 12) + 48 }
+          ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.loginColumn}>
-            <View style={styles.loginBrand}>
-              <View
-                style={[
-                  styles.adminLightLogoRing,
-                  {
-                    backgroundColor: palette.mutedCard,
-                    borderColor: palette.outlineVariant,
-                    shadowColor: '#000'
-                  }
-                ]}
+          <View style={styles.darkAdminHero}>
+            <Image
+              source={{ uri: ADMIN_LIGHT_HERO_URI }}
+              style={[StyleSheet.absoluteFill, styles.lightAdminHeroImage]}
+              resizeMode="cover"
+            />
+            <View style={styles.lightAdminHeroOverlay} />
+            <View style={styles.lightAdminHeroFade} />
+            <View style={[styles.darkAdminHeroHeader, { paddingTop: Math.max(insets.top, 10) }]}>
+              <BrandMark
+                accentColor={palette.brandTitle}
+                markColor={palette.brandTitle}
+                subtitleColor={palette.subText}
+                size="sm"
+              />
+              <TouchableOpacity
+                onPress={controller.toggleTheme}
+                accessibilityRole="button"
+                accessibilityLabel="Switch to dark theme"
+                style={[styles.themeChip, { borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
               >
-                <Text style={[styles.adminLightLogoGlyph, { color: palette.brandTitle }]}>📡</Text>
-              </View>
-              <Text style={[styles.loginDisplayTitle, { color: palette.brandTitle }]}>TerraVision Mobile</Text>
+                <Text style={[styles.themeChipText, { color: palette.subText }]}>Dark</Text>
+              </TouchableOpacity>
             </View>
+          </View>
 
-            <View style={[styles.loginCard, { backgroundColor: palette.surfaceLowest, borderColor: palette.outlineVariant, shadowColor: '#000' }]}>
-              <View style={styles.adminLightPillWrap}>
-                <View style={[styles.adminLightPill, { backgroundColor: palette.bottomNav }]}>
-                  <Text style={[styles.adminLightPillIcon, { color: palette.subText }]}>⚙</Text>
-                  <Text style={[styles.adminLightPillLabel, { color: palette.subText }]}>
+          <View style={[styles.loginColumn, styles.darkAdminCardOverlap]}>
+            <View
+              style={[
+                styles.darkAdminCard,
+                {
+                  backgroundColor: palette.surfaceLowest,
+                  borderColor: palette.outlineVariant,
+                  shadowColor: '#000'
+                }
+              ]}
+            >
+              <View style={styles.darkAdminCardHeader}>
+                <View
+                  style={[
+                    styles.darkAdminPill,
+                    {
+                      backgroundColor: palette.mutedCard,
+                      borderColor: palette.outlineVariant
+                    }
+                  ]}
+                >
+                  <Text style={[styles.darkAdminPillText, mobileTypography.pill, { color: palette.brandTitle }]}>
                     Administrator access
                   </Text>
                 </View>
+                <Text style={[styles.darkAdminCardTitle, mobileTypography.cardTitle, { color: palette.text }]}>
+                  System Login
+                </Text>
+                <Text style={[styles.darkAdminCardSubtitle, mobileTypography.bodySm, { color: palette.subText }]}>
+                  Secure access to TerraVision operations and logistics data.
+                </Text>
               </View>
 
-              <View style={styles.loginFieldGroup}>
-                <Text style={[styles.loginLabel, { color: palette.subText }]}>Work email</Text>
-                <TextInput
-                  style={[
-                    styles.adminLightInput,
-                    { borderColor: palette.outlineVariant, color: palette.text, backgroundColor: palette.surfaceLowest }
-                  ]}
-                  placeholder="admin@terravision.inc"
-                  placeholderTextColor={palette.subText}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoCorrect={false}
-                  value={state.email}
-                  onChangeText={controller.setEmail}
+              <FormField
+                label="Work email"
+                borderColor={palette.outlineVariant}
+                backgroundColor={palette.surfaceLowest}
+                textColor={palette.text}
+                labelColor={palette.subText}
+                placeholderColor={palette.subText}
+                accentColor={palette.brandTitle}
+                secureToggleColor={palette.subText}
+                placeholder="admin@terravision.inc"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+                value={state.email}
+                onChangeText={controller.setEmail}
+              />
+
+              <FormField
+                label="Password"
+                borderColor={palette.outlineVariant}
+                backgroundColor={palette.surfaceLowest}
+                textColor={palette.text}
+                labelColor={palette.subText}
+                placeholderColor={palette.subText}
+                accentColor={palette.brandTitle}
+                secureToggleColor={palette.subText}
+                placeholder="Enter your password"
+                secureTextEntry
+                value={state.password}
+                onChangeText={controller.setPassword}
+              />
+
+              <View style={styles.darkAdminActions}>
+                <PrimaryButton
+                  label="Sign in as admin"
+                  trailing="→"
+                  onPress={controller.handleLogin}
+                  backgroundColor={palette.button}
+                  textColor={palette.buttonText}
+                  disabled={isLoginDisabled}
                 />
-              </View>
-
-              <View style={styles.loginFieldGroup}>
-                <Text style={[styles.loginLabel, { color: palette.subText }]}>Password</Text>
-                <View style={styles.adminLightPwRow}>
-                  <TextInput
-                    style={[
-                      styles.adminLightInput,
-                      styles.adminLightInputWithEye,
-                      { borderColor: palette.outlineVariant, color: palette.text, backgroundColor: palette.surfaceLowest }
-                    ]}
-                    placeholder="••••••••"
-                    placeholderTextColor={palette.subText}
-                    secureTextEntry={!loginShowPassword}
-                    value={state.password}
-                    onChangeText={controller.setPassword}
-                  />
-                  <TouchableOpacity
-                    style={styles.adminLightPwEye}
-                    onPress={() => setLoginShowPassword((v) => !v)}
-                    accessibilityRole="button"
-                    accessibilityLabel={loginShowPassword ? 'Hide password' : 'Show password'}
-                  >
-                    <Text style={[styles.adminLightPwEyeText, { color: palette.subText }]}>
-                      {loginShowPassword ? '🙈' : '👁'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.adminLightCta,
-                  { backgroundColor: palette.button },
-                  isLoginDisabled && styles.buttonDisabled
-                ]}
-                disabled={isLoginDisabled}
-                onPress={controller.handleLogin}
-                accessibilityRole="button"
-                accessibilityLabel="Sign in as admin"
-              >
-                <Text style={[styles.adminLightCtaLabel, { color: palette.buttonText }]}>Sign in as admin</Text>
-              </TouchableOpacity>
-
-              <View style={styles.adminLightForgotWrap}>
                 <TouchableOpacity
                   onPress={() =>
                     Alert.alert('Forgot password', 'Please contact your administrator to reset your password.')
@@ -347,41 +325,33 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
                   accessibilityRole="button"
                   accessibilityLabel="Forgot password"
                 >
-                  <Text style={[styles.adminLightForgotLabel, { color: palette.subText }]}>Forgot password</Text>
+                  <Text style={[styles.darkAdminForgot, mobileTypography.label, { color: palette.subText }]}>
+                    Forgot password
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             <View
               style={[
-                styles.adminLightNotice,
-                {
-                  backgroundColor: 'rgba(246,242,247,0.92)',
-                  borderColor: palette.outlineVariant
-                }
+                styles.proNotice,
+                { backgroundColor: palette.mutedCard, borderColor: palette.outlineVariant }
               ]}
             >
-              <Text style={[styles.adminLightNoticeIcon, { color: palette.subText }]}>ⓘ</Text>
-              <Text style={[styles.adminLightNoticeText, { color: palette.subText }]}>
-                Restricted to TerraVision administrators.
+              <Text style={[styles.proNoticeText, mobileTypography.caption, { color: palette.subText }]}>
+                Restricted to TerraVision administrators. Unauthorized access is monitored.
               </Text>
             </View>
           </View>
         </ScrollView>
 
         <View
-          style={[styles.adminLightFooterBar, { paddingBottom: Math.max(insets.bottom, 12) }]}
+          style={[styles.darkAdminFooterBar, { paddingBottom: Math.max(insets.bottom, 12) }]}
           pointerEvents="box-none"
         >
-          <Text style={[styles.adminLightFooterText, { color: palette.subText }]}>Restricted access</Text>
-          <TouchableOpacity
-            style={styles.adminLightFooterInfo}
-            onPress={() => Alert.alert('Restricted access', 'This application is limited to authorized TerraVision personnel.')}
-            accessibilityRole="button"
-            accessibilityLabel="More information"
-          >
-            <Text style={[styles.adminLightFooterInfoIcon, { color: palette.subText }]}>ⓘ</Text>
-          </TouchableOpacity>
+          <Text style={[styles.darkAdminFooterText, mobileTypography.caption, { color: palette.subText }]}>
+            Restricted access
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -391,10 +361,12 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
     <SafeAreaView style={[styles.loggedShell, { backgroundColor: palette.bg }]} edges={['top']}>
       <View style={[styles.stickyHeader, { backgroundColor: palette.header, borderBottomColor: palette.outlineVariant }]}>
         <View style={styles.headerRow}>
-          <View style={styles.headerTitleCluster}>
-            <Text style={styles.loginHeaderIcon}>📡</Text>
-            <Text style={[styles.brandTitleSingle, { color: palette.brandTitle }]}>TerraVision Mobile</Text>
-          </View>
+          <BrandMark
+            accentColor={palette.brandTitle}
+            markColor={palette.brandTitle}
+            subtitleColor={palette.subText}
+            size="sm"
+          />
           <View style={styles.headerRight}>
             <View style={styles.headerRightPillWrap}>
               <RealtimeStatusBadge
@@ -411,10 +383,14 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
               />
             </View>
             <TouchableOpacity
-              style={[styles.ghostBtn, styles.headerGhostTight, { borderColor: palette.outlineVariant }]}
+              style={[styles.themeChip, styles.headerGhostTight, { borderColor: palette.outlineVariant }]}
               onPress={controller.toggleTheme}
+              accessibilityRole="button"
+              accessibilityLabel="Toggle theme"
             >
-              <Text style={[styles.ghostBtnText, { color: palette.subText }]}>{state.themeMode === 'dark' ? '☀' : '☾'}</Text>
+              <Text style={[styles.themeChipText, { color: palette.subText }]}>
+                {state.themeMode === 'dark' ? 'Light' : 'Dark'}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={controller.handleLogout} accessibilityRole="button" accessibilityLabel="Logout">
               <Text style={[styles.logoutText, { color: palette.subText }]}>Logout</Text>
@@ -438,8 +414,18 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
           />
         )}
 
-        {isCommerceLoading && <StateMessage text="Yukleniyor..." color={palette.subText} />}
-        {commerceError && <StateMessage tone="error" text="Veri alinamadi. Lutfen tekrar deneyin." />}
+        {isCommerceLoading && (
+          <StateMessage
+            variant="banner"
+            text="Loading data…"
+            color={palette.subText}
+            backgroundColor={palette.mutedCard}
+            borderColor={palette.outlineVariant}
+          />
+        )}
+        {commerceError && (
+          <StateMessage variant="banner" tone="error" text="Could not load data. Please try again." />
+        )}
         {orderSuccessMessage && <StateMessage text={orderSuccessMessage} color={palette.text} />}
 
         {state.activeSection === 'products' && (
@@ -484,7 +470,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             palette={palette}
             themeMode={state.themeMode}
             isLoading={isCommerceLoading}
-            errorMessage={orderErrorMessage ?? (commerceError ? 'Siparis verileri alinamadi.' : null)}
+            errorMessage={orderErrorMessage ?? (commerceError ? 'Could not load orders.' : null)}
           />
         )}
         {state.activeSection === 'appointments' && (
@@ -507,7 +493,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             onAppointmentFilterChange={controller.setAppointmentFilterStatus}
             onCreateAppointment={controller.handleCreateAppointment}
             onUpdateStatus={controller.handleUpdateAppointmentStatus}
-            errorMessage={commerceError ? 'Randevu verileri alinamadi.' : null}
+            errorMessage={commerceError ? 'Could not load appointments.' : null}
             totalAppointmentsCount={controller.totalAppointmentsCount}
             pendingAppointmentsCount={controller.pendingAppointmentsCount}
             completedAppointmentsCount={controller.completedAppointmentsCount}
@@ -548,10 +534,18 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
               accessibilityState={{ selected: active }}
               accessibilityLabel={sectionLabels[section]}
             >
-              <Text style={styles.bottomNavIcon}>{sectionIcons[section]}</Text>
+              <NavTabIcon
+                section={section}
+                active={active}
+                activeBg={palette.brandTitle}
+                activeFg={palette.buttonText}
+                inactiveFg={palette.navInactive}
+                borderColor={palette.outlineVariant}
+              />
               <Text
                 style={[
                   styles.bottomNavLabel,
+                  mobileTypography.navLabel,
                   { color: palette.navInactive },
                   active && activePillTextStyle
                 ]}
@@ -582,6 +576,35 @@ const styles = StyleSheet.create({
     marginBottom: -32
   },
   darkAdminHeroImage: { opacity: 0.4 },
+  lightAdminHeroImage: { opacity: 0.55 },
+  lightAdminHeroOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(251, 248, 252, 0.72)'
+  },
+  lightAdminHeroFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 88,
+    backgroundColor: '#fbf8fc',
+    opacity: 0.95
+  },
+  themeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth
+  },
+  themeChipText: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
+  proNotice: {
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth
+  },
+  proNoticeText: { textAlign: 'center' },
   darkAdminHeroScrim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(5, 20, 38, 0.52)'
@@ -931,19 +954,16 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 16, paddingTop: 12 },
   stickyHeader: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 4,
     zIndex: 20
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitleCluster: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
-  loginHeaderIcon: { fontSize: 22, marginRight: 8 },
-  brandTitleSingle: { fontSize: 20, fontWeight: '600', letterSpacing: -0.3, flexShrink: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' },
   headerRightPillWrap: { marginRight: 8 },
   headerGhostTight: { marginRight: 8 },
@@ -962,22 +982,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingTop: 8,
+    paddingTop: 10,
+    paddingHorizontal: 4,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: -2 },
-    elevation: 8
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 12
   },
   bottomNavItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    minWidth: 56
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    minWidth: 58
   },
   bottomNavIcon: { fontSize: 20, marginBottom: 2 },
   bottomNavLabel: { fontSize: 11, fontWeight: '600' }

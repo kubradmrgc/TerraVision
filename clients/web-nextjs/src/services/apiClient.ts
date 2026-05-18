@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios';
+import { API_ROUTES } from '@terravision/shared';
 import { API_BASE_URL } from '../config/env';
 import { tokenStore } from './tokenStore';
 
@@ -17,7 +18,7 @@ async function refreshAccessToken(): Promise<string> {
         throw new Error('No refresh token');
       }
 
-      const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken });
+      const response = await axios.post(`${API_BASE_URL}${API_ROUTES.authRefresh}`, { refreshToken });
       const token = response.data.token as string;
       const newRefreshToken = response.data.refreshToken as string;
       tokenStore.setTokens(token, newRefreshToken);

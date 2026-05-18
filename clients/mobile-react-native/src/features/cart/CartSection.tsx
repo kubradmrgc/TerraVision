@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import type { CartDto } from '../../types/cart';
 import type { MobilePalette, ThemeMode } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
+import { SectionHeader } from '../../ui/SectionHeader';
 
 type Props = {
   cart: CartDto | null;
@@ -71,51 +72,49 @@ export function CartSection(props: Props): React.JSX.Element {
         </View>
       ) : null}
 
-      {isDark ? (
-        <>
-          <View style={styles.cartHeaderRow}>
-            <Text style={[styles.darkSectionTitle, { color: palette.text }]}>
-              Your Cart {isCartEmpty ? '' : `(${itemCount} ${itemCount === 1 ? 'item' : 'items'})`}
-            </Text>
-            <Text style={[styles.cartHeaderIcon, { color: palette.border }]}>🛒</Text>
-          </View>
-          {!isCartEmpty ? (
-            <View style={styles.darkClearRow}>
-              <TouchableOpacity
-                onPress={props.onClearCart}
-                disabled={props.isMutating}
-                accessibilityRole="button"
-                accessibilityLabel="Clear cart"
+      <SectionHeader
+        title={isCartEmpty ? 'Your Cart' : `Your Cart (${itemCount} ${itemCount === 1 ? 'item' : 'items'})`}
+        subtitle={isCartEmpty ? 'Add products from the catalog' : 'Review items before checkout'}
+        titleColor={palette.text}
+        subtitleColor={palette.subText}
+        right={
+          !isCartEmpty ? (
+            <TouchableOpacity
+              onPress={props.onClearCart}
+              disabled={props.isMutating || isCartEmpty}
+              accessibilityRole="button"
+              accessibilityLabel="Clear cart"
+            >
+              <Text
+                style={[
+                  styles.clearCartLink,
+                  {
+                    color:
+                      props.isMutating || isCartEmpty
+                        ? palette.subText
+                        : isDark
+                          ? DARK_DELETE
+                          : '#ba1a1a'
+                  }
+                ]}
               >
-                <Text style={[styles.clearCartLink, { color: props.isMutating ? palette.subText : DARK_DELETE }]}>
-                  Clear Cart
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-        </>
-      ) : (
-        <View style={styles.cartHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>
-            Your Cart {isCartEmpty ? '' : `(${itemCount} ${itemCount === 1 ? 'item' : 'items'})`}
-          </Text>
-          <TouchableOpacity
-            onPress={props.onClearCart}
-            disabled={isPrimaryDisabled}
-            accessibilityRole="button"
-            accessibilityLabel="Clear cart"
-          >
-            <Text style={[styles.clearCartLink, { color: isPrimaryDisabled ? palette.subText : '#ba1a1a' }]}>
-              Clear Cart
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+                Clear
+              </Text>
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
-      {props.isLoading ? <StateMessage text="Sepet yukleniyor..." color={palette.subText} /> : null}
+      {props.isLoading ? <StateMessage text="Loading cart…" color={palette.subText} /> : null}
 
       {isCartEmpty && !props.isLoading && !props.errorMessage ? (
-        <StateMessage text="Sepetiniz bos. Urunler sekmesinden ekleme yapabilirsiniz." color={palette.subText} />
+        <StateMessage
+          variant="banner"
+          text="Your cart is empty. Browse Products to add items."
+          color={palette.subText}
+          backgroundColor={palette.mutedCard}
+          borderColor={palette.outlineVariant}
+        />
       ) : null}
 
       <View style={styles.itemList}>

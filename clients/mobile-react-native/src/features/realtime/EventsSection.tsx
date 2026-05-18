@@ -4,6 +4,7 @@ import { getOrderStatusLabel } from '../../theme/mobileTheme';
 import type { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '../../types/realtime';
 import type { MobilePalette, ThemeMode } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
+import { FeedIconBadge } from '../../ui/FeedIconBadge';
 
 const LIGHT_SECONDARY_ACCENT = '#006d3e';
 const LIGHT_TERTIARY_ACCENT = '#722736';
@@ -38,7 +39,7 @@ type FeedRow = {
   key: string;
   accent: FeedAccent;
   darkKind: DarkCardKind;
-  iconGlyph: string;
+  iconLabel: string;
   title: string;
   body: string;
   sortTime: number;
@@ -83,7 +84,7 @@ function buildFeedRows(
       key: `cart-${idx}-${item.productId}`,
       accent: 'secondary',
       darkKind: 'user',
-      iconGlyph: '🛒',
+      iconLabel: 'CT',
       title: 'Cart Updated',
       body: `User #${item.userId} ${item.action.toLowerCase()} product #${item.productId} (qty ${item.quantity}).`,
       sortTime: t || Date.now() - idx * 120000,
@@ -97,7 +98,7 @@ function buildFeedRows(
       key: `oc-${idx}-${item.orderId}`,
       accent: 'primary',
       darkKind: 'critical',
-      iconGlyph: '⚡',
+      iconLabel: 'OR',
       title: `Order #${item.orderId} Created`,
       body: `New order total ${item.totalAmount.toFixed(2)} (${getOrderStatusLabel(item.status)}).`,
       sortTime: t || Date.now() - idx * 900000,
@@ -115,7 +116,7 @@ function buildFeedRows(
       key: `os-${idx}-${item.orderId}`,
       accent,
       darkKind,
-      iconGlyph: cancelled ? '⚠️' : shipped ? '🚚' : '🔄',
+      iconLabel: cancelled ? 'AL' : shipped ? 'SH' : 'ST',
       title: shipped
         ? `Order #${item.orderId} Shipped`
         : cancelled
@@ -349,7 +350,12 @@ export function EventsSection(props: Props): React.JSX.Element {
                         }
                       ]}
                     >
-                      <Text style={{ fontSize: 22, color: tile.fg }}>{row.iconGlyph}</Text>
+                      <FeedIconBadge
+                        label={row.iconLabel}
+                        backgroundColor={tile.bg}
+                        textColor={tile.fg}
+                        size="md"
+                      />
                     </View>
                     <View style={edStyles.activityMain}>
                       <View style={edStyles.activityMetaRow}>
@@ -446,7 +452,12 @@ export function EventsSection(props: Props): React.JSX.Element {
                   ]}
                 >
                   <View style={[elStyles.iconBubble, { backgroundColor: bubble.bg }]}>
-                    <Text style={{ fontSize: 18 }}>{row.iconGlyph}</Text>
+                    <FeedIconBadge
+                      label={row.iconLabel}
+                      backgroundColor={bubble.bg}
+                      textColor={bubble.fg}
+                      size="sm"
+                    />
                   </View>
                   <View style={elStyles.feedBody}>
                     <View style={elStyles.feedTopLine}>

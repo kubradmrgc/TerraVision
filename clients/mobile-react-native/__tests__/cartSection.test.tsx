@@ -79,9 +79,8 @@ describe('CartSection', () => {
     const place = findByLabel(tree.root, 'Place order');
     const clear = findByLabel(tree.root, 'Clear cart');
     expect(place.length).toBe(1);
-    expect(clear.length).toBe(1);
     expect(place[0].props.disabled).toBe(true);
-    expect(clear[0].props.disabled).toBe(true);
+    expect(clear.length).toBe(0);
   });
 
   it('enables item actions when cart has products and not mutating', () => {

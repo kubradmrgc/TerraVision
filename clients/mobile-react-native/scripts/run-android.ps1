@@ -51,5 +51,44 @@ if (-not (Test-Path -LiteralPath $rn)) {
   Write-Error "react-native CLI not found at $rn - run npm install in $root"
 }
 $metroPort = if ($env:REACT_NATIVE_PACKAGER_PORT) { $env:REACT_NATIVE_PACKAGER_PORT } else { '8082' }
-Write-Host "Installing app; Metro should already run on port $metroPort (npm start). Set REACT_NATIVE_PACKAGER_PORT to override."
+$env:REACT_NATIVE_PACKAGER_PORT = $metroPort
+$env:RCT_METRO_PORT = $metroPort
+
+Write-Host "Metro port: $metroPort (npm start uses the same port in package.json)"
+
+$adb = Get-Command adb -ErrorAction SilentlyContinue
+if ($adb) {
+  $online = @(adb devices 2>$null | Select-String -Pattern '\tdevice$')
+  foreach ($line in $online) {
+    $serial = ($line -split '\s+', 2)[0]
+    if ($serial) {
+      adb -s $serial reverse "tcp:$metroPort" "tcp:$metroPort" 2>$null | Out-Null
+      # Default RN dev menu still mentions 8081; reverse both when Metro uses 8082.
+      if ($metroPort -ne '8081') {
+        adb -s $serial reverse tcp:8081 tcp:8081 2>$null | Out-Null
+      }
+      Write-Host "adb reverse tcp:$metroPort -> host (device $serial)"
+    }
+  }
+  if (-not $online.Count) {
+    Write-Warning "No adb device/emulator online. Start an AVD, then rerun."
+  }
+} else {
+  Write-Warning "adb not on PATH; emulator may not reach Metro on the host."
+}
+
+$listening = Get-NetTCPConnection -LocalPort $metroPort -State Listen -ErrorAction SilentlyContinue
+if (-not $listening) {
+  Write-Warning @"
+Metro is not listening on port $metroPort.
+In another terminal run:
+  cd clients/mobile-react-native
+  npm start
+Then press R twice in the emulator or tap RELOAD.
+"@
+} else {
+  Write-Host "Metro is listening on port $metroPort."
+}
+
+Write-Host "Installing app (Metro must stay running; --no-packager)."
 & $rn run-android --port $metroPort --no-packager

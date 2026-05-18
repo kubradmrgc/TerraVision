@@ -1,12 +1,7 @@
+import { ORDER_STATUS_LABELS, getOrderStatusLabel as sharedGetOrderStatusLabel } from '@terravision/shared';
 import { MobilePalette, MobileSection } from '../features/app/types';
 
-export const orderStatusLabels: Record<number, string> = {
-  1: 'Pending',
-  2: 'Confirmed',
-  3: 'Shipped',
-  4: 'Delivered',
-  5: 'Cancelled'
-};
+export const orderStatusLabels = ORDER_STATUS_LABELS;
 
 export const sectionLabels: Record<MobileSection, string> = {
   products: 'Products',
@@ -24,8 +19,7 @@ export const sectionIcons: Record<MobileSection, string> = {
   events: '⚡'
 };
 
-export const getOrderStatusLabel = (status: number): string =>
-  orderStatusLabels[status] ?? `Unknown(${status})`;
+export const getOrderStatusLabel = sharedGetOrderStatusLabel;
 
 export const getPalette = (themeMode: 'light' | 'dark'): MobilePalette =>
   themeMode === 'dark'

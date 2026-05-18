@@ -13,6 +13,7 @@ import type { ProductDto } from '../../types/product';
 import type { UploadFileInput } from '../../services/mediaService';
 import type { MobilePalette } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
+import { SectionHeader } from '../../ui/SectionHeader';
 import { AR_UPLOAD_HELP_TEXT } from '../ar/arUploadValidation';
 
 type Props = {
@@ -197,21 +198,21 @@ export function ProductsSection(props: Props): React.JSX.Element {
             { backgroundColor: palette.mutedCard, borderColor: palette.outlineVariant }
           ]}
         >
-          <View style={styles.adminTopBar}>
-            <View style={styles.adminTitleBlock}>
-              <Text style={[styles.sectionTitle, { color: palette.text }]}>AR Model Ingestion</Text>
-              <Text style={[styles.adminSubtitle, { color: palette.subText }]}>
-                Uploading spatial assets for field deployment
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.newAssetBtn, { backgroundColor: palette.primaryContainer }]}
-              onPress={props.onPickArFile}
-              disabled={props.arPendingProducts.length === 0}
-            >
-              <Text style={[styles.newAssetBtnText, { color: palette.onPrimaryContainer }]}>New asset</Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader
+            title="AR Model Ingestion"
+            subtitle="Upload spatial assets for field deployment"
+            titleColor={palette.text}
+            subtitleColor={palette.subText}
+            right={
+              <TouchableOpacity
+                style={[styles.newAssetBtn, { backgroundColor: palette.primaryContainer }]}
+                onPress={props.onPickArFile}
+                disabled={props.arPendingProducts.length === 0}
+              >
+                <Text style={[styles.newAssetBtnText, { color: palette.onPrimaryContainer }]}>New asset</Text>
+              </TouchableOpacity>
+            }
+          />
           <View style={styles.adminGrid}>
             <View style={[styles.adminCol, styles.adminColFirst]}>
               <Text style={[styles.caption, { color: palette.subText }]}>Upload AR model</Text>
@@ -222,7 +223,9 @@ export function ProductsSection(props: Props): React.JSX.Element {
                 accessibilityRole="button"
                 accessibilityLabel="Select AR model file"
               >
-                <Text style={[styles.uploadGlyph, { color: palette.subText }]}>⬆</Text>
+                <View style={[styles.uploadBadge, { borderColor: palette.outlineVariant }]}>
+                  <Text style={[styles.uploadBadgeText, { color: palette.brandTitle }]}>UP</Text>
+                </View>
                 <Text style={[styles.uploadHint, { color: palette.subText }]}>Tap to select (.usdz, .glb)</Text>
               </TouchableOpacity>
               <View style={[styles.pickerShell, { borderColor: palette.outlineVariant }]}>
@@ -242,7 +245,7 @@ export function ProductsSection(props: Props): React.JSX.Element {
             </View>
             <View style={[styles.adminCol, styles.adminColSecond]}>
               {props.arPendingProducts.length === 0 ? (
-                <StateMessage text="AR modeli bekleyen urun yok." color={palette.subText} />
+                <StateMessage text="No products awaiting an AR model." color={palette.subText} />
               ) : null}
               {props.selectedUploadFile ? (
                 <Text style={[styles.fileName, { color: palette.text }]} numberOfLines={1}>
@@ -302,26 +305,15 @@ export function ProductsSection(props: Props): React.JSX.Element {
         </View>
       )}
 
-      <View style={styles.inventoryHeader}>
-        <View style={styles.inventoryTitleRow}>
-          <Text style={styles.inventoryIcon}>📦</Text>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>Active Inventory</Text>
-        </View>
-        <View style={styles.viewToggle}>
-          <View style={[styles.toggleBtn, styles.toggleBtnFirst, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}>
-            <Text style={[styles.toggleIcon, { color: palette.subText }]}>☰</Text>
-          </View>
-          <View style={[styles.toggleBtn, styles.toggleBtnMid, { backgroundColor: palette.mutedCard, borderColor: palette.outlineVariant }]}>
-            <Text style={[styles.toggleIcon, { color: palette.text }]}>#</Text>
-          </View>
-          <View style={[styles.toggleBtn, { borderColor: palette.outlineVariant }]}>
-            <Text style={[styles.toggleIcon, { color: palette.subText }]}>▦</Text>
-          </View>
-        </View>
-      </View>
+      <SectionHeader
+        title="Active Inventory"
+        subtitle={`${props.products.length} product${props.products.length === 1 ? '' : 's'} in catalog`}
+        titleColor={palette.text}
+        subtitleColor={palette.subText}
+      />
 
       {props.products.length === 0 ? (
-        <StateMessage text="Urun bulunamadi." color={palette.subText} />
+        <StateMessage variant="banner" text="No products found." color={palette.subText} backgroundColor={palette.mutedCard} borderColor={palette.outlineVariant} />
       ) : (
         <FlatList
           data={props.products}
@@ -349,14 +341,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 2
   },
-  adminTopBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 16
-  },
-  adminTitleBlock: { flex: 1, marginRight: 8 },
-  adminSubtitle: { fontSize: 13, marginTop: 4, lineHeight: 18 },
   newAssetBtn: {
     borderRadius: 8,
     paddingVertical: 10,
@@ -378,7 +362,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12
   },
-  uploadGlyph: { fontSize: 28, marginBottom: 4 },
+  uploadBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8
+  },
+  uploadBadgeText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
   uploadHint: { fontSize: 14, textAlign: 'center', paddingHorizontal: 8 },
   pickerShell: { borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
   fileName: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
@@ -390,26 +383,6 @@ const styles = StyleSheet.create({
   clearFileText: { fontSize: 14, fontWeight: '600' },
   adminUploadBtn: { marginTop: 12 },
   disabledOpacity: { opacity: 0.55 },
-  inventoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12
-  },
-  inventoryTitleRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
-  inventoryIcon: { fontSize: 22, marginRight: 8 },
-  viewToggle: { flexDirection: 'row' },
-  toggleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  toggleBtnFirst: { marginRight: 6 },
-  toggleBtnMid: { marginRight: 6 },
-  toggleIcon: { fontSize: 16, fontWeight: '700' },
   productCard: {
     borderRadius: 12,
     borderWidth: 1,
