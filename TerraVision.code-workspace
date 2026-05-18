@@ -6,17 +6,18 @@
     }
   ],
   "settings": {
-    "npm.autoDetect": "on",
-    "npm.packageManager": "npm",
-    "npm.exclude": "**/node_modules/**",
-    "files.exclude": {
-      "**/clients/TerraVisionNative": true
+    "npm.autoDetect": "off",
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/android/.gradle/**": true,
+      "**/android/build/**": true,
+      "**/.next/**": true
     },
     "search.exclude": {
-      "**/clients/TerraVisionNative": true,
       "**/node_modules": true,
       "**/android/.gradle": true,
-      "**/android/build": true
+      "**/android/build": true,
+      "**/.next": true
     }
   }
 }
