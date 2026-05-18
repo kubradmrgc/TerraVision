@@ -23,7 +23,8 @@ then re-run this script or set ANDROID_HOME to your SDK path (e.g. C:\Users\YOU\
 
 # Gradle on Windows accepts forward slashes in local.properties
 $sdkPosix = ($sdk -replace '\\', '/').TrimEnd('/')
-$content = "sdk.dir=$sdkPosix`r`n"
-Set-Content -LiteralPath $outFile -Value $content -Encoding utf8
+$content = "sdk.dir=$sdkPosix`n"
+# UTF-8 without BOM (Set-Content -Encoding utf8 adds BOM and breaks Android Gradle sdk.dir parsing)
+[System.IO.File]::WriteAllText($outFile, $content, [System.Text.UTF8Encoding]::new($false))
 Write-Host "OK: wrote $outFile"
 Write-Host "    sdk.dir=$sdkPosix"

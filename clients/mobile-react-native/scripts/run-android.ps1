@@ -3,6 +3,9 @@
 $ErrorActionPreference = 'Stop'
 Set-Location (Resolve-Path (Join-Path $PSScriptRoot '..'))
 
+# Ensure sdk.dir in local.properties (without UTF-8 BOM) before Gradle runs
+& (Join-Path $PSScriptRoot 'write-android-sdk-path.ps1')
+
 $jbrCandidates = @(
   "$env:ProgramFiles\Android\Android Studio\jbr",
   "${env:ProgramFiles(x86)}\Android\Android Studio\jbr",
@@ -47,4 +50,6 @@ $rn = Join-Path $root 'node_modules\.bin\react-native.cmd'
 if (-not (Test-Path -LiteralPath $rn)) {
   Write-Error "react-native CLI not found at $rn - run npm install in $root"
 }
-& $rn run-android
+$metroPort = if ($env:REACT_NATIVE_PACKAGER_PORT) { $env:REACT_NATIVE_PACKAGER_PORT } else { '8082' }
+Write-Host "Installing app; Metro should already run on port $metroPort (npm start). Set REACT_NATIVE_PACKAGER_PORT to override."
+& $rn run-android --port $metroPort --no-packager

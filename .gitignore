@@ -6,6 +6,8 @@ obj/
 clients/mobile-react-native/android/local.properties
 clients/mobile-react-native/android/.gradle/
 clients/mobile-react-native/android/build/
+clients/mobile-react-native/android/app/.cxx/
+clients/mobile-react-native/android/app/build/
 clients/mobile-react-native/android/app/build/
 # Legacy nested RN repo (removed from git; use clients/mobile-react-native)
 clients/TerraVisionNative/
