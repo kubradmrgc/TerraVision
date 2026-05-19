@@ -6,6 +6,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.UiThreadUtil
 import java.net.URLEncoder
 
 class TerraVisionArModule(private val reactContext: ReactApplicationContext) :
@@ -33,8 +34,14 @@ class TerraVisionArModule(private val reactContext: ReactApplicationContext) :
 
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(sceneViewerIntentUrl))
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            reactContext.startActivity(intent)
-            promise.resolve(null)
+            UiThreadUtil.runOnUiThread {
+                try {
+                    reactContext.startActivity(intent)
+                    promise.resolve(null)
+                } catch (error: Exception) {
+                    promise.reject("AR_LAUNCH_ERROR", error.message, error)
+                }
+            }
         } catch (error: Exception) {
             promise.reject("AR_LAUNCH_ERROR", error.message, error)
         }
