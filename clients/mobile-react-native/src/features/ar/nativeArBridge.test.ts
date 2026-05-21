@@ -27,7 +27,7 @@ const preview: ArPreviewResponse = {
   suggestedScale: 1
 };
 
-const loadBridge = async (
+const loadBridge = (
   platform: 'ios' | 'android',
   nativeModule?: { launchArSession: jest.Mock }
 ) => {
@@ -35,7 +35,7 @@ const loadBridge = async (
   mockPlatformOS = platform;
   mockNativeModules = nativeModule ? { TerraVisionAr: nativeModule } : {};
 
-  return import('./nativeArBridge');
+  return require('./nativeArBridge') as typeof import('./nativeArBridge');
 };
 
 describe('launchNativeAr', () => {
@@ -47,7 +47,7 @@ describe('launchNativeAr', () => {
 
   it('delegates iOS USDZ previews to the native AR module', async () => {
     const nativeModule = { launchArSession: jest.fn().mockResolvedValue(undefined) };
-    const { launchNativeAr } = await loadBridge('ios', nativeModule);
+    const { launchNativeAr } = loadBridge('ios', nativeModule);
 
     await launchNativeAr(preview);
 
@@ -62,7 +62,7 @@ describe('launchNativeAr', () => {
 
   it('rejects non-USDZ iOS previews before invoking native AR', async () => {
     const nativeModule = { launchArSession: jest.fn().mockResolvedValue(undefined) };
-    const { launchNativeAr } = await loadBridge('ios', nativeModule);
+    const { launchNativeAr } = loadBridge('ios', nativeModule);
 
     await expect(
       launchNativeAr({
