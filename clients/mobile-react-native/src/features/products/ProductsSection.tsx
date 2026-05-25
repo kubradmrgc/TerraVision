@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import type { ProductDto } from '../../types/product';
+import { API_BASE_URL } from '../../config/env';
 import type { UploadFileInput } from '../../services/mediaService';
 import type { MobilePalette } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
@@ -45,6 +46,16 @@ function formatPriceTry(value: number): string {
 }
 
 const LOW_STOCK_MAX = 5;
+
+function resolveProductImageUrl(path: string): string {
+  if (!path) {
+    return '';
+  }
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  return `${API_BASE_URL.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 function ProductCard({
   item,
@@ -97,7 +108,7 @@ function ProductCard({
       <View style={[styles.imageWrap, { backgroundColor: palette.surfaceDim }]}>
         {showImage ? (
           <Image
-            source={{ uri: item.imageUrl }}
+            source={{ uri: resolveProductImageUrl(item.imageUrl) }}
             style={styles.productImage}
             resizeMode="cover"
             onError={() => setImageFailed(true)}

@@ -14,20 +14,25 @@ namespace TerraVision.Api.Services
         private readonly TerraVisionDbContext _dbContext;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IRealtimeSyncService _realtimeSyncService;
+        private readonly ICareService _careService;
 
         public OrderService(
             TerraVisionDbContext dbContext,
             IUnitOfWork unitOfWork,
-            IRealtimeSyncService realtimeSyncService)
+            IRealtimeSyncService realtimeSyncService,
+            ICareService careService)
         {
             _dbContext = dbContext;
             _unitOfWork = unitOfWork;
             _realtimeSyncService = realtimeSyncService;
+            _careService = careService;
         }
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            await using var transaction = _dbContext.Database.IsRelational()
+                ? await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+                : null;
 
             var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
             if (cart == null)
@@ -72,6 +77,8 @@ namespace TerraVision.Api.Services
 
             await _dbContext.Orders.AddAsync(order);
 
+            var lowStockEvents = new List<ProductLowStockEvent>();
+
             foreach (var item in cartItems)
             {
                 await _dbContext.OrderItems.AddAsync(new OrderItem
@@ -82,14 +89,36 @@ namespace TerraVision.Api.Services
                     Quantity = item.CartItem.Quantity
                 });
 
+                var previousStock = item.Product.StockQuantity;
                 item.Product.StockQuantity -= item.CartItem.Quantity;
                 item.Product.UpdatedDate = DateTime.UtcNow;
+
+                if (ProductStockAlertEvaluator.ShouldNotify(item.Product, previousStock))
+                {
+                    lowStockEvents.Add(new ProductLowStockEvent
+                    {
+                        ProductId = item.Product.Id,
+                        ProductName = item.Product.Name,
+                        StockQuantity = item.Product.StockQuantity,
+                        MinStockLevel = item.Product.MinStockLevel,
+                        Message = ProductStockAlertEvaluator.BuildMessage(
+                            item.Product.Name,
+                            item.Product.StockQuantity,
+                            item.Product.MinStockLevel),
+                        OccurredAtUtc = DateTime.UtcNow
+                    });
+                }
+
                 item.CartItem.IsDeleted = true;
                 item.CartItem.UpdatedDate = DateTime.UtcNow;
             }
 
             await _unitOfWork.CommitAsync();
-            await transaction.CommitAsync();
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,
@@ -98,6 +127,11 @@ namespace TerraVision.Api.Services
                 TotalAmount = order.TotalAmount,
                 OccurredAtUtc = DateTime.UtcNow
             });
+
+            foreach (var lowStockEvent in lowStockEvents)
+            {
+                await _realtimeSyncService.BroadcastProductLowStockAsync(lowStockEvent);
+            }
 
             return await GetMyOrderByIdAsync(userId, order.Id);
         }
@@ -312,6 +346,11 @@ namespace TerraVision.Api.Services
                     Reason = request.Reason,
                     CreatedDate = DateTime.UtcNow
                 });
+            }
+
+            if (previousStatus != request.Status && request.Status == OrderStatus.Delivered)
+            {
+                await _careService.ProvisionCalendarsForDeliveredOrderAsync(order.Id);
             }
 
             await _unitOfWork.CommitAsync();

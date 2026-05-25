@@ -65,7 +65,8 @@ jest.mock('../src/services/realtimeService', () => ({
     onStatusChanged: jest.fn(() => () => undefined),
     onCartChanged: jest.fn(() => () => undefined),
     onOrderCreated: jest.fn(() => () => undefined),
-    onOrderStatusChanged: jest.fn(() => () => undefined)
+    onOrderStatusChanged: jest.fn(() => () => undefined),
+    onReconnected: jest.fn(() => () => undefined)
   }
 }));
 
@@ -121,8 +122,13 @@ describe('useMobileAppController unit', () => {
     });
 
     expect(latest).not.toBeNull();
-    expect(latest!.isLoginDisabled).toBe(false);
+    expect(latest!.isLoginDisabled).toBe(true);
     const initialTheme = latest!.state.themeMode;
+
+    await act(async () => {
+      latest!.selectLoginPortal('customer');
+    });
+    expect(latest!.isLoginDisabled).toBe(false);
 
     await act(async () => {
       latest!.setEmail('');
@@ -152,6 +158,9 @@ describe('useMobileAppController handleCreateAppointment', () => {
       renderer = renderHookHarness();
     });
     await act(async () => {
+      latest!.selectLoginPortal('customer');
+    });
+    await act(async () => {
       await latest!.handleLogin();
     });
     return renderer!;
@@ -163,9 +172,11 @@ describe('useMobileAppController handleCreateAppointment', () => {
       renderer = renderHookHarness();
     });
     await act(async () => {
+      latest!.selectLoginPortal('admin');
+    });
+    await act(async () => {
       await latest!.handleLogin();
     });
-    expect(latest!.state.role).toBe(3);
 
     await act(async () => {
       await latest!.handleCreateAppointment();

@@ -1,72 +1,79 @@
-import {
-  HubConnection,
-  HubConnectionBuilder,
-  HttpTransportType,
-  LogLevel
-} from '@microsoft/signalr';
-import { SIGNALR_EVENTS } from '@terravision/shared';
-import { SIGNALR_HUB_URL } from '../config/env';
-import { tokenStore } from './tokenStore';
-import { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '../types/realtime';
+import { HubConnection } from '@microsoft/signalr';
 import {
   AUTOMATIC_RECONNECT_DELAYS_MS,
-  INITIAL_CONNECT_MAX_ROUNDS,
+  buildHubConnection,
+  createHandlerRegistry,
   delayBeforeConnectRetry,
-  sleep
-} from './realtimePolicy';
+  INITIAL_CONNECT_MAX_ROUNDS,
+  registerStandardHubHandlers,
+  sleep,
+  startHubWithTransportFallback,
+  wireHubLifecycle
+} from '@terravision/shared';
+import { SIGNALR_HUB_URL } from '../config/env';
+import { tokenStore } from './tokenStore';
+import type {
+  ExchangeOfferReceivedEvent,
+  ExchangeOfferStatusChangedEvent,
+  ExchangeProductListedEvent
+} from '@terravision/shared';
+import { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '../types/realtime';
 
-type CartChangedHandler = (event: CartChangedEvent) => void;
-type OrderCreatedHandler = (event: OrderCreatedEvent) => void;
-type OrderStatusChangedHandler = (event: OrderStatusChangedEvent) => void;
 export type RealtimeConnectionStatus = 'connecting' | 'connected' | 'degraded' | 'offline';
 type StatusChangedHandler = (status: RealtimeConnectionStatus) => void;
 
 class RealtimeService {
   private connection: HubConnection | null = null;
   private connecting = false;
-  private cartChangedHandlers: CartChangedHandler[] = [];
-  private orderCreatedHandlers: OrderCreatedHandler[] = [];
-  private orderStatusChangedHandlers: OrderStatusChangedHandler[] = [];
-  private statusHandlers: StatusChangedHandler[] = [];
+  private readonly cartChangedHandlers = createHandlerRegistry<CartChangedEvent>();
+  private readonly orderCreatedHandlers = createHandlerRegistry<OrderCreatedEvent>();
+  private readonly orderStatusChangedHandlers = createHandlerRegistry<OrderStatusChangedEvent>();
+  private readonly exchangeOfferReceivedHandlers = createHandlerRegistry<ExchangeOfferReceivedEvent>();
+  private readonly exchangeOfferStatusHandlers = createHandlerRegistry<ExchangeOfferStatusChangedEvent>();
+  private readonly exchangeProductListedHandlers = createHandlerRegistry<ExchangeProductListedEvent>();
+  private readonly statusHandlers = createHandlerRegistry<RealtimeConnectionStatus>();
+  private readonly reconnectedHandlers = createHandlerRegistry<void>();
 
-  private emitStatus(status: RealtimeConnectionStatus) {
-    this.statusHandlers.forEach((handler) => handler(status));
+  private emitStatus(status: RealtimeConnectionStatus): void {
+    this.statusHandlers.emit(status);
   }
 
-  private createConnection(transport: HttpTransportType): HubConnection {
-    const connection = new HubConnectionBuilder()
-      .withUrl(SIGNALR_HUB_URL, {
-        accessTokenFactory: async () => (await tokenStore.getToken()) ?? '',
-        transport
-      })
-      .withAutomaticReconnect([...AUTOMATIC_RECONNECT_DELAYS_MS])
-      .configureLogging(LogLevel.Warning)
-      .build();
+  private emitReconnected(): void {
+    this.reconnectedHandlers.emit(undefined);
+  }
 
-    connection.on(SIGNALR_EVENTS.cartChanged, (event: CartChangedEvent) => {
-      this.cartChangedHandlers.forEach((handler) => handler(event));
+  private createConnection(transport: Parameters<typeof buildHubConnection>[0]['transport']): HubConnection {
+    const connection = buildHubConnection({
+      hubUrl: SIGNALR_HUB_URL,
+      transport,
+      getAccessToken: () => tokenStore.getToken(),
+      automaticReconnectDelays: AUTOMATIC_RECONNECT_DELAYS_MS,
+      registerHandlers: (hub) => {
+        registerStandardHubHandlers(hub, {
+          onCartChanged: (event) => this.cartChangedHandlers.emit(event),
+          onOrderCreated: (event) => this.orderCreatedHandlers.emit(event),
+          onOrderStatusChanged: (event) => this.orderStatusChangedHandlers.emit(event),
+          onExchangeOfferReceived: (event) => this.exchangeOfferReceivedHandlers.emit(event),
+          onExchangeOfferStatusChanged: (event) => this.exchangeOfferStatusHandlers.emit(event),
+          onExchangeProductListed: (event) => this.exchangeProductListedHandlers.emit(event)
+        });
+      }
     });
-    connection.on(SIGNALR_EVENTS.orderCreated, (event: OrderCreatedEvent) => {
-      this.orderCreatedHandlers.forEach((handler) => handler(event));
-    });
-    connection.on(SIGNALR_EVENTS.orderStatusChanged, (event: OrderStatusChangedEvent) => {
-      this.orderStatusChangedHandlers.forEach((handler) => handler(event));
-    });
-    connection.onreconnecting(() => {
-      this.emitStatus('degraded');
-    });
-    connection.onreconnected(() => {
-      this.emitStatus('connected');
-    });
-    connection.onclose(() => {
-      this.emitStatus('offline');
+
+    wireHubLifecycle(connection, {
+      onReconnecting: () => this.emitStatus('degraded'),
+      onReconnected: () => {
+        this.emitStatus('connected');
+        this.emitReconnected();
+      },
+      onClose: () => this.emitStatus('offline')
     });
 
     return connection;
   }
 
   private async stopAndClearConnection(): Promise<void> {
-    const existing: HubConnection | null = this.connection;
+    const existing = this.connection;
     this.connection = null;
     if (!existing) {
       return;
@@ -74,23 +81,11 @@ class RealtimeService {
     await existing.stop().catch(() => undefined);
   }
 
-  /**
-   * Single attempt: WebSockets first, then LongPolling. Emits connected on success.
-   * Throws if both transports fail to start.
-   */
   private async startWithTransportFallback(): Promise<void> {
-    this.connection = this.createConnection(HttpTransportType.WebSockets);
-    try {
-      await this.connection.start();
-      this.emitStatus('connected');
-      return;
-    } catch {
-      this.emitStatus('degraded');
-      await this.connection.stop().catch(() => undefined);
-      this.connection = this.createConnection(HttpTransportType.LongPolling);
-      await this.connection.start();
-      this.emitStatus('connected');
-    }
+    this.connection = await startHubWithTransportFallback((transport) =>
+      this.createConnection(transport)
+    );
+    this.emitStatus('connected');
   }
 
   async connect(): Promise<void> {
@@ -99,6 +94,7 @@ class RealtimeService {
     }
     this.connecting = true;
     this.emitStatus('connecting');
+
     try {
       if (this.connection) {
         await this.connection.stop().catch(() => undefined);
@@ -138,35 +134,37 @@ class RealtimeService {
     this.emitStatus('offline');
   }
 
-  onCartChanged(handler: CartChangedHandler): () => void {
-    this.cartChangedHandlers.push(handler);
-
-    return () => {
-      this.cartChangedHandlers = this.cartChangedHandlers.filter((h) => h !== handler);
-    };
+  onCartChanged(handler: (event: CartChangedEvent) => void): () => void {
+    return this.cartChangedHandlers.add(handler);
   }
 
-  onOrderCreated(handler: OrderCreatedHandler): () => void {
-    this.orderCreatedHandlers.push(handler);
-
-    return () => {
-      this.orderCreatedHandlers = this.orderCreatedHandlers.filter((h) => h !== handler);
-    };
+  onOrderCreated(handler: (event: OrderCreatedEvent) => void): () => void {
+    return this.orderCreatedHandlers.add(handler);
   }
 
-  onOrderStatusChanged(handler: OrderStatusChangedHandler): () => void {
-    this.orderStatusChangedHandlers.push(handler);
+  onOrderStatusChanged(handler: (event: OrderStatusChangedEvent) => void): () => void {
+    return this.orderStatusChangedHandlers.add(handler);
+  }
 
-    return () => {
-      this.orderStatusChangedHandlers = this.orderStatusChangedHandlers.filter((h) => h !== handler);
-    };
+  onExchangeOfferReceived(handler: (event: ExchangeOfferReceivedEvent) => void): () => void {
+    return this.exchangeOfferReceivedHandlers.add(handler);
+  }
+
+  onExchangeOfferStatusChanged(handler: (event: ExchangeOfferStatusChangedEvent) => void): () => void {
+    return this.exchangeOfferStatusHandlers.add(handler);
+  }
+
+  onExchangeProductListed(handler: (event: ExchangeProductListedEvent) => void): () => void {
+    return this.exchangeProductListedHandlers.add(handler);
   }
 
   onStatusChanged(handler: StatusChangedHandler): () => void {
-    this.statusHandlers.push(handler);
-    return () => {
-      this.statusHandlers = this.statusHandlers.filter((h) => h !== handler);
-    };
+    return this.statusHandlers.add(handler);
+  }
+
+  /** Fires after SignalR automatic reconnect succeeds (invalidate TanStack queries here). */
+  onReconnected(handler: () => void): () => void {
+    return this.reconnectedHandlers.add(handler);
   }
 }
 

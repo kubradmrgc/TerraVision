@@ -3,6 +3,8 @@ import { appointmentService } from '../../services/appointmentService';
 import { cartService } from '../../services/cartService';
 import { orderService } from '../../services/orderService';
 import { productService } from '../../services/productService';
+import { careService } from '../../services/careService';
+import type { CareActionType } from '@terravision/shared';
 
 export function useCommerceQueries(enabled: boolean, role: number | null) {
   const queryClient = useQueryClient();
@@ -29,6 +31,12 @@ export function useCommerceQueries(enabled: boolean, role: number | null) {
     queryKey: ['appointments', role],
     queryFn: () => appointmentService.getMyAppointments(role ?? 1),
     enabled: enabled && role !== null
+  });
+
+  const careCalendarQuery = useQuery({
+    queryKey: ['care', 'calendar'],
+    queryFn: careService.getMyCalendar,
+    enabled: enabled && role === 1
   });
 
   const createAppointmentMutation = useMutation({
@@ -72,17 +80,27 @@ export function useCommerceQueries(enabled: boolean, role: number | null) {
     }
   });
 
+  const completeCareActionMutation = useMutation({
+    mutationFn: ({ calendarId, actionType }: { calendarId: number; actionType: CareActionType }) =>
+      careService.completeAction(calendarId, actionType),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['care'] });
+    }
+  });
+
   return {
     productsQuery,
     cartQuery,
     ordersQuery,
     appointmentsQuery,
+    careCalendarQuery,
     createAppointmentMutation,
     updateAppointmentStatusMutation,
     addItemMutation,
     updateItemMutation,
     removeItemMutation,
     clearCartMutation,
-    placeOrderMutation
+    placeOrderMutation,
+    completeCareActionMutation
   };
 }

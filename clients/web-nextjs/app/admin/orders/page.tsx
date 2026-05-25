@@ -2,27 +2,15 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { formatTryCurrency, getOrderStatusLabel, ORDER_STATUS_LABELS } from '@terravision/shared';
 import { orderService } from '../../../src/services/orderService';
 import { tokenStore } from '../../../src/services/tokenStore';
 import { OrderDto } from '../../../src/types/order';
 
-const orderStatusLabels: Record<number, string> = {
-  1: 'Pending',
-  2: 'Confirmed',
-  3: 'Shipped',
-  4: 'Delivered',
-  5: 'Cancelled'
-};
-
-const statusOptions = [
-  { value: 1, label: 'Pending' },
-  { value: 2, label: 'Confirmed' },
-  { value: 3, label: 'Shipped' },
-  { value: 4, label: 'Delivered' },
-  { value: 5, label: 'Cancelled' }
-];
-
-const getOrderStatusLabel = (status: number): string => orderStatusLabels[status] ?? `Unknown(${status})`;
+const statusOptions = Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({
+  value: Number(value),
+  label
+}));
 
 const getAllowedNextStatuses = (currentStatus: number): number[] => {
   switch (currentStatus) {
@@ -307,7 +295,7 @@ function AdminOrdersContent() {
                   Order #{order.id} · User #{order.userId}
                 </strong>
                 <span>
-                  {getOrderStatusLabel(order.status)} · {order.totalAmount} TL
+                  {getOrderStatusLabel(order.status)} · {formatTryCurrency(order.totalAmount)}
                 </span>
               </div>
 

@@ -21,12 +21,37 @@ describe('apiContract', () => {
     assert.match(API_ROUTES.products, /\/api\/products$/);
     assert.match(API_ROUTES.cartMe, /\/api\/cart\/me$/);
     assert.match(API_ROUTES.ordersFromCart, /\/api\/orders\/from-cart$/);
+    assert.match(API_ROUTES.mediaArModelsPresign, /\/api\/media\/ar-models\/presign$/);
+    assert.match(API_ROUTES.mediaUploadCapabilities, /\/api\/media\/upload-capabilities$/);
   });
 
   it('keeps SignalR event names aligned with hub', () => {
     assert.equal(SIGNALR_EVENTS.cartChanged, 'cart.changed');
+    assert.equal(SIGNALR_EVENTS.cartAbandoned, 'customer.cart.abandoned');
     assert.equal(SIGNALR_EVENTS.orderCreated, 'order.created');
     assert.equal(SIGNALR_EVENTS.orderStatusChanged, 'order.status.changed');
+    assert.equal(SIGNALR_EVENTS.arSessionCreated, 'ar.session.created');
+    assert.equal(SIGNALR_EVENTS.exchangeOfferReceived, 'exchange.offer.received');
+  });
+
+  it('exposes TerraTakas exchange routes', () => {
+    assert.match(API_ROUTES.EXCHANGE.products, /\/api\/exchange\/products$/);
+    assert.match(API_ROUTES.EXCHANGE.offers, /\/api\/exchange\/offers$/);
+  });
+
+  it('exposes AR session routes', () => {
+    assert.match(API_ROUTES.AR.saveSession, /\/api\/ar\/sessions$/);
+    assert.match(API_ROUTES.AR.getMySessions, /\/api\/ar\/sessions\/me$/);
+  });
+
+  it('exposes presigned media routes', () => {
+    assert.match(API_ROUTES.mediaArModelsPresign, /\/api\/media\/ar-models\/presign$/);
+    assert.match(API_ROUTES.mediaUploadCapabilities, /\/api\/media\/upload-capabilities$/);
+  });
+
+  it('exposes plant care calendar routes', () => {
+    assert.match(API_ROUTES.careMyCalendar, /\/api\/care\/my-calendar$/);
+    assert.match(API_ROUTES.careCompleteAction(12), /\/api\/care\/12\/complete-action$/);
   });
 
   it('documents DTO key contracts for smoke tests', () => {

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TerraVision.Api.Extensions;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.Auth;
 
@@ -18,6 +20,7 @@ namespace TerraVision.Api.Controllers
 
         [HttpPost("login")]
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.AuthSensitive)]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var response = await _authService.LoginAsync(request);
@@ -26,6 +29,7 @@ namespace TerraVision.Api.Controllers
 
         [HttpPost("register")]
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.AuthSensitive)]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             var response = await _authService.RegisterAsync(request);
@@ -34,6 +38,7 @@ namespace TerraVision.Api.Controllers
 
         [HttpPost("refresh")]
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.AuthSensitive)]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
         {
             var response = await _authService.RefreshTokenAsync(request);

@@ -27,7 +27,13 @@ function AppContent(): React.JSX.Element {
       <ArExperienceModal
         visible={controller.state.isArExperienceVisible}
         preview={controller.state.arPreview}
+        palette={controller.palette}
         onClose={() => controller.setIsArExperienceVisible(false)}
+        onSaveLayout={controller.handleSaveArLayout}
+        isSaving={controller.isArSessionSaving}
+        saveProgress={controller.arSessionSaveProgress}
+        saveErrorMessage={controller.arSessionSaveError}
+        saveSuccessMessage={controller.arSessionSaveSuccess}
       />
     </>
   );

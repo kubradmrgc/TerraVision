@@ -7,6 +7,8 @@ const ABBREV: Record<MobileSection, string> = {
   cart: 'Ca',
   orders: 'Or',
   appointments: 'Ap',
+  care: 'Tk',
+  exchange: 'Tt',
   events: 'Ev'
 };
 

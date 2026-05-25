@@ -208,6 +208,9 @@ describe('mobile integration scenarios', () => {
       renderer = renderHookHarness();
     });
     await act(async () => {
+      latest!.selectLoginPortal('admin');
+    });
+    await act(async () => {
       await latest!.handleLogin();
     });
     await act(async () => {
@@ -225,6 +228,9 @@ describe('mobile integration scenarios', () => {
     let renderer: ReturnType<typeof renderHookHarness>;
     await act(async () => {
       renderer = renderHookHarness();
+    });
+    await act(async () => {
+      latest!.selectLoginPortal('admin');
     });
     await act(async () => {
       await latest!.handleLogin();

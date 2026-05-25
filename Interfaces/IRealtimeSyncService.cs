@@ -1,3 +1,4 @@
+using TerraVision.Api.Models.DTOs;
 using TerraVision.Api.Models.Realtime;
 
 namespace TerraVision.Api.Interfaces
@@ -7,5 +8,11 @@ namespace TerraVision.Api.Interfaces
         Task BroadcastCartChangedAsync(CartChangedEvent cartEvent);
         Task BroadcastOrderCreatedAsync(OrderCreatedEvent orderEvent);
         Task BroadcastOrderStatusChangedAsync(OrderStatusChangedEvent orderEvent);
+        Task BroadcastArSessionCreatedAsync(ArSessionCreatedEvent arSessionEvent);
+        Task BroadcastCartAbandonedAsync(CartAbandonedEvent cartEvent, CancellationToken cancellationToken = default);
+        Task BroadcastProductLowStockAsync(ProductLowStockEvent lowStockEvent);
+        Task BroadcastExchangeOfferReceivedAsync(ExchangeOfferReceivedEvent offerEvent);
+        Task BroadcastExchangeOfferStatusChangedAsync(ExchangeOfferStatusChangedEvent offerEvent);
+        Task BroadcastExchangeProductListedAsync(ExchangeProductDto product);
     }
 }

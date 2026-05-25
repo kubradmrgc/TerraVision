@@ -1,1 +1,7 @@
-export type { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '@terravision/shared';
+export type {
+  ArSessionCreatedEvent,
+  CartChangedEvent,
+  OrderCreatedEvent,
+  OrderStatusChangedEvent,
+  ProductLowStockEvent
+} from '@terravision/shared';

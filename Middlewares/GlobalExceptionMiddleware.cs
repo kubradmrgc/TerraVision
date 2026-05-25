@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using TerraVision.Api.Exceptions;
 using TerraVision.Api.Models;
 
 namespace TerraVision.Api.Middlewares
@@ -55,6 +56,11 @@ namespace TerraVision.Api.Middlewares
                 case ArgumentException:
                 case InvalidOperationException:
                     statusCode = (int)HttpStatusCode.BadRequest;
+                    message = exception.Message;
+                    break;
+                case AppointmentConflictException:
+                case AppointmentConcurrencyException:
+                    statusCode = (int)HttpStatusCode.Conflict;
                     message = exception.Message;
                     break;
             }

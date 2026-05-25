@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { computeCartDisplayTotals, formatTryCurrency } from '@terravision/shared';
 import type { CartDto } from '../../types/cart';
 import type { MobilePalette, ThemeMode } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
@@ -19,14 +20,6 @@ type Props = {
   onRemove: (productId: number) => void;
 };
 
-function formatTry(value: number): string {
-  try {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 2 }).format(value);
-  } catch {
-    return `${value} TL`;
-  }
-}
-
 const DARK_PRIMARY_FIXED_DIM = '#73db9a';
 const DARK_ERROR_SOFT = 'rgba(255, 180, 171, 0.14)';
 const DARK_ERROR_BORDER = 'rgba(255, 180, 171, 0.28)';
@@ -38,10 +31,7 @@ export function CartSection(props: Props): React.JSX.Element {
   const cartItems = props.cart?.items ?? [];
   const isCartEmpty = cartItems.length === 0;
   const isPrimaryDisabled = props.isMutating || isCartEmpty;
-  const subtotal = cartItems.reduce((sum, x) => sum + (x.lineTotal ?? 0), 0);
-  const logisticsFee = 0;
-  const total = props.cart?.totalAmount ?? subtotal + logisticsFee;
-  const itemCount = cartItems.reduce((n, x) => n + x.quantity, 0);
+  const { subtotal, logisticsFee, total, itemCount } = computeCartDisplayTotals(props.cart);
 
   const itemCardBg = isDark ? palette.mutedCard : palette.surfaceLowest;
   const thumbFrameBg = isDark ? palette.imagePlaceholder : palette.bottomNav;
@@ -152,7 +142,7 @@ export function CartSection(props: Props): React.JSX.Element {
               <Text style={[styles.itemMeta, { color: palette.subText }]}>Ref #{item.productId}</Text>
               <View style={styles.itemFooterRow}>
                 <Text style={[styles.itemPrice, isDark && styles.itemPriceDark, { color: linePriceColor }]}>
-                  {formatTry(item.lineTotal)}
+                  {formatTryCurrency(item.lineTotal)}
                 </Text>
                 <View
                   style={[
@@ -201,30 +191,30 @@ export function CartSection(props: Props): React.JSX.Element {
               <Text style={[styles.darkSummaryTitle, { color: palette.text }]}>Order Summary</Text>
               <View style={styles.totalRow}>
                 <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>Subtotal</Text>
-                <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>{formatTry(subtotal)}</Text>
+                <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>{formatTryCurrency(subtotal)}</Text>
               </View>
               <View style={styles.totalRow}>
                 <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>Logistics Fee</Text>
-                <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>{formatTry(logisticsFee)}</Text>
+                <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>{formatTryCurrency(logisticsFee)}</Text>
               </View>
               <View style={[styles.darkSummaryTotalRow, { borderTopColor: palette.outlineVariant }]}>
                 <Text style={[styles.darkSummaryTotalLabel, { color: palette.text }]}>Total</Text>
-                <Text style={[styles.darkSummaryTotalValue, { color: palette.primaryContainer }]}>{formatTry(total)}</Text>
+                <Text style={[styles.darkSummaryTotalValue, { color: palette.primaryContainer }]}>{formatTryCurrency(total)}</Text>
               </View>
             </View>
           ) : (
             <View style={[styles.totalsBlock, { borderTopColor: palette.outlineVariant }]}>
               <View style={styles.totalRow}>
                 <Text style={[styles.totalLabel, { color: palette.subText }]}>Subtotal</Text>
-                <Text style={[styles.totalValue, { color: palette.text }]}>{formatTry(subtotal)}</Text>
+                <Text style={[styles.totalValue, { color: palette.text }]}>{formatTryCurrency(subtotal)}</Text>
               </View>
               <View style={styles.totalRow}>
                 <Text style={[styles.totalLabel, { color: palette.subText }]}>Logistics Fee</Text>
-                <Text style={[styles.totalValue, { color: palette.text }]}>{formatTry(logisticsFee)}</Text>
+                <Text style={[styles.totalValue, { color: palette.text }]}>{formatTryCurrency(logisticsFee)}</Text>
               </View>
               <View style={[styles.totalRow, styles.totalRowGrand]}>
                 <Text style={[styles.totalGrandLabel, { color: palette.text }]}>Total Amount</Text>
-                <Text style={[styles.totalGrandValue, { color: palette.brandTitle }]}>{formatTry(total)}</Text>
+                <Text style={[styles.totalGrandValue, { color: palette.brandTitle }]}>{formatTryCurrency(total)}</Text>
               </View>
             </View>
           )}

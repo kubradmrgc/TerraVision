@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { formatTryCurrency } from '@terravision/shared';
 import {
   Alert,
   ScrollView,
@@ -37,14 +38,6 @@ const LIGHT_ON_TERTIARY_FIXED_VARIANT = '#792d3b';
 
 const DARK_PRIMARY_FIXED_DIM = '#73db9a';
 const DARK_SHIPPED_TINT = 'rgba(115, 219, 154, 0.08)';
-
-function formatTry(value: number): string {
-  try {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 2 }).format(value);
-  } catch {
-    return `${value} TL`;
-  }
-}
 
 function formatRelativeSince(iso: string): string {
   const t = new Date(iso).getTime();
@@ -116,13 +109,13 @@ function activePipelineCount(list: OrderDto[]): number {
 function primaryLineSummary(order: OrderDto): { title: string; amount: string | null } {
   const items = order.items ?? [];
   if (items.length === 0) {
-    return { title: 'Order contents', amount: formatTry(order.totalAmount) };
+    return { title: 'Order contents', amount: formatTryCurrency(order.totalAmount) };
   }
   const first = items[0];
   const extra = items.length - 1;
   const title =
     extra > 0 ? `${first.productName} (+${extra} more)` : `${first.productName} (x${first.quantity})`;
-  return { title, amount: formatTry(first.lineTotal) };
+  return { title, amount: formatTryCurrency(first.lineTotal) };
 }
 
 function productHeadline(order: OrderDto): string {
@@ -300,7 +293,7 @@ function DarkCompactOrderCard({
   surfaceHighest: string;
 }): React.JSX.Element {
   const ref = orderTvRef(order.id);
-  const price = formatTry(order.totalAmount);
+  const price = formatTryCurrency(order.totalAmount);
   const title = productHeadline(order);
   const body = darkStatusCopy(order);
 

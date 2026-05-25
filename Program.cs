@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -8,9 +10,20 @@ using TerraVision.Api.Hubs;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Middlewares;
 using TerraVision.Api.Services;
+using TerraVision.Api.Extensions;
 using TerraVision.Api.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Reject oversized uploads at the host before buffering entire bodies into memory.
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = MediaUploadRules.MaxHttpRequestBodyBytes;
+});
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = MediaUploadRules.MaxHttpRequestBodyBytes;
+});
 
 // Add services to the container.
 builder.Services.AddOpenApi();
@@ -60,7 +73,12 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IRealtimeSyncService, SignalRRealtimeSyncService>();
-builder.Services.AddScoped<IMediaService, LocalMediaService>();
+builder.Services.AddTerraVisionMediaStorage(builder.Configuration, builder.Environment);
+builder.Services.AddScoped<IArSessionService, ArSessionService>();
+builder.Services.AddScoped<ICareService, CareService>();
+builder.Services.AddScoped<IExchangeService, ExchangeService>();
+builder.Services.AddTerraVisionEmail(builder.Configuration);
+builder.Services.AddTerraVisionCartAbandonment(builder.Configuration, builder.Environment);
 
 // JWT Authentication ayarları
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
@@ -99,6 +117,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddTerraVisionRateLimiting(builder.Configuration, builder.Environment);
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
@@ -149,6 +168,10 @@ app.UseStaticFiles();
 app.UseCors("TerraVisionClients");
 app.UseAuthentication();
 app.UseAuthorization();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseRateLimiter();
+}
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapHub<TerraVisionHub>("/hubs/terravision");

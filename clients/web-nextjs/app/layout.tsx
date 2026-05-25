@@ -4,7 +4,11 @@ import { TopNav } from './components/TopNav';
 
 export const metadata: Metadata = {
   title: 'TerraVision',
-  description: 'TerraVision Web Client'
+  description: 'Bitki ve bahçe platformu — müşteri alışverişi ve yönetici operasyonları',
+  icons: {
+    icon: '/brand/terravision-logo.png',
+    apple: '/brand/terravision-logo.png'
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="tr">
       <body>
         <TopNav />
-        <main className="tv-main">{children}</main>
+        <main className="tv-main tv-main--site">{children}</main>
       </body>
     </html>
   );

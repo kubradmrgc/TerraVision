@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { errorCodes, isErrorWithCode, pick } from '@react-native-documents/picker';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
@@ -9,17 +9,23 @@ import { mediaService } from '../../services/mediaService';
 import { productService } from '../../services/productService';
 import { onUnauthorized } from '../../services/apiClient';
 import { MobileSection, MobileAppState, ThemeMode } from './types';
+import type { LoginPortal } from '@terravision/shared';
 import { getPalette } from '../../theme/mobileTheme';
 import { useCommerceQueries } from './useCommerceQueries';
 import { validateArUploadFile } from '../ar/arUploadValidation';
 import { AUTH_UI_MESSAGES, buildPostLogoutState, getSessionRestoreStatus } from '../auth/session';
 import { pushUniqueEvent } from '../realtime/eventDedup';
 import { toStatusMessage } from '../../ui/httpError';
+import { roleMatchesPortal, portalRoleMismatchMessage, syncQueriesOnReconnect, USER_ROLE } from '@terravision/shared';
+import { arSessionService } from '../../services/arSessionService';
+import { mapArSessionSaveError } from '../ar/arSessionErrors';
+import { getMobileLoginPortalConfig } from '../auth/loginPortalConfig';
 import { AppointmentStatus } from '../../types/appointment';
+import type { CareActionType } from '@terravision/shared';
 
 const initialState: MobileAppState = {
-  email: 'admin@terravision.com',
-  password: 'admin123',
+  email: '',
+  password: '',
   loggedIn: false,
   isAdmin: false,
   role: null,
@@ -36,7 +42,8 @@ const initialState: MobileAppState = {
   selectedUploadProductId: null,
   selectedUploadFile: null,
   themeMode: 'light',
-  activeSection: 'products'
+  activeSection: 'products',
+  loginPortal: null
 };
 
 export function useMobileAppController() {
@@ -51,10 +58,17 @@ export function useMobileAppController() {
   const [appointmentErrorMessage, setAppointmentErrorMessage] = useState<string | null>(null);
   const [appointmentSuccessMessage, setAppointmentSuccessMessage] = useState<string | null>(null);
   const [appointmentFilterStatus, setAppointmentFilterStatus] = useState<'all' | AppointmentStatus>('all');
+  const [careErrorMessage, setCareErrorMessage] = useState<string | null>(null);
+  const [careSuccessMessage, setCareSuccessMessage] = useState<string | null>(null);
+  const [careMutatingKey, setCareMutatingKey] = useState<string | null>(null);
   const [arUploadErrorMessage, setArUploadErrorMessage] = useState<string | null>(null);
   const [arUploadSuccessMessage, setArUploadSuccessMessage] = useState<string | null>(null);
   const [arUploadProgress, setArUploadProgress] = useState(0);
   const [isArUploading, setIsArUploading] = useState(false);
+  const [isArSessionSaving, setIsArSessionSaving] = useState(false);
+  const [arSessionSaveProgress, setArSessionSaveProgress] = useState(0);
+  const [arSessionSaveError, setArSessionSaveError] = useState<string | null>(null);
+  const [arSessionSaveSuccess, setArSessionSaveSuccess] = useState<string | null>(null);
   const unauthorizedAlertShownRef = useRef(false);
   const cartEventSeenRef = useRef(new Set<string>());
   const cartEventOrderRef = useRef<string[]>([]);
@@ -74,7 +88,9 @@ export function useMobileAppController() {
     updateItemMutation,
     removeItemMutation,
     clearCartMutation,
-    placeOrderMutation
+    placeOrderMutation,
+    careCalendarQuery,
+    completeCareActionMutation
   } = useCommerceQueries(state.loggedIn, state.role);
 
   const isLoginDisabled = useMemo(() => !state.email || !state.password, [state.email, state.password]);
@@ -122,14 +138,22 @@ export function useMobileAppController() {
     setOrderSuccessMessage(null);
     setAppointmentSuccessMessage(null);
     setAppointmentErrorMessage(null);
+    setCareSuccessMessage(null);
+    setCareErrorMessage(null);
     setState((prev) => ({ ...prev, activeSection }));
   };
   const toggleTheme = () =>
     setState((prev) => ({ ...prev, themeMode: prev.themeMode === 'dark' ? ('light' as ThemeMode) : ('dark' as ThemeMode) }));
   const setIsArPreviewVisible = (isArPreviewVisible: boolean) =>
     setState((prev) => ({ ...prev, isArPreviewVisible }));
-  const setIsArExperienceVisible = (isArExperienceVisible: boolean) =>
+  const setIsArExperienceVisible = (isArExperienceVisible: boolean) => {
+    if (isArExperienceVisible) {
+      setArSessionSaveError(null);
+      setArSessionSaveSuccess(null);
+      setArSessionSaveProgress(0);
+    }
     setState((prev) => ({ ...prev, isArExperienceVisible }));
+  };
   const syncRealtimeSubscriptions = useCallback(() => {
     const unsubscribeStatus = realtimeService.onStatusChanged((status) => {
       setRealtimeStatus(status);
@@ -171,12 +195,19 @@ export function useMobileAppController() {
         )
       }));
       queryClient.invalidateQueries({ queryKey: ['orders'] }).catch(() => undefined);
+      if (event.newStatus === 4) {
+        queryClient.invalidateQueries({ queryKey: ['care'] }).catch(() => undefined);
+      }
+    });
+    const unsubscribeReconnect = realtimeService.onReconnected(() => {
+      void syncQueriesOnReconnect((filters) => queryClient.invalidateQueries(filters));
     });
     return () => {
       unsubscribeStatus();
       unsubscribeCart();
       unsubscribeCreated();
       unsubscribeOrderStatus();
+      unsubscribeReconnect();
     };
   }, [queryClient]);
 
@@ -247,22 +278,35 @@ export function useMobileAppController() {
   }, [arPendingProducts, state.selectedUploadProductId]);
 
   const handleLogin = async () => {
+    if (!state.loginPortal) {
+      Alert.alert('Giriş', 'Önce müşteri, danışman veya yönetici giriş türünü seçin.');
+      return;
+    }
+
     try {
       const auth = await authService.login({ email: state.email, password: state.password });
+      if (!roleMatchesPortal(auth.role, state.loginPortal)) {
+        await authService.logout();
+        Alert.alert('Hesap türü uyuşmuyor', portalRoleMismatchMessage(state.loginPortal));
+        return;
+      }
+
       setState((prev) => ({
         ...prev,
         isAdmin: auth.role === 3,
         role: auth.role,
-        loggedIn: true
+        loggedIn: true,
+        activeSection: auth.role === 3 ? 'products' : auth.role === 2 ? 'appointments' : 'products'
       }));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['products'] }),
         queryClient.invalidateQueries({ queryKey: ['cart'] }),
         queryClient.invalidateQueries({ queryKey: ['orders'] }),
-        queryClient.invalidateQueries({ queryKey: ['appointments'] })
+        queryClient.invalidateQueries({ queryKey: ['appointments'] }),
+        queryClient.invalidateQueries({ queryKey: ['care'] })
       ]);
     } catch {
-      Alert.alert('Login failed', AUTH_UI_MESSAGES.loginFailed);
+      Alert.alert('Giriş başarısız', AUTH_UI_MESSAGES.loginFailed);
     }
   };
 
@@ -437,6 +481,77 @@ export function useMobileAppController() {
     }
   };
 
+  const handleCompleteCareAction = async (calendarId: number, actionType: CareActionType) => {
+    const key = `${calendarId}-${actionType}`;
+    setCareMutatingKey(key);
+    setCareErrorMessage(null);
+    setCareSuccessMessage(null);
+    if (state.role !== USER_ROLE.Customer) {
+      setCareErrorMessage('Bakım takvimi yalnızca müşteri hesapları içindir.');
+      setCareMutatingKey(null);
+      return;
+    }
+    try {
+      await completeCareActionMutation.mutateAsync({ calendarId, actionType });
+      setCareSuccessMessage('Bakım görevi kaydedildi; sonraki tarih güncellendi.');
+    } catch (error) {
+      setCareErrorMessage(
+        toStatusMessage(error, 'Bakım görevi kaydedilemedi.', {
+          400: 'Geçersiz bakım isteği.',
+          401: AUTH_UI_MESSAGES.sessionExpired,
+          403: 'Bu işlem için müşteri oturumu gerekiyor.',
+          404: 'Bakım kaydı bulunamadı.'
+        })
+      );
+    } finally {
+      setCareMutatingKey(null);
+    }
+  };
+
+  const handleSaveArLayout = async (params: {
+    environmentNotes: string;
+    scaleX: number;
+    scaleY: number;
+    scaleZ: number;
+    rotationY: number;
+    screenshot: { uri: string; name: string; type: string };
+  }) => {
+    if (state.role !== USER_ROLE.Customer) {
+      Alert.alert('Yetki', 'AR odasi kaydi yalnizca musteri hesaplarinda aciktir.');
+      return;
+    }
+    if (!state.arPreview) {
+      return;
+    }
+
+    setArSessionSaveError(null);
+    setArSessionSaveSuccess(null);
+    try {
+      setIsArSessionSaving(true);
+      setArSessionSaveProgress(0);
+      await arSessionService.saveSession(
+        {
+          productId: state.arPreview.productId,
+          deviceModel: `${Platform.OS} ${String(Platform.Version)}`,
+          scaleX: params.scaleX,
+          scaleY: params.scaleY,
+          scaleZ: params.scaleZ,
+          rotationY: params.rotationY,
+          environmentNotes: params.environmentNotes,
+          screenshot: params.screenshot
+        },
+        { onProgress: (percent) => setArSessionSaveProgress(percent) }
+      );
+      setArSessionSaveProgress(100);
+      setArSessionSaveSuccess('Tasarim odaniza kaydedildi.');
+      Alert.alert('Basarili', 'AR yerlesiminiz kaydedildi. Web profilinizden goruntuleyebilirsiniz.');
+    } catch (error) {
+      setArSessionSaveError(mapArSessionSaveError(error));
+    } finally {
+      setIsArSessionSaving(false);
+    }
+  };
+
   const handlePreviewAr = async (productId: number) => {
     try {
       const preview = await arService.getProductPreview(productId);
@@ -549,6 +664,24 @@ export function useMobileAppController() {
   const setSelectedUploadProductId = (value: number | null) =>
     setState((prev) => ({ ...prev, selectedUploadProductId: value }));
 
+  const selectLoginPortal = (portal: LoginPortal) => {
+    const config = getMobileLoginPortalConfig(portal);
+    setState((prev) => ({
+      ...prev,
+      loginPortal: portal,
+      email: config.defaultEmail,
+      password: config.defaultPassword
+    }));
+  };
+
+  const clearLoginPortal = () =>
+    setState((prev) => ({
+      ...prev,
+      loginPortal: null,
+      email: '',
+      password: ''
+    }));
+
   return {
     state: {
       ...state,
@@ -561,9 +694,20 @@ export function useMobileAppController() {
     isLoginDisabled,
     arPendingProducts,
     canUploadArModel,
+    carePlants: careCalendarQuery.data?.plants ?? [],
     isCommerceLoading:
-      productsQuery.isLoading || cartQuery.isLoading || ordersQuery.isLoading || (state.role !== null && appointmentsQuery.isLoading),
-    commerceError: productsQuery.error ?? cartQuery.error ?? ordersQuery.error ?? appointmentsQuery.error ?? null,
+      productsQuery.isLoading ||
+      cartQuery.isLoading ||
+      ordersQuery.isLoading ||
+      (state.role !== null && appointmentsQuery.isLoading) ||
+      (state.role === USER_ROLE.Customer && careCalendarQuery.isLoading),
+    commerceError:
+      productsQuery.error ??
+      cartQuery.error ??
+      ordersQuery.error ??
+      appointmentsQuery.error ??
+      (state.role === USER_ROLE.Customer ? careCalendarQuery.error : null) ??
+      null,
     isCartMutating:
       addItemMutation.isPending ||
       updateItemMutation.isPending ||
@@ -571,6 +715,10 @@ export function useMobileAppController() {
       clearCartMutation.isPending,
     isOrderMutating: placeOrderMutation.isPending,
     isAppointmentMutating: createAppointmentMutation.isPending || updateAppointmentStatusMutation.isPending,
+    isCareMutating: completeCareActionMutation.isPending,
+    careMutatingKey,
+    careErrorMessage,
+    careSuccessMessage,
     totalAppointmentsCount: (appointmentsQuery.data ?? []).length,
     pendingAppointmentsCount: (appointmentsQuery.data ?? []).filter((x) => x.status === 1).length,
     completedAppointmentsCount: appointmentInsight.completed,
@@ -588,11 +736,18 @@ export function useMobileAppController() {
     arUploadSuccessMessage,
     arUploadProgress,
     isArUploading,
+    isArSessionSaving,
+    arSessionSaveProgress,
+    arSessionSaveError,
+    arSessionSaveSuccess,
+    handleSaveArLayout,
     realtimeStatus,
     activePillStyle,
     activePillTextStyle,
     setEmail,
     setPassword,
+    selectLoginPortal,
+    clearLoginPortal,
     setActiveSection,
     toggleTheme,
     setIsArPreviewVisible,
@@ -612,6 +767,7 @@ export function useMobileAppController() {
     setAppointmentFilterStatus,
     handleCreateAppointment,
     handleUpdateAppointmentStatus,
+    handleCompleteCareAction,
     handlePreviewAr,
     handleUploadArModel,
     handlePickArFile,

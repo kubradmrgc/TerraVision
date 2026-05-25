@@ -33,6 +33,96 @@ namespace TerraVision.Api.Data
                     IsActive = true, 
                     IsDeleted = false, 
                     CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) 
+                },
+                new User
+                {
+                    Id = 2,
+                    FirstName = "Demo",
+                    LastName = "Customer",
+                    Email = "customer@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$LXAiIikolyu25wuU7VFIb.o/QHItfLKu9Vj4Gjjbvdmsl3qnAo456"),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Customer,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new User
+                {
+                    Id = 3,
+                    FirstName = "Demo",
+                    LastName = "Consultant",
+                    Email = "consultant@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$yVosCupKynNPZpg2Eq2XBuwPtgX0xdtJ8vEMDyqq9cCI9ZEzyqwp."),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Consultant,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                }
+            );
+
+            var seedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            modelBuilder.Entity<Product>().HasData(
+                new Product
+                {
+                    Id = 1,
+                    Name = "Monstera Deliciosa",
+                    Description = "İç mekan için popüler, geniş yapraklı dekoratif bitki.",
+                    Price = 1299.00m,
+                    StockQuantity = 12,
+                    MinStockLevel = 3,
+                    SKU = "PLT-MON-001",
+                    ImageUrl = "/assets/product-images/monstera-deliciosa.jpg",
+                    IsArCompatible = true,
+                    CategoryId = 1,
+                    WateringIntervalDays = 7,
+                    FertilizingIntervalDays = 30,
+                    CleaningIntervalDays = 14,
+                    CareInstructions = "Toprak yüzeyi kuruyunca sulayın; doğrudan güneşten kaçının.",
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new Product
+                {
+                    Id = 2,
+                    Name = "Fiddle Leaf Fig",
+                    Description = "Modern salonlar için ikonik kauçuk ağacı türü.",
+                    Price = 1899.50m,
+                    StockQuantity = 8,
+                    MinStockLevel = 2,
+                    SKU = "PLT-FIC-002",
+                    ImageUrl = "/assets/product-images/fiddle-leaf-fig.jpg",
+                    IsArCompatible = false,
+                    CategoryId = 1,
+                    WateringIntervalDays = 10,
+                    FertilizingIntervalDays = 45,
+                    CleaningIntervalDays = 21,
+                    CareInstructions = "Yaprakları nemli bezle silin; kışın sulamayı seyreltin.",
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new Product
+                {
+                    Id = 3,
+                    Name = "Lavanta Saksısı",
+                    Description = "Balkon ve bahçe için kokulu lavanta bitkisi.",
+                    Price = 349.90m,
+                    StockQuantity = 25,
+                    MinStockLevel = 5,
+                    SKU = "PLT-LAV-003",
+                    ImageUrl = "/assets/product-images/lavender-pot.jpg",
+                    IsArCompatible = false,
+                    CategoryId = 2,
+                    WateringIntervalDays = 5,
+                    FertilizingIntervalDays = 21,
+                    CleaningIntervalDays = null,
+                    CareInstructions = "Tam güneşte yetiştirin; çiçeklenme sonrası hafif budama yapın.",
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
                 }
             );
         }

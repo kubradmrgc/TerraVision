@@ -10,6 +10,12 @@ namespace TerraVision.Api.Models.DTOs
         public DateTime AppointmentDate { get; set; }
         public string Notes { get; set; } = string.Empty;
         public AppointmentStatus Status { get; set; }
+        public AppointmentOutcome Outcome { get; set; }
+        public int? LinkedOrderId { get; set; }
+        public int? SatisfactionScore { get; set; }
+        public string? OutcomeNotes { get; set; }
+        public DateTime? OutcomeRecordedAt { get; set; }
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     }
 
     public class CreateAppointmentRequest
@@ -23,5 +29,7 @@ namespace TerraVision.Api.Models.DTOs
     {
         public int Id { get; set; }
         public AppointmentStatus Status { get; set; }
+        /// <summary>Optional optimistic token from a recent GET; omit to use server-loaded version.</summary>
+        public byte[]? RowVersion { get; set; }
     }
 }

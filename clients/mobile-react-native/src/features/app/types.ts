@@ -1,3 +1,4 @@
+import { LoginPortal } from '@terravision/shared';
 import { UploadFileInput } from '../../services/mediaService';
 import { ProductDto } from '../../services/productService';
 import { AppointmentDto } from '../../types/appointment';
@@ -7,7 +8,7 @@ import { OrderDto } from '../../types/order';
 import { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '../../types/realtime';
 
 export type ThemeMode = 'light' | 'dark';
-export type MobileSection = 'products' | 'cart' | 'orders' | 'appointments' | 'events';
+export type MobileSection = 'products' | 'cart' | 'orders' | 'appointments' | 'care' | 'exchange' | 'events';
 
 export type MobilePalette = {
   bg: string;
@@ -73,4 +74,5 @@ export type MobileAppState = {
   selectedUploadFile: UploadFileInput | null;
   themeMode: ThemeMode;
   activeSection: MobileSection;
+  loginPortal: LoginPortal | null;
 };

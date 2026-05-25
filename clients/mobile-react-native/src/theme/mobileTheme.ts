@@ -8,6 +8,8 @@ export const sectionLabels: Record<MobileSection, string> = {
   cart: 'Cart',
   orders: 'Orders',
   appointments: 'Appointments',
+  care: 'Takvimim',
+  exchange: 'TerraTakas',
   events: 'Events'
 };
 
@@ -16,6 +18,8 @@ export const sectionIcons: Record<MobileSection, string> = {
   cart: '🛒',
   orders: '📦',
   appointments: '🗓️',
+  care: '🌿',
+  exchange: '🔄',
   events: '⚡'
 };
 

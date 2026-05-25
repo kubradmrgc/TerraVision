@@ -34,7 +34,7 @@ public class ClientContractTests : IClassFixture<TerraVisionApiFactory>
             return;
 
         var first = doc.RootElement[0];
-        foreach (var key in new[] { "id", "name", "description", "price", "stockQuantity", "sku", "imageUrl", "isArCompatible", "categoryId" })
+        foreach (var key in new[] { "id", "name", "description", "price", "stockQuantity", "minStockLevel", "sku", "imageUrl", "isArCompatible", "categoryId" })
         {
             Assert.True(first.TryGetProperty(key, out _), $"ProductDto missing '{key}'");
         }

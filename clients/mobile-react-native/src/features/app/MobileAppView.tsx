@@ -1,46 +1,23 @@
 import React from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sectionLabels } from '../../theme/mobileTheme';
 import { mobileTypography } from '../../theme/mobileTypography';
 import type { MobileSection } from './types';
 import { useMobileAppController } from './useMobileAppController';
+import { MobileLoginFlow } from '../auth/MobileLoginFlow';
 import { RealtimeStatusBadge } from '../realtime/RealtimeStatusBadge';
 import { StateMessage } from '../../ui/StateMessage';
 import { BrandMark } from '../../ui/BrandMark';
-import { FormField } from '../../ui/FormField';
-import { PrimaryButton } from '../../ui/PrimaryButton';
 import { NavTabIcon } from '../../ui/NavTabIcon';
 import { ProductsSection } from '../products/ProductsSection';
 import { CartSection } from '../cart/CartSection';
 import { OrdersSection } from '../orders/OrdersSection';
 import { AppointmentsSection } from '../appointments/AppointmentsSection';
 import { EventsSection } from '../realtime/EventsSection';
-
-/** Stitch admin light hero (vertical farm / industrial); dimmed via overlay in RN. */
-const ADMIN_LIGHT_HERO_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCLBYfd-R71WN-M2vx6_vYkiH-BbXpc6iwksKIrhxE2p5ijVO2FfpnHjbh1j7c5lmavq_DuLIP3qp36Ri9yES1WbiS-6ANSI2zyd9gF1D3FdSfeuFxWwMhfDjNJY-ikiShly1y3J5VLjGNASiqkfFEF_DY62MH5JdFsBw2tt7rUPKaPAecTuetv4DszaSOcVfMGF9rIBORBOmmb1pu8_-QL4dpyeTMj-eKaT4dxkafeAjLG6discBlb06LKBo50cIV_ckdncYNUtZUh';
-
-/** Stitch admin dark hero (server rack / mint LEDs). */
-const ADMIN_DARK_HERO_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuBjUDULPtu2PC4wR0FoYy1h26-DqvZG4wPPPrPPqMgm1_uv_gvgM_rNsy5ciGvmIGZBrmWlDvytsh771MhYE95RFM6y8p5vLGCCvcdUNe-bMZvPS_-zPppLmLdA90EpXerAHgxIOMGx0eo95rXH_7sQ9LDQEhTK4FWqrChvlvKyNBSInpEXQ9Ywpdwn0y2PiLyyUEmi3NYEkl4U26u9yjeS69rrRRfj27UzR990xAbhNEOhyYgrMdeje-P0ByziiW9xGGZQUSQYQ971';
-
-/** Industrial precision dark login (matches Stitch admin dark HTML). */
-const DARK_LOGIN = {
-  bg: '#051426',
-  card: '#122033',
-  inputBg: '#010f21',
-  borderIndustrial: '#3e4a40',
-  text: '#d5e3fd',
-  muted: '#bdcabe',
-  mint: '#dbffe2',
-  ctaMint: '#86efac',
-  ctaNavy: '#00391d',
-  inputIcon: '#707970',
-  white: '#ffffff',
-  pillBorder: '#004c22',
-  pillBg: 'rgba(0, 76, 34, 0.2)'
-} as const;
+import { CareCalendarSection } from '../care/CareCalendarSection';
+import { ExchangeSection } from '../exchange/ExchangeSection';
+import { USER_ROLE } from '@terravision/shared';
 
 type Props = {
   controller: ReturnType<typeof useMobileAppController>;
@@ -51,7 +28,6 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
   const {
     state,
     palette,
-    isLoginDisabled,
     arPendingProducts,
     canUploadArModel,
     activePillStyle,
@@ -73,288 +49,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
   const bottomPad = Math.max(insets.bottom, 10) + 56;
 
   if (!state.loggedIn) {
-    if (state.themeMode === 'dark') {
-      const d = DARK_LOGIN;
-      return (
-        <SafeAreaView style={[styles.loginShell, { backgroundColor: d.bg }]} edges={['top', 'bottom']}>
-          <ScrollView
-            style={styles.darkAdminScroll}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={[
-              styles.darkAdminScrollContent,
-              { paddingBottom: Math.max(insets.bottom, 12) + 48 }
-            ]}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.darkAdminHero}>
-              <Image
-                source={{ uri: ADMIN_DARK_HERO_URI }}
-                style={[StyleSheet.absoluteFill, styles.darkAdminHeroImage]}
-                resizeMode="cover"
-              />
-              <View style={styles.darkAdminHeroScrim} />
-              <View style={styles.darkAdminHeroFade} />
-              <View style={[styles.darkAdminHeroHeader, { paddingTop: Math.max(insets.top, 10) }]}>
-                <BrandMark accentColor={d.ctaMint} markColor={d.mint} subtitleColor={d.muted} size="sm" />
-                <TouchableOpacity
-                  onPress={controller.toggleTheme}
-                  accessibilityRole="button"
-                  accessibilityLabel="Switch to light theme"
-                  style={[styles.themeChip, { borderColor: d.borderIndustrial }]}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Text style={[styles.themeChipText, { color: d.muted }]}>Light</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={[styles.loginColumn, styles.darkAdminCardOverlap]}>
-              <View
-                style={[
-                  styles.darkAdminCard,
-                  { backgroundColor: d.card, borderColor: d.borderIndustrial, shadowColor: '#000' }
-                ]}
-              >
-                <View style={styles.darkAdminCardHeader}>
-                  <View style={[styles.darkAdminPill, { backgroundColor: d.pillBg, borderColor: d.pillBorder }]}>
-                    <Text style={[styles.darkAdminPillText, mobileTypography.pill, { color: d.mint }]}>
-                      Administrator access
-                    </Text>
-                  </View>
-                  <Text style={[styles.darkAdminCardTitle, mobileTypography.cardTitle, { color: d.white }]}>
-                    System Login
-                  </Text>
-                  <Text style={[styles.darkAdminCardSubtitle, mobileTypography.bodySm, { color: d.muted }]}>
-                    Authenticate to access environmental data streams.
-                  </Text>
-                </View>
-
-                <FormField
-                  label="Work email"
-                  borderColor={d.borderIndustrial}
-                  backgroundColor={d.inputBg}
-                  textColor={d.text}
-                  labelColor={d.muted}
-                  placeholderColor={d.inputIcon}
-                  accentColor={d.ctaMint}
-                  secureToggleColor={d.inputIcon}
-                  placeholder="admin@terravision.corp"
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoCorrect={false}
-                  value={state.email}
-                  onChangeText={controller.setEmail}
-                />
-
-                <FormField
-                  label="Password"
-                  borderColor={d.borderIndustrial}
-                  backgroundColor={d.inputBg}
-                  textColor={d.text}
-                  labelColor={d.muted}
-                  placeholderColor={d.muted}
-                  accentColor={d.ctaMint}
-                  secureToggleColor={d.muted}
-                  placeholder="Enter your password"
-                  secureTextEntry
-                  value={state.password}
-                  onChangeText={controller.setPassword}
-                />
-
-                <View style={styles.darkAdminActions}>
-                  <PrimaryButton
-                    label="Sign in as admin"
-                    trailing="→"
-                    onPress={controller.handleLogin}
-                    backgroundColor={d.ctaMint}
-                    textColor={d.ctaNavy}
-                    disabled={isLoginDisabled}
-                  />
-                  <TouchableOpacity
-                    onPress={() =>
-                      Alert.alert(
-                        'Forgot password',
-                        'Please contact your administrator to reset your password.'
-                      )
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel="Forgot password"
-                  >
-                    <Text style={[styles.darkAdminForgot, mobileTypography.label, { color: d.muted }]}>
-                      Forgot password
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={[styles.proNotice, { backgroundColor: 'rgba(18, 32, 51, 0.85)', borderColor: d.borderIndustrial }]}>
-                <Text style={[styles.proNoticeText, mobileTypography.caption, { color: d.muted }]}>
-                  Restricted to TerraVision administrators. Unauthorized access is monitored.
-                </Text>
-              </View>
-            </View>
-          </ScrollView>
-
-          <View
-            style={[styles.darkAdminFooterBar, { paddingBottom: Math.max(insets.bottom, 12) }]}
-            pointerEvents="box-none"
-          >
-            <Text style={[styles.darkAdminFooterText, mobileTypography.caption, { color: d.inputIcon }]}>
-              Restricted access
-            </Text>
-          </View>
-        </SafeAreaView>
-      );
-    }
-
-    return (
-      <SafeAreaView style={[styles.loginShell, { backgroundColor: palette.bg }]} edges={['top', 'bottom']}>
-        <ScrollView
-          style={styles.darkAdminScroll}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.darkAdminScrollContent,
-            { paddingBottom: Math.max(insets.bottom, 12) + 48 }
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.darkAdminHero}>
-            <Image
-              source={{ uri: ADMIN_LIGHT_HERO_URI }}
-              style={[StyleSheet.absoluteFill, styles.lightAdminHeroImage]}
-              resizeMode="cover"
-            />
-            <View style={styles.lightAdminHeroOverlay} />
-            <View style={styles.lightAdminHeroFade} />
-            <View style={[styles.darkAdminHeroHeader, { paddingTop: Math.max(insets.top, 10) }]}>
-              <BrandMark
-                accentColor={palette.brandTitle}
-                markColor={palette.brandTitle}
-                subtitleColor={palette.subText}
-                size="sm"
-              />
-              <TouchableOpacity
-                onPress={controller.toggleTheme}
-                accessibilityRole="button"
-                accessibilityLabel="Switch to dark theme"
-                style={[styles.themeChip, { borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
-              >
-                <Text style={[styles.themeChipText, { color: palette.subText }]}>Dark</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={[styles.loginColumn, styles.darkAdminCardOverlap]}>
-            <View
-              style={[
-                styles.darkAdminCard,
-                {
-                  backgroundColor: palette.surfaceLowest,
-                  borderColor: palette.outlineVariant,
-                  shadowColor: '#000'
-                }
-              ]}
-            >
-              <View style={styles.darkAdminCardHeader}>
-                <View
-                  style={[
-                    styles.darkAdminPill,
-                    {
-                      backgroundColor: palette.mutedCard,
-                      borderColor: palette.outlineVariant
-                    }
-                  ]}
-                >
-                  <Text style={[styles.darkAdminPillText, mobileTypography.pill, { color: palette.brandTitle }]}>
-                    Administrator access
-                  </Text>
-                </View>
-                <Text style={[styles.darkAdminCardTitle, mobileTypography.cardTitle, { color: palette.text }]}>
-                  System Login
-                </Text>
-                <Text style={[styles.darkAdminCardSubtitle, mobileTypography.bodySm, { color: palette.subText }]}>
-                  Secure access to TerraVision operations and logistics data.
-                </Text>
-              </View>
-
-              <FormField
-                label="Work email"
-                borderColor={palette.outlineVariant}
-                backgroundColor={palette.surfaceLowest}
-                textColor={palette.text}
-                labelColor={palette.subText}
-                placeholderColor={palette.subText}
-                accentColor={palette.brandTitle}
-                secureToggleColor={palette.subText}
-                placeholder="admin@terravision.inc"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoCorrect={false}
-                value={state.email}
-                onChangeText={controller.setEmail}
-              />
-
-              <FormField
-                label="Password"
-                borderColor={palette.outlineVariant}
-                backgroundColor={palette.surfaceLowest}
-                textColor={palette.text}
-                labelColor={palette.subText}
-                placeholderColor={palette.subText}
-                accentColor={palette.brandTitle}
-                secureToggleColor={palette.subText}
-                placeholder="Enter your password"
-                secureTextEntry
-                value={state.password}
-                onChangeText={controller.setPassword}
-              />
-
-              <View style={styles.darkAdminActions}>
-                <PrimaryButton
-                  label="Sign in as admin"
-                  trailing="→"
-                  onPress={controller.handleLogin}
-                  backgroundColor={palette.button}
-                  textColor={palette.buttonText}
-                  disabled={isLoginDisabled}
-                />
-                <TouchableOpacity
-                  onPress={() =>
-                    Alert.alert('Forgot password', 'Please contact your administrator to reset your password.')
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="Forgot password"
-                >
-                  <Text style={[styles.darkAdminForgot, mobileTypography.label, { color: palette.subText }]}>
-                    Forgot password
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View
-              style={[
-                styles.proNotice,
-                { backgroundColor: palette.mutedCard, borderColor: palette.outlineVariant }
-              ]}
-            >
-              <Text style={[styles.proNoticeText, mobileTypography.caption, { color: palette.subText }]}>
-                Restricted to TerraVision administrators. Unauthorized access is monitored.
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
-
-        <View
-          style={[styles.darkAdminFooterBar, { paddingBottom: Math.max(insets.bottom, 12) }]}
-          pointerEvents="box-none"
-        >
-          <Text style={[styles.darkAdminFooterText, mobileTypography.caption, { color: palette.subText }]}>
-            Restricted access
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <MobileLoginFlow controller={controller} />;
   }
 
   return (
@@ -500,6 +195,19 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             averageAppointmentDurationMins={controller.averageAppointmentDurationMins}
           />
         )}
+        {state.activeSection === 'care' && (
+          <CareCalendarSection
+            plants={controller.carePlants}
+            palette={palette}
+            isLoading={controller.isCommerceLoading}
+            errorMessage={controller.careErrorMessage ?? (commerceError ? 'Bakım takvimi yüklenemedi.' : null)}
+            successMessage={controller.careSuccessMessage}
+            isMutating={controller.isCareMutating}
+            mutatingKey={controller.careMutatingKey}
+            onCompleteAction={controller.handleCompleteCareAction}
+          />
+        )}
+        {state.activeSection === 'exchange' && <ExchangeSection palette={palette} />}
         {state.activeSection === 'events' && (
           <EventsSection
             events={state.events}
@@ -523,7 +231,9 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
           }
         ]}
       >
-        {(Object.keys(sectionLabels) as MobileSection[]).map((section) => {
+        {(Object.keys(sectionLabels) as MobileSection[])
+          .filter((section) => section !== 'care' || state.role === USER_ROLE.Customer)
+          .map((section) => {
           const active = state.activeSection === section;
           return (
             <TouchableOpacity

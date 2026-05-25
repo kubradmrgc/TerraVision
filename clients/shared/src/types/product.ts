@@ -4,6 +4,7 @@ export interface ProductDto {
   description: string;
   price: number;
   stockQuantity: number;
+  minStockLevel: number;
   sku: string;
   imageUrl: string;
   isArCompatible: boolean;

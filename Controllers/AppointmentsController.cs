@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TerraVision.Api.Extensions;
 using TerraVision.Api.Enums;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
@@ -21,6 +23,7 @@ namespace TerraVision.Api.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Customer")]
+        [EnableRateLimiting(RateLimitPolicies.AppointmentsWrite)]
         public async Task<IActionResult> Create([FromBody] CreateAppointmentRequest request)
         {
             var customerId = GetCurrentUserId();
@@ -65,6 +68,35 @@ namespace TerraVision.Api.Controllers
             var userRole = GetCurrentUserRole();
             var appointment = await _appointmentService.UpdateAppointmentStatusAsync(userId, userRole, request);
             return Ok(appointment);
+        }
+
+        [HttpPut("{id}/outcome")]
+        [Authorize(Roles = "Consultant,Admin")]
+        public async Task<IActionResult> RecordOutcome(int id, [FromBody] RecordAppointmentOutcomeRequest request)
+        {
+            if (id != request.Id) return BadRequest("ID mismatch");
+
+            var userId = GetCurrentUserId();
+            var userRole = GetCurrentUserRole();
+            var appointment = await _appointmentService.RecordAppointmentOutcomeAsync(userId, userRole, request);
+            return Ok(appointment);
+        }
+
+        [HttpGet("analytics/performance")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPerformanceBoard()
+        {
+            var board = await _appointmentService.GetConsultantPerformanceBoardAsync();
+            return Ok(board);
+        }
+
+        [HttpGet("analytics/my-performance")]
+        [Authorize(Roles = "Consultant")]
+        public async Task<IActionResult> GetMyPerformance()
+        {
+            var consultantId = GetCurrentUserId();
+            var kpi = await _appointmentService.GetConsultantKpiAsync(consultantId);
+            return Ok(kpi);
         }
 
         private int GetCurrentUserId()
