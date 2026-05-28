@@ -278,6 +278,19 @@ namespace TerraVision.Api.Services
             await using var transaction = await _dbContext.Database.BeginTransactionAsync();
             var now = DateTime.UtcNow;
 
+            var updatedOrderRows = await _dbContext.Orders
+                .Where(o => o.Id == order.Id && !o.IsDeleted && o.Status == previousStatus)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(o => o.Status, request.Status)
+                    .SetProperty(o => o.UpdatedByUserId, updatedByUserId)
+                    .SetProperty(o => o.UpdatedReason, request.Reason)
+                    .SetProperty(o => o.UpdatedDate, now));
+
+            if (updatedOrderRows == 0)
+            {
+                throw new InvalidOperationException("Order status was updated by another request. Please refresh and try again.");
+            }
+
             if (request.Status == OrderStatus.Cancelled && previousStatus != OrderStatus.Cancelled)
             {
                 var orderItems = await _dbContext.OrderItems
@@ -298,7 +311,6 @@ namespace TerraVision.Api.Services
             order.UpdatedByUserId = updatedByUserId;
             order.UpdatedReason = request.Reason;
             order.UpdatedDate = now;
-            await _unitOfWork.CommitAsync();
             await transaction.CommitAsync();
 
             await _realtimeSyncService.BroadcastOrderStatusChangedAsync(new OrderStatusChangedEvent
