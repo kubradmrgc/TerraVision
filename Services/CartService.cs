@@ -45,7 +45,7 @@ namespace TerraVision.Api.Services
 
             var cart = await GetOrCreateCartAsync(userId);
             var existingItem = await _dbContext.CartItems
-                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId && !ci.IsDeleted);
+                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId);
 
             if (existingItem == null)
             {
@@ -58,7 +58,17 @@ namespace TerraVision.Api.Services
             }
             else
             {
-                existingItem.Quantity += request.Quantity;
+                if (existingItem.IsDeleted)
+                {
+                    existingItem.Quantity = request.Quantity;
+                    existingItem.IsDeleted = false;
+                    existingItem.IsActive = true;
+                }
+                else
+                {
+                    existingItem.Quantity += request.Quantity;
+                }
+
                 existingItem.UpdatedDate = DateTime.UtcNow;
             }
 

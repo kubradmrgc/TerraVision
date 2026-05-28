@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TerraVision.Api.Enums;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
 
@@ -22,19 +23,38 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> Create([FromBody] CreateAppointmentRequest request)
         {
-            // Extract logged-in customer's ID from JWT Claims
-            var customerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(customerIdStr, out int customerId))
+            var customerId = GetCurrentUserId();
+            if (customerId == null)
+            {
                 return Unauthorized();
+            }
 
-            var appointment = await _appointmentService.CreateAppointmentAsync(customerId, request);
+            var appointment = await _appointmentService.CreateAppointmentAsync(customerId.Value, request);
             return CreatedAtAction(nameof(GetById), new { id = appointment.Id }, appointment);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
             var appointment = await _appointmentService.GetAppointmentByIdAsync(id);
+            if (appointment == null)
+            {
+                return NotFound();
+            }
+
+            if (!User.IsInRole(UserRole.Admin.ToString()) &&
+                appointment.CustomerId != userId.Value &&
+                appointment.ConsultantId != userId.Value)
+            {
+                return Forbid();
+            }
+
             return Ok(appointment);
         }
 
@@ -42,10 +62,10 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> GetMyCustomerAppointments()
         {
-            var customerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(customerIdStr, out int customerId)) return Unauthorized();
+            var customerId = GetCurrentUserId();
+            if (customerId == null) return Unauthorized();
 
-            var appointments = await _appointmentService.GetCustomerAppointmentsAsync(customerId);
+            var appointments = await _appointmentService.GetCustomerAppointmentsAsync(customerId.Value);
             return Ok(appointments);
         }
 
@@ -53,10 +73,10 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Consultant,Admin")]
         public async Task<IActionResult> GetMyConsultantAppointments()
         {
-            var consultantIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(consultantIdStr, out int consultantId)) return Unauthorized();
+            var consultantId = GetCurrentUserId();
+            if (consultantId == null) return Unauthorized();
 
-            var appointments = await _appointmentService.GetConsultantAppointmentsAsync(consultantId);
+            var appointments = await _appointmentService.GetConsultantAppointmentsAsync(consultantId.Value);
             return Ok(appointments);
         }
 
@@ -66,11 +86,17 @@ namespace TerraVision.Api.Controllers
         {
             if (id != request.Id) return BadRequest("ID mismatch");
 
-            var consultantIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(consultantIdStr, out int consultantId)) return Unauthorized();
+            var consultantId = GetCurrentUserId();
+            if (consultantId == null) return Unauthorized();
 
-            var appointment = await _appointmentService.UpdateAppointmentStatusAsync(consultantId, request);
+            var appointment = await _appointmentService.UpdateAppointmentStatusAsync(consultantId.Value, request);
             return Ok(appointment);
+        }
+
+        private int? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.TryParse(userIdClaim, out var userId) ? userId : null;
         }
     }
 }
