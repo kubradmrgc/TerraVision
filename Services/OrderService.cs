@@ -26,59 +26,79 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
-            var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
-            if (cart == null)
-            {
-                throw new InvalidOperationException("Cart not found.");
-            }
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            Order order;
 
-            var cartItems = await _dbContext.CartItems
-                .Where(ci => ci.CartId == cart.Id && !ci.IsDeleted)
-                .Join(_dbContext.Products,
-                    ci => ci.ProductId,
-                    p => p.Id,
-                    (ci, p) => new { CartItem = ci, Product = p })
-                .ToListAsync();
-
-            if (cartItems.Count == 0)
+            try
             {
-                throw new InvalidOperationException("Cart is empty.");
-            }
-
-            foreach (var item in cartItems)
-            {
-                if (item.Product.StockQuantity < item.CartItem.Quantity)
+                var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
+                if (cart == null)
                 {
-                    throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
+                    throw new InvalidOperationException("Cart not found.");
                 }
-            }
 
-            var order = new Order
-            {
-                UserId = userId,
-                TotalAmount = cartItems.Sum(x => x.Product.Price * x.CartItem.Quantity)
-            };
+                var cartItems = await _dbContext.CartItems
+                    .Where(ci => ci.CartId == cart.Id && !ci.IsDeleted)
+                    .Join(_dbContext.Products,
+                        ci => ci.ProductId,
+                        p => p.Id,
+                        (ci, p) => new { CartItem = ci, Product = p })
+                    .ToListAsync();
 
-            await _dbContext.Orders.AddAsync(order);
-            await _unitOfWork.CommitAsync();
-
-            foreach (var item in cartItems)
-            {
-                await _dbContext.OrderItems.AddAsync(new OrderItem
+                if (cartItems.Count == 0)
                 {
-                    OrderId = order.Id,
-                    ProductId = item.Product.Id,
-                    UnitPrice = item.Product.Price,
-                    Quantity = item.CartItem.Quantity
-                });
+                    throw new InvalidOperationException("Cart is empty.");
+                }
 
-                item.Product.StockQuantity -= item.CartItem.Quantity;
-                item.Product.UpdatedDate = DateTime.UtcNow;
-                item.CartItem.IsDeleted = true;
-                item.CartItem.UpdatedDate = DateTime.UtcNow;
+                var utcNow = DateTime.UtcNow;
+                var cartItemIds = cartItems.Select(x => x.CartItem.Id).ToList();
+                var claimedCartRows = await _dbContext.CartItems
+                    .Where(ci => cartItemIds.Contains(ci.Id) && ci.CartId == cart.Id && !ci.IsDeleted)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(ci => ci.IsDeleted, true)
+                        .SetProperty(ci => ci.UpdatedDate, utcNow));
+
+                if (claimedCartRows != cartItemIds.Count)
+                {
+                    throw new InvalidOperationException("Cart changed while the order was being placed. Please review your cart and try again.");
+                }
+
+                foreach (var item in cartItems)
+                {
+                    var stockRows = await _dbContext.Products
+                        .Where(p => p.Id == item.Product.Id && p.StockQuantity >= item.CartItem.Quantity)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.StockQuantity, p => p.StockQuantity - item.CartItem.Quantity)
+                            .SetProperty(p => p.UpdatedDate, utcNow));
+
+                    if (stockRows != 1)
+                    {
+                        throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
+                    }
+                }
+
+                order = new Order
+                {
+                    UserId = userId,
+                    TotalAmount = cartItems.Sum(x => x.Product.Price * x.CartItem.Quantity),
+                    Items = cartItems.Select(item => new OrderItem
+                    {
+                        ProductId = item.Product.Id,
+                        UnitPrice = item.Product.Price,
+                        Quantity = item.CartItem.Quantity
+                    }).ToList()
+                };
+
+                await _dbContext.Orders.AddAsync(order);
+                await _unitOfWork.CommitAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
 
-            await _unitOfWork.CommitAsync();
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,
@@ -248,24 +268,67 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> UpdateOrderStatusAsync(int orderId, int updatedByUserId, UpdateOrderStatusRequest request)
         {
-            var order = await _dbContext.Orders
-                .SingleOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
-            if (order == null)
-            {
-                throw new KeyNotFoundException("Order not found.");
-            }
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            Order order;
+            OrderStatus previousStatus;
 
-            var previousStatus = order.Status;
-            if (!IsStatusTransitionAllowed(previousStatus, request.Status))
+            try
             {
-                throw new InvalidOperationException($"Invalid status transition: {previousStatus} -> {request.Status}");
-            }
+                order = await _dbContext.Orders
+                    .SingleOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
+                if (order == null)
+                {
+                    throw new KeyNotFoundException("Order not found.");
+                }
 
-            order.Status = request.Status;
-            order.UpdatedByUserId = updatedByUserId;
-            order.UpdatedReason = request.Reason;
-            order.UpdatedDate = DateTime.UtcNow;
-            await _unitOfWork.CommitAsync();
+                previousStatus = order.Status;
+                if (!IsStatusTransitionAllowed(previousStatus, request.Status))
+                {
+                    throw new InvalidOperationException($"Invalid status transition: {previousStatus} -> {request.Status}");
+                }
+
+                var utcNow = DateTime.UtcNow;
+                var updatedRows = await _dbContext.Orders
+                    .Where(o => o.Id == orderId && !o.IsDeleted && o.Status == previousStatus)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(o => o.Status, request.Status)
+                        .SetProperty(o => o.UpdatedByUserId, updatedByUserId)
+                        .SetProperty(o => o.UpdatedReason, request.Reason)
+                        .SetProperty(o => o.UpdatedDate, utcNow));
+
+                if (updatedRows != 1)
+                {
+                    throw new InvalidOperationException("Order status changed while the update was being processed. Please retry.");
+                }
+
+                if (request.Status == OrderStatus.Cancelled && previousStatus != OrderStatus.Cancelled)
+                {
+                    var orderItems = await _dbContext.OrderItems
+                        .Where(oi => oi.OrderId == order.Id && !oi.IsDeleted)
+                        .ToListAsync();
+
+                    foreach (var item in orderItems)
+                    {
+                        await _dbContext.Products
+                            .Where(p => p.Id == item.ProductId)
+                            .ExecuteUpdateAsync(setters => setters
+                                .SetProperty(p => p.StockQuantity, p => p.StockQuantity + item.Quantity)
+                                .SetProperty(p => p.UpdatedDate, utcNow));
+                    }
+                }
+
+                order.Status = request.Status;
+                order.UpdatedByUserId = updatedByUserId;
+                order.UpdatedReason = request.Reason;
+                order.UpdatedDate = utcNow;
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             await _realtimeSyncService.BroadcastOrderStatusChangedAsync(new OrderStatusChangedEvent
             {
