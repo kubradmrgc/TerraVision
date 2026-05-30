@@ -72,6 +72,26 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def releaseSigningConfigKeys = [
+    "TERRAVISION_UPLOAD_STORE_FILE",
+    "TERRAVISION_UPLOAD_STORE_PASSWORD",
+    "TERRAVISION_UPLOAD_KEY_ALIAS",
+    "TERRAVISION_UPLOAD_KEY_PASSWORD",
+]
+def releaseSigningConfigValues = releaseSigningConfigKeys.collectEntries { key ->
+    [(key): project.findProperty(key) ?: System.getenv(key)]
+}
+def hasAnyReleaseSigningConfigValue = releaseSigningConfigValues.values().any { value ->
+    value != null && !value.toString().trim().isEmpty()
+}
+def hasReleaseSigningConfig = releaseSigningConfigValues.values().every { value ->
+    value != null && !value.toString().trim().isEmpty()
+}
+
+if (hasAnyReleaseSigningConfigValue && !hasReleaseSigningConfig) {
+    throw new GradleException("Release signing requires all of: ${releaseSigningConfigKeys.join(', ')}")
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -92,15 +112,24 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigningConfig) {
+            release {
+                storeFile file(releaseSigningConfigValues["TERRAVISION_UPLOAD_STORE_FILE"].toString())
+                storePassword releaseSigningConfigValues["TERRAVISION_UPLOAD_STORE_PASSWORD"].toString()
+                keyAlias releaseSigningConfigValues["TERRAVISION_UPLOAD_KEY_ALIAS"].toString()
+                keyPassword releaseSigningConfigValues["TERRAVISION_UPLOAD_KEY_PASSWORD"].toString()
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Release artifacts must not fall back to the checked-in debug keystore.
+            if (hasReleaseSigningConfig) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
