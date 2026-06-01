@@ -22,6 +22,7 @@ jest.mock('@react-native-documents/picker', () => ({
 jest.mock('../src/features/auth/session', () => ({
   AUTH_UI_MESSAGES: {
     loginFailed: 'Email veya sifre gecersiz olabilir.',
+    registerFailed: 'Kayit tamamlanamadi.',
     sessionExpired: 'Oturumunuz sonlandi. Lutfen tekrar giris yapin.',
     sessionPartial: 'Oturum bilgisi eksik bulundu. Lutfen tekrar giris yapin.'
   },
@@ -53,6 +54,7 @@ jest.mock('../src/services/authService', () => {
   return {
     authService: {
       login: mockAuthLogin,
+      register: jest.fn(async () => ({ role: 1 })),
       logout: jest.fn(async () => undefined)
     }
   };

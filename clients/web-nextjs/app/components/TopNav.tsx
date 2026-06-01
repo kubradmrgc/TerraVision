@@ -34,7 +34,10 @@ const ROLE_CATEGORIES: RoleCategory[] = [
     id: 'customer',
     label: 'Müşteri',
     hint: 'Alışveriş ve AR deneyimi',
-    links: [{ href: '/login', label: 'Giriş', exact: true }]
+    links: [
+      { href: '/login', label: 'Giriş', exact: true },
+      { href: '/register', label: 'Kayıt ol' }
+    ]
   },
   {
     id: 'consultant',
@@ -69,7 +72,7 @@ function isRoleActive(pathname: string, role: RoleCategory): boolean {
 }
 
 function isAnyLoginActive(pathname: string): boolean {
-  return pathname.startsWith('/login') || pathname.startsWith('/admin');
+  return pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/admin');
 }
 
 export function TopNav() {

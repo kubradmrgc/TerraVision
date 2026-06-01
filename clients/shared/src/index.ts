@@ -1,4 +1,5 @@
 export * from './userRoles';
+export * from './auth/registerValidation';
 export * from './apiContract';
 export * from './mediaPresignedUpload';
 export * from './orderStatus';

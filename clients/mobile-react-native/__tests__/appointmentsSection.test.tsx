@@ -32,7 +32,13 @@ const sampleAppointments: AppointmentDto[] = [
     consultantId: 2,
     appointmentDate: '2026-06-01T10:00:00Z',
     notes: 'sample',
-    status: 1
+    status: 1,
+    outcome: 0,
+    linkedOrderId: null,
+    satisfactionScore: null,
+    outcomeNotes: null,
+    outcomeRecordedAt: null,
+    rowVersion: 'dGVzdA=='
   }
 ];
 

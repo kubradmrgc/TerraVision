@@ -1,1 +1,1 @@
-export type { LoginRequest, AuthResponse } from '@terravision/shared';
+export type { LoginRequest, RegisterRequest, AuthResponse } from '@terravision/shared';

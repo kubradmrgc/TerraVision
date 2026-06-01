@@ -29,9 +29,12 @@ export function HomeLoginBlock({ variant, id }: Props) {
           Giriş yap ve alışverişe başla
           <span aria-hidden="true">→</span>
         </Link>
+        <Link href="/register" className="tv-home-login-btn tv-home-login-btn--secondary">
+          Yeni hesap oluştur
+        </Link>
         <p className="tv-home-login-hint">
-          Hesabınız yok mu? Demo müşteri hesabıyla giriş sayfasından deneyebilirsiniz. Danışman ve
-          yönetici girişi için üst menüdeki <strong>Giriş</strong> alanını kullanın.
+          Kayıt olduktan sonra web ve mobilde aynı hesapla giriş yapabilirsiniz. Danışman ve yönetici
+          girişi için üst menüdeki <strong>Giriş</strong> alanını kullanın.
         </p>
       </div>
     </aside>

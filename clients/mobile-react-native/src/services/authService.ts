@@ -1,11 +1,17 @@
 import { API_ROUTES } from '@terravision/shared';
 import { apiClient } from './apiClient';
 import { tokenStore } from './tokenStore';
-import { AuthResponse, LoginRequest } from '../types/auth';
+import { AuthResponse, LoginRequest, RegisterRequest } from '../types/auth';
 
 export const authService = {
   async login(payload: LoginRequest): Promise<AuthResponse> {
     const { data } = await apiClient.post<AuthResponse>(API_ROUTES.authLogin, payload);
+    await tokenStore.setTokens(data.token, data.refreshToken);
+    return data;
+  },
+
+  async register(payload: RegisterRequest): Promise<AuthResponse> {
+    const { data } = await apiClient.post<AuthResponse>(API_ROUTES.authRegister, payload);
     await tokenStore.setTokens(data.token, data.refreshToken);
     return data;
   },

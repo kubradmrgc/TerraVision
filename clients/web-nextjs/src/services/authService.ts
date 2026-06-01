@@ -1,17 +1,27 @@
-import { API_ROUTES, USER_ROLE } from '@terravision/shared';
+import { API_ROUTES, RegisterRequest, USER_ROLE } from '@terravision/shared';
 import { apiClient } from './apiClient';
 import { tokenStore } from './tokenStore';
 import { AuthResponse, LoginRequest } from '../types/auth';
 
 const ROLE_KEY = 'terravision_web_role';
 
+function persistAuthSession(data: AuthResponse): void {
+  tokenStore.setTokens(data.token, data.refreshToken);
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.setItem(ROLE_KEY, String(data.role));
+  }
+}
+
 export const authService = {
   async login(payload: LoginRequest): Promise<AuthResponse> {
     const { data } = await apiClient.post<AuthResponse>(API_ROUTES.authLogin, payload);
-    tokenStore.setTokens(data.token, data.refreshToken);
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(ROLE_KEY, String(data.role));
-    }
+    persistAuthSession(data);
+    return data;
+  },
+
+  async register(payload: RegisterRequest): Promise<AuthResponse> {
+    const { data } = await apiClient.post<AuthResponse>(API_ROUTES.authRegister, payload);
+    persistAuthSession(data);
     return data;
   },
 

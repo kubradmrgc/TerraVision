@@ -102,11 +102,11 @@ export function CareCalendarSection({
   onCompleteAction
 }: Props): React.JSX.Element {
   if (isLoading) {
-    return <StateMessage palette={palette} message="Bakım takvimi yükleniyor…" />;
+    return <StateMessage tone="loading" text="Bakım takvimi yükleniyor…" color={palette.subText} />;
   }
 
   if (errorMessage) {
-    return <StateMessage palette={palette} message={errorMessage} tone="error" />;
+    return <StateMessage tone="error" text={errorMessage} />;
   }
 
   if (plants.length === 0) {
@@ -124,7 +124,7 @@ export function CareCalendarSection({
   return (
     <View style={styles.wrap}>
       {successMessage ? (
-        <Text style={[styles.success, { color: palette.brandTitle }]} accessibilityRole="status">
+        <Text style={[styles.success, { color: palette.brandTitle }]}>
           {successMessage}
         </Text>
       ) : null}

@@ -9,6 +9,7 @@ type SessionStore = {
 
 export const AUTH_UI_MESSAGES = {
   loginFailed: 'Email veya sifre gecersiz olabilir.',
+  registerFailed: 'Kayit tamamlanamadi. Bilgilerinizi kontrol edip tekrar deneyin.',
   sessionExpired: 'Oturumunuz sonlandi. Lutfen tekrar giris yapin.',
   sessionPartial: 'Oturum bilgisi eksik bulundu. Lutfen tekrar giris yapin.'
 } as const;

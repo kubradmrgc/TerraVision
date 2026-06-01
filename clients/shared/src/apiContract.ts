@@ -37,6 +37,7 @@ export const API_ROUTES_AR = {
 
 export const API_ROUTES = {
   authLogin: `${API_PATH_PREFIX}/auth/login`,
+  authRegister: `${API_PATH_PREFIX}/auth/register`,
   authRefresh: `${API_PATH_PREFIX}/auth/refresh`,
   authLogout: `${API_PATH_PREFIX}/auth/logout`,
   categories: `${API_PATH_PREFIX}/categories`,

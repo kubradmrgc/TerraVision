@@ -2,6 +2,10 @@ import { AUTH_UI_MESSAGES, buildPostLogoutState, getSessionRestoreStatus } from 
 import type { MobileAppState } from '../src/features/app/types';
 
 const baseState: MobileAppState = {
+  authMode: 'login',
+  firstName: '',
+  lastName: '',
+  confirmPassword: '',
   email: 'admin@terravision.com',
   password: 'admin123',
   loggedIn: true,

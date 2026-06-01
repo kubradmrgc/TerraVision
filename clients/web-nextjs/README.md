@@ -12,6 +12,7 @@ Bu klasor TerraVision API icin Next.js/TypeScript istemci servis taslagini iceri
 
 - `/` — yönlendirme ve bağlantılar
 - `/login` — e-posta/şifre ile giriş
+- `/register` — yeni müşteri hesabı oluşturma (web + mobil senkron)
 - `/products` — ürün listesi, sepete ekle
 - `/cart` — sepet, adet, temizle, SignalR canlı olaylar, çıkış
 - `/admin/orders` — admin için tüm siparişleri listeleme ve durum güncelleme
@@ -19,7 +20,7 @@ Bu klasor TerraVision API icin Next.js/TypeScript istemci servis taslagini iceri
 ## Servisler
 
 - `src/services/apiClient.ts`: Axios + JWT + refresh token retry
-- `src/services/authService.ts`: login/logout
+- `src/services/authService.ts`: login/register/logout
 - `src/services/productService.ts`: urun listeleme
 - `src/services/cartService.ts`: sepet CRUD operasyonlari
 - `src/services/orderService.ts`: siparis olusturma, kullanici siparisleri, admin siparis yonetimi

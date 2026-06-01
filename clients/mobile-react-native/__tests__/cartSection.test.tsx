@@ -92,7 +92,16 @@ describe('CartSection', () => {
             cartId: 1,
             userId: 1,
             totalAmount: 120,
-            items: [{ productId: 7, productName: 'Demo', unitPrice: 60, quantity: 2, lineTotal: 120 }]
+            items: [
+              {
+                productId: 7,
+                productName: 'Demo',
+                imageUrl: '',
+                unitPrice: 60,
+                quantity: 2,
+                lineTotal: 120
+              }
+            ]
           }}
           palette={lightPalette}
           isLoading={false}
@@ -122,7 +131,9 @@ describe('CartSection', () => {
             cartId: 1,
             userId: 1,
             totalAmount: 99,
-            items: [{ productId: 1, productName: 'X', unitPrice: 99, quantity: 1, lineTotal: 99 }]
+            items: [
+              { productId: 1, productName: 'X', imageUrl: '', unitPrice: 99, quantity: 1, lineTotal: 99 }
+            ]
           }}
           palette={darkPalette}
           isLoading={false}

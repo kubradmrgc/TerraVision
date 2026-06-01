@@ -610,6 +610,18 @@ html.dark .tv-landing-hero-bg {
   text-decoration: none;
 }
 
+.tv-home-login-btn--secondary {
+  margin-top: 10px;
+  background: transparent;
+  color: var(--tv-brand);
+  border: 1px solid var(--tv-border-strong);
+}
+
+.tv-home-login-btn--secondary:hover {
+  background: var(--tv-brand-soft);
+  color: var(--tv-brand);
+}
+
 .tv-home-login-hint {
   font-size: 12px;
   color: var(--tv-text-muted);
@@ -1228,6 +1240,23 @@ html.dark .tv-portal-card:hover {
 .tv-submit:disabled {
   opacity: 0.65;
   cursor: wait;
+}
+
+.tv-login-switch {
+  margin: 20px 0 0;
+  font-size: 14px;
+  color: var(--tv-text-muted);
+  text-align: center;
+}
+
+.tv-login-switch a {
+  font-weight: 700;
+  color: var(--tv-brand);
+  text-decoration: none;
+}
+
+.tv-login-switch a:hover {
+  text-decoration: underline;
 }
 
 .tv-login-alt {

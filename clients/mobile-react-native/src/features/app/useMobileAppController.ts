@@ -16,7 +16,15 @@ import { validateArUploadFile } from '../ar/arUploadValidation';
 import { AUTH_UI_MESSAGES, buildPostLogoutState, getSessionRestoreStatus } from '../auth/session';
 import { pushUniqueEvent } from '../realtime/eventDedup';
 import { toStatusMessage } from '../../ui/httpError';
-import { roleMatchesPortal, portalRoleMismatchMessage, syncQueriesOnReconnect, USER_ROLE } from '@terravision/shared';
+import {
+  roleMatchesPortal,
+  portalRoleMismatchMessage,
+  syncQueriesOnReconnect,
+  toCustomerRegisterRequest,
+  USER_ROLE,
+  validateRegisterForm
+} from '@terravision/shared';
+import type { AuthResponse } from '../../types/auth';
 import { arSessionService } from '../../services/arSessionService';
 import { mapArSessionSaveError } from '../ar/arSessionErrors';
 import { getMobileLoginPortalConfig } from '../auth/loginPortalConfig';
@@ -24,6 +32,10 @@ import { AppointmentStatus } from '../../types/appointment';
 import type { CareActionType } from '@terravision/shared';
 
 const initialState: MobileAppState = {
+  authMode: 'login',
+  firstName: '',
+  lastName: '',
+  confirmPassword: '',
   email: '',
   password: '',
   loggedIn: false,
@@ -94,6 +106,15 @@ export function useMobileAppController() {
   } = useCommerceQueries(state.loggedIn, state.role);
 
   const isLoginDisabled = useMemo(() => !state.email || !state.password, [state.email, state.password]);
+  const isRegisterDisabled = useMemo(
+    () =>
+      !state.firstName.trim() ||
+      !state.lastName.trim() ||
+      !state.email.trim() ||
+      !state.password ||
+      !state.confirmPassword,
+    [state.firstName, state.lastName, state.email, state.password, state.confirmPassword]
+  );
   const arPendingProducts = useMemo(
     () => (productsQuery.data ?? []).filter((x) => !x.isArCompatible).sort((a, b) => a.name.localeCompare(b.name)),
     [productsQuery.data]
@@ -277,6 +298,36 @@ export function useMobileAppController() {
     setState((prev) => ({ ...prev, selectedUploadProductId: arPendingProducts[0].id }));
   }, [arPendingProducts, state.selectedUploadProductId]);
 
+  const completeAuthSession = async (auth: AuthResponse, portal: LoginPortal): Promise<boolean> => {
+    if (!roleMatchesPortal(auth.role, portal)) {
+      await authService.logout();
+      Alert.alert('Hesap türü uyuşmuyor', portalRoleMismatchMessage(portal));
+      return false;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      isAdmin: auth.role === USER_ROLE.Admin,
+      role: auth.role,
+      loggedIn: true,
+      authMode: 'login',
+      activeSection:
+        auth.role === USER_ROLE.Admin
+          ? 'products'
+          : auth.role === USER_ROLE.Consultant
+            ? 'appointments'
+            : 'products'
+    }));
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['products'] }),
+      queryClient.invalidateQueries({ queryKey: ['cart'] }),
+      queryClient.invalidateQueries({ queryKey: ['orders'] }),
+      queryClient.invalidateQueries({ queryKey: ['appointments'] }),
+      queryClient.invalidateQueries({ queryKey: ['care'] })
+    ]);
+    return true;
+  };
+
   const handleLogin = async () => {
     if (!state.loginPortal) {
       Alert.alert('Giriş', 'Önce müşteri, danışman veya yönetici giriş türünü seçin.');
@@ -285,28 +336,49 @@ export function useMobileAppController() {
 
     try {
       const auth = await authService.login({ email: state.email, password: state.password });
-      if (!roleMatchesPortal(auth.role, state.loginPortal)) {
-        await authService.logout();
-        Alert.alert('Hesap türü uyuşmuyor', portalRoleMismatchMessage(state.loginPortal));
-        return;
-      }
-
-      setState((prev) => ({
-        ...prev,
-        isAdmin: auth.role === 3,
-        role: auth.role,
-        loggedIn: true,
-        activeSection: auth.role === 3 ? 'products' : auth.role === 2 ? 'appointments' : 'products'
-      }));
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['products'] }),
-        queryClient.invalidateQueries({ queryKey: ['cart'] }),
-        queryClient.invalidateQueries({ queryKey: ['orders'] }),
-        queryClient.invalidateQueries({ queryKey: ['appointments'] }),
-        queryClient.invalidateQueries({ queryKey: ['care'] })
-      ]);
+      await completeAuthSession(auth, state.loginPortal);
     } catch {
       Alert.alert('Giriş başarısız', AUTH_UI_MESSAGES.loginFailed);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (state.loginPortal !== 'customer') {
+      Alert.alert('Kayıt', 'Yeni hesap yalnızca müşteri girişi için oluşturulabilir.');
+      return;
+    }
+
+    const validation = validateRegisterForm({
+      firstName: state.firstName,
+      lastName: state.lastName,
+      email: state.email,
+      password: state.password,
+      confirmPassword: state.confirmPassword
+    });
+    if (!validation.ok) {
+      Alert.alert('Kayıt', validation.message);
+      return;
+    }
+
+    try {
+      const auth = await authService.register(
+        toCustomerRegisterRequest({
+          firstName: state.firstName,
+          lastName: state.lastName,
+          email: state.email,
+          password: state.password,
+          confirmPassword: state.confirmPassword
+        })
+      );
+      await completeAuthSession(auth, 'customer');
+    } catch (error) {
+      Alert.alert(
+        'Kayıt başarısız',
+        toStatusMessage(error, AUTH_UI_MESSAGES.registerFailed, {
+          400: 'Bu e-posta zaten kayıtlı olabilir veya bilgiler geçersiz.',
+          409: 'Bu e-posta zaten kayıtlı.'
+        })
+      );
     }
   };
 
@@ -664,22 +736,43 @@ export function useMobileAppController() {
   const setSelectedUploadProductId = (value: number | null) =>
     setState((prev) => ({ ...prev, selectedUploadProductId: value }));
 
-  const selectLoginPortal = (portal: LoginPortal) => {
+  const selectLoginPortal = (portal: LoginPortal, authMode: MobileAppState['authMode'] = 'login') => {
     const config = getMobileLoginPortalConfig(portal);
     setState((prev) => ({
       ...prev,
       loginPortal: portal,
-      email: config.defaultEmail,
-      password: config.defaultPassword
+      authMode: portal === 'customer' ? authMode : 'login',
+      email: authMode === 'register' ? '' : config.defaultEmail,
+      password: authMode === 'register' ? '' : config.defaultPassword,
+      firstName: '',
+      lastName: '',
+      confirmPassword: ''
     }));
   };
+
+  const openCustomerRegister = () => selectLoginPortal('customer', 'register');
+
+  const setAuthMode = (authMode: MobileAppState['authMode']) =>
+    setState((prev) => ({
+      ...prev,
+      authMode,
+      email: authMode === 'register' ? '' : prev.email,
+      password: authMode === 'register' ? '' : prev.password,
+      firstName: '',
+      lastName: '',
+      confirmPassword: ''
+    }));
 
   const clearLoginPortal = () =>
     setState((prev) => ({
       ...prev,
       loginPortal: null,
+      authMode: 'login',
       email: '',
-      password: ''
+      password: '',
+      firstName: '',
+      lastName: '',
+      confirmPassword: ''
     }));
 
   return {
@@ -692,6 +785,7 @@ export function useMobileAppController() {
     },
     palette,
     isLoginDisabled,
+    isRegisterDisabled,
     arPendingProducts,
     canUploadArModel,
     carePlants: careCalendarQuery.data?.plants ?? [],
@@ -746,6 +840,11 @@ export function useMobileAppController() {
     activePillTextStyle,
     setEmail,
     setPassword,
+    setFirstName: (value: string) => setState((prev) => ({ ...prev, firstName: value })),
+    setLastName: (value: string) => setState((prev) => ({ ...prev, lastName: value })),
+    setConfirmPassword: (value: string) => setState((prev) => ({ ...prev, confirmPassword: value })),
+    setAuthMode,
+    openCustomerRegister,
     selectLoginPortal,
     clearLoginPortal,
     setActiveSection,
@@ -754,6 +853,7 @@ export function useMobileAppController() {
     setIsArExperienceVisible,
     setSelectedUploadProductId,
     handleLogin,
+    handleRegister,
     handleLogout,
     handleAddToCart,
     handleIncreaseQuantity,

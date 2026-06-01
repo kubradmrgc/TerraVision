@@ -18,6 +18,7 @@ describe('apiContract', () => {
   });
 
   it('exposes stable route prefixes for web and mobile', () => {
+    assert.match(API_ROUTES.authRegister, /\/api\/auth\/register$/);
     assert.match(API_ROUTES.products, /\/api\/products$/);
     assert.match(API_ROUTES.cartMe, /\/api\/cart\/me$/);
     assert.match(API_ROUTES.ordersFromCart, /\/api\/orders\/from-cart$/);

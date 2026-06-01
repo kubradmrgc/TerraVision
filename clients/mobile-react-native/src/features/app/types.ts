@@ -54,7 +54,13 @@ export type MobilePalette = {
   realtimeCapsuleDotColor: string;
 };
 
+export type AuthMode = 'login' | 'register';
+
 export type MobileAppState = {
+  authMode: AuthMode;
+  firstName: string;
+  lastName: string;
+  confirmPassword: string;
   email: string;
   password: string;
   loggedIn: boolean;

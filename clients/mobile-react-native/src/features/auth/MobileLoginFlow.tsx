@@ -51,7 +51,18 @@ const PORTAL_CTA = 'Giriş yap ve alışverişe başla →';
 
 export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
   const insets = useSafeAreaInsets();
-  const { state, palette, isLoginDisabled } = controller;
+  const {
+    state,
+    palette,
+    isLoginDisabled,
+    isRegisterDisabled,
+    setFirstName,
+    setLastName,
+    setConfirmPassword,
+    setAuthMode,
+    openCustomerRegister
+  } = controller;
+  const isRegisterMode = state.authMode === 'register' && state.loginPortal === 'customer';
 
   if (!state.loginPortal) {
     return (
@@ -128,6 +139,17 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
             );
           })()}
 
+          <TouchableOpacity
+            style={[styles.registerOutlineBtn, { borderColor: palette.outlineVariant }]}
+            onPress={openCustomerRegister}
+            accessibilityRole="button"
+            accessibilityLabel="Yeni müşteri hesabı oluştur"
+          >
+            <Text style={[styles.registerOutlineBtnText, mobileTypography.label, { color: palette.brandTitle }]}>
+              Hesabınız yok mu? Kayıt olun
+            </Text>
+          </TouchableOpacity>
+
           <View style={[styles.staffSection, { borderTopColor: palette.outlineVariant }]}>
             <Text style={[styles.staffLabel, mobileTypography.caption, { color: palette.subText }]}>
               Personel erişimi
@@ -162,6 +184,7 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
   const d = DARK_LOGIN;
 
   const renderForm = (config: LoginPortalUiConfig) => {
+    const showRegister = state.loginPortal === 'customer' && isRegisterMode;
     const cardBg = useAdminVisual ? d.card : palette.surfaceLowest;
     const borderColor = useAdminVisual ? d.borderIndustrial : palette.outlineVariant;
     const titleColor = useAdminVisual ? d.white : palette.text;
@@ -187,9 +210,77 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
             <View style={[styles.pill, { backgroundColor: pillBg, borderColor: pillBorder }]}>
               <Text style={[styles.pillText, mobileTypography.pill, { color: pillColor }]}>{config.pill}</Text>
             </View>
-            <Text style={[styles.cardTitle, mobileTypography.cardTitle, { color: titleColor }]}>{config.title}</Text>
-            <Text style={[styles.cardSubtitle, mobileTypography.bodySm, { color: subColor }]}>{config.subtitle}</Text>
+            <Text style={[styles.cardTitle, mobileTypography.cardTitle, { color: titleColor }]}>
+              {showRegister ? 'Hesap oluştur' : config.title}
+            </Text>
+            <Text style={[styles.cardSubtitle, mobileTypography.bodySm, { color: subColor }]}>
+              {showRegister
+                ? 'Kayıt sonrası web ve mobilde aynı hesapla giriş yapın; sepet ve siparişler senkronize kalır.'
+                : config.subtitle}
+            </Text>
           </View>
+
+          {state.loginPortal === 'customer' ? (
+            <View style={styles.authModeRow}>
+              <TouchableOpacity
+                onPress={() => setAuthMode('login')}
+                style={[
+                  styles.authModeChip,
+                  {
+                    borderColor,
+                    backgroundColor: !showRegister ? pillBg : 'transparent'
+                  }
+                ]}
+              >
+                <Text style={[styles.authModeChipText, { color: !showRegister ? pillColor : subColor }]}>Giriş</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setAuthMode('register')}
+                style={[
+                  styles.authModeChip,
+                  {
+                    borderColor,
+                    backgroundColor: showRegister ? pillBg : 'transparent'
+                  }
+                ]}
+              >
+                <Text style={[styles.authModeChipText, { color: showRegister ? pillColor : subColor }]}>Kayıt</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {showRegister ? (
+            <>
+              <FormField
+                label="Ad"
+                borderColor={borderColor}
+                backgroundColor={inputBg}
+                textColor={useAdminVisual ? d.text : palette.text}
+                labelColor={subColor}
+                placeholderColor={subColor}
+                accentColor={accent}
+                secureToggleColor={subColor}
+                placeholder="Adınız"
+                autoCapitalize="words"
+                value={state.firstName}
+                onChangeText={setFirstName}
+              />
+              <FormField
+                label="Soyad"
+                borderColor={borderColor}
+                backgroundColor={inputBg}
+                textColor={useAdminVisual ? d.text : palette.text}
+                labelColor={subColor}
+                placeholderColor={subColor}
+                accentColor={accent}
+                secureToggleColor={subColor}
+                placeholder="Soyadınız"
+                autoCapitalize="words"
+                value={state.lastName}
+                onChangeText={setLastName}
+              />
+            </>
+          ) : null}
 
           <FormField
             label="E-posta"
@@ -217,20 +308,37 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
             placeholderColor={subColor}
             accentColor={accent}
             secureToggleColor={subColor}
-            placeholder="Şifrenizi girin"
+            placeholder={showRegister ? 'En az 8 karakter' : 'Şifrenizi girin'}
             secureTextEntry
             value={state.password}
             onChangeText={controller.setPassword}
           />
 
+          {showRegister ? (
+            <FormField
+              label="Şifre (tekrar)"
+              borderColor={borderColor}
+              backgroundColor={inputBg}
+              textColor={useAdminVisual ? d.text : palette.text}
+              labelColor={subColor}
+              placeholderColor={subColor}
+              accentColor={accent}
+              secureToggleColor={subColor}
+              placeholder="Şifrenizi tekrar girin"
+              secureTextEntry
+              value={state.confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+          ) : null}
+
           <View style={styles.actions}>
             <PrimaryButton
-              label={config.submitLabel}
+              label={showRegister ? 'Hesap oluştur' : config.submitLabel}
               trailing="→"
-              onPress={controller.handleLogin}
+              onPress={showRegister ? controller.handleRegister : controller.handleLogin}
               backgroundColor={ctaBg}
               textColor={ctaFg}
-              disabled={isLoginDisabled}
+              disabled={showRegister ? isRegisterDisabled : isLoginDisabled}
             />
             <TouchableOpacity
               onPress={() =>
@@ -428,6 +536,27 @@ const styles = StyleSheet.create({
   featureDot: { width: 5, height: 5, borderRadius: 3 },
   featureText: {},
   portalCardCta: { fontWeight: '700' },
+  registerOutlineBtn: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  registerOutlineBtnText: { fontWeight: '600' },
+  authModeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12
+  },
+  authModeChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center'
+  },
+  authModeChipText: { fontSize: 13, fontWeight: '700' },
   scrollContent: { paddingHorizontal: 16, paddingTop: 0 },
   hero: {
     height: 192,

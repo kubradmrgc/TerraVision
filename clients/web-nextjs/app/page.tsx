@@ -62,6 +62,9 @@ export default function HomePage() {
               <Link href="/login" className="tv-landing-btn tv-landing-btn--primary">
                 Müşteri girişi
               </Link>
+              <Link href="/register" className="tv-landing-btn tv-landing-btn--ghost">
+                Hesap oluştur
+              </Link>
               <Link href="/products" className="tv-landing-btn tv-landing-btn--ghost">
                 Ürünleri incele
               </Link>
@@ -199,6 +202,7 @@ export default function HomePage() {
           </div>
           <nav className="tv-landing-footer-nav" aria-label="Site bağlantıları">
             <Link href="/login">Müşteri girişi</Link>
+            <Link href="/register">Kayıt ol</Link>
             <Link href="/products">Ürünler</Link>
             <Link href="/cart">Sepet</Link>
             <Link href="/profile/ar-rooms">AR Odalarım</Link>

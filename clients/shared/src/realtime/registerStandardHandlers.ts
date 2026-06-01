@@ -1,12 +1,12 @@
 import type { HubConnection } from '@microsoft/signalr';
 import { SIGNALR_EVENTS } from '../apiContract';
-import type { ArSessionCreatedEvent } from '../types/ar';
 import type {
   ExchangeOfferReceivedEvent,
   ExchangeOfferStatusChangedEvent,
   ExchangeProductListedEvent
 } from '../types/exchange';
 import type {
+  ArSessionCreatedEvent,
   CartAbandonedEvent,
   CartChangedEvent,
   OrderCreatedEvent,

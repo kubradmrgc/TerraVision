@@ -83,6 +83,12 @@ export function LoginPanel({ portal }: Props) {
           </button>
         </form>
 
+        {portal === 'customer' ? (
+          <p className="tv-login-switch">
+            Hesabınız yok mu? <Link href="/register">Kayıt olun</Link>
+          </p>
+        ) : null}
+
         {portal !== 'customer' && config.alternateLinks.length > 0 ? (
           <div className="tv-login-alt">
             <p className="tv-login-alt-label">Farklı hesap türü</p>
