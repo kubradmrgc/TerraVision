@@ -3,12 +3,13 @@ import { Alert, Platform } from 'react-native';
 import { errorCodes, isErrorWithCode, pick } from '@react-native-documents/picker';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
+import { tokenStore } from '../../services/tokenStore';
 import { realtimeService } from '../../services/realtimeService';
 import { arService } from '../../services/arService';
 import { mediaService } from '../../services/mediaService';
 import { productService } from '../../services/productService';
 import { onUnauthorized } from '../../services/apiClient';
-import { MobileSection, MobileAppState, ThemeMode } from './types';
+import { MobileSection, MobileAppState, ThemeMode, UserProfile } from './types';
 import type { LoginPortal } from '@terravision/shared';
 import { getPalette } from '../../theme/mobileTheme';
 import { useCommerceQueries } from './useCommerceQueries';
@@ -55,8 +56,16 @@ const initialState: MobileAppState = {
   selectedUploadFile: null,
   themeMode: 'light',
   activeSection: 'products',
-  loginPortal: null
+  loginPortal: null,
+  profile: null
 };
+
+function defaultSectionForRole(role: number | null): MobileAppState['activeSection'] {
+  if (role === USER_ROLE.Consultant) {
+    return 'appointments';
+  }
+  return 'products';
+}
 
 export function useMobileAppController() {
   const [state, setState] = useState<MobileAppState>(initialState);
@@ -287,7 +296,15 @@ export function useMobileAppController() {
         Alert.alert('Session', AUTH_UI_MESSAGES.sessionPartial);
         return;
       }
-      setState((prev) => ({ ...prev, loggedIn: true }));
+      const profile = await tokenStore.getProfile();
+      setState((prev) => ({
+        ...prev,
+        loggedIn: true,
+        profile,
+        role: profile?.role ?? prev.role,
+        isAdmin: profile?.role === USER_ROLE.Admin,
+        activeSection: defaultSectionForRole(profile?.role ?? null)
+      }));
     })();
   }, []);
 
@@ -305,18 +322,23 @@ export function useMobileAppController() {
       return false;
     }
 
+    const profile: UserProfile = {
+      userId: auth.userId,
+      firstName: auth.firstName,
+      lastName: auth.lastName,
+      email: auth.email,
+      role: auth.role
+    };
+    await tokenStore.setProfile(profile);
+
     setState((prev) => ({
       ...prev,
       isAdmin: auth.role === USER_ROLE.Admin,
       role: auth.role,
       loggedIn: true,
       authMode: 'login',
-      activeSection:
-        auth.role === USER_ROLE.Admin
-          ? 'products'
-          : auth.role === USER_ROLE.Consultant
-            ? 'appointments'
-            : 'products'
+      profile,
+      activeSection: defaultSectionForRole(auth.role)
     }));
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['products'] }),

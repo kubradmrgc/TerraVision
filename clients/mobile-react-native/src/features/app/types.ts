@@ -8,7 +8,24 @@ import { OrderDto } from '../../types/order';
 import { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '../../types/realtime';
 
 export type ThemeMode = 'light' | 'dark';
-export type MobileSection = 'products' | 'cart' | 'orders' | 'appointments' | 'care' | 'exchange' | 'events';
+export type MobileSection =
+  | 'products'
+  | 'cart'
+  | 'orders'
+  | 'appointments'
+  | 'care'
+  | 'exchange'
+  | 'events'
+  | 'profile';
+
+/** Authenticated user snapshot persisted for profile screen + session restore. */
+export type UserProfile = {
+  userId: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: number;
+};
 
 export type MobilePalette = {
   bg: string;
@@ -81,4 +98,5 @@ export type MobileAppState = {
   themeMode: ThemeMode;
   activeSection: MobileSection;
   loginPortal: LoginPortal | null;
+  profile: UserProfile | null;
 };

@@ -17,6 +17,7 @@ import { AppointmentsSection } from '../appointments/AppointmentsSection';
 import { EventsSection } from '../realtime/EventsSection';
 import { CareCalendarSection } from '../care/CareCalendarSection';
 import { ExchangeSection } from '../exchange/ExchangeSection';
+import { ProfileSection } from '../profile/ProfileSection';
 import { USER_ROLE } from '@terravision/shared';
 
 type Props = {
@@ -208,6 +209,15 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
           />
         )}
         {state.activeSection === 'exchange' && <ExchangeSection palette={palette} />}
+        {state.activeSection === 'profile' && (
+          <ProfileSection
+            profile={state.profile}
+            palette={palette}
+            themeMode={state.themeMode}
+            onToggleTheme={controller.toggleTheme}
+            onLogout={controller.handleLogout}
+          />
+        )}
         {state.activeSection === 'events' && (
           <EventsSection
             events={state.events}

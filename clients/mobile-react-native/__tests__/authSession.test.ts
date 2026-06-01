@@ -25,7 +25,8 @@ const baseState: MobileAppState = {
   selectedUploadFile: null,
   themeMode: 'dark',
   activeSection: 'orders',
-  loginPortal: 'admin'
+  loginPortal: 'admin',
+  profile: null
 };
 
 describe('auth session helpers', () => {

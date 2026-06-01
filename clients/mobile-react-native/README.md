@@ -30,6 +30,7 @@ Admin urun secimi icin `@react-native-picker/picker` kullanilir.
 ## Icerik
 
 - `src/services/apiClient.ts`: Axios istemcisi ve JWT header otomasyonu
+- `src/features/profile/ProfileSection.tsx`: Profil/hesap ekrani (kullanici bilgisi, tema, cikis)
 - `src/services/authService.ts`: login/register/logout akisi
 - `src/services/realtimeService.ts`: SignalR baglantisi (`cart.changed` dinleme)
 - `src/services/cartService.ts`: Gercek cart endpoint akisi (`/api/cart/*`)

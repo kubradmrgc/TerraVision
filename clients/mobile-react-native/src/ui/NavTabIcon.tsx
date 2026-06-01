@@ -9,7 +9,8 @@ const ABBREV: Record<MobileSection, string> = {
   appointments: 'Ap',
   care: 'Tk',
   exchange: 'Tt',
-  events: 'Ev'
+  events: 'Ev',
+  profile: 'Pf'
 };
 
 type Props = {

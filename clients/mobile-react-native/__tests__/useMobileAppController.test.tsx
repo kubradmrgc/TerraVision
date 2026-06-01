@@ -88,6 +88,17 @@ jest.mock('../src/services/apiClient', () => ({
   onUnauthorized: jest.fn()
 }));
 
+jest.mock('../src/services/tokenStore', () => ({
+  tokenStore: {
+    setProfile: jest.fn(async () => undefined),
+    getProfile: jest.fn(async () => null),
+    setTokens: jest.fn(async () => undefined),
+    getToken: jest.fn(async () => null),
+    getRefreshToken: jest.fn(async () => null),
+    clearToken: jest.fn(async () => undefined)
+  }
+}));
+
 let latest:
   | ReturnType<typeof useMobileAppController>
   | null = null;

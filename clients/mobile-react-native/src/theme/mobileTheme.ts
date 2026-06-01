@@ -10,7 +10,8 @@ export const sectionLabels: Record<MobileSection, string> = {
   appointments: 'Appointments',
   care: 'Takvimim',
   exchange: 'TerraTakas',
-  events: 'Events'
+  events: 'Events',
+  profile: 'Profil'
 };
 
 export const sectionIcons: Record<MobileSection, string> = {
@@ -20,7 +21,8 @@ export const sectionIcons: Record<MobileSection, string> = {
   appointments: '🗓️',
   care: '🌿',
   exchange: '🔄',
-  events: '⚡'
+  events: '⚡',
+  profile: '👤'
 };
 
 export const getOrderStatusLabel = sharedGetOrderStatusLabel;
