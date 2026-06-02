@@ -73,6 +73,7 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IRealtimeSyncService, SignalRRealtimeSyncService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddTerraVisionMediaStorage(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<IArSessionService, ArSessionService>();
 builder.Services.AddScoped<ICareService, CareService>();

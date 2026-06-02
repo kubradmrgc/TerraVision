@@ -1343,6 +1343,150 @@ html.dark .tv-portal-card:hover {
   margin: 0 0 12px;
 }
 
+.tv-profile-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tv-profile-subnav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--tv-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tv-text-muted);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.tv-profile-subnav-link:hover {
+  color: var(--tv-text);
+  border-color: var(--tv-brand);
+}
+
+.tv-profile-subnav-link--active {
+  background: var(--tv-brand);
+  border-color: var(--tv-brand);
+  color: #fff;
+}
+
+.tv-profile-hub-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.tv-profile-hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--tv-border);
+  background: var(--tv-surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tv-profile-hub-card:hover {
+  border-color: var(--tv-brand);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.tv-profile-hub-card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.tv-profile-hub-card p {
+  margin: 0;
+  color: var(--tv-text-muted);
+  font-size: 14px;
+  flex: 1;
+}
+
+.tv-profile-hub-card-cta {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tv-brand);
+}
+
+.tv-account-panel {
+  min-width: 220px;
+  padding: 8px;
+}
+
+.tv-account-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tv-account-logout {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tv-danger, #b42318);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tv-account-logout:hover {
+  background: rgba(180, 35, 24, 0.08);
+}
+
+.tv-home-login--authenticated .tv-home-login-card {
+  border-color: var(--tv-brand);
+}
+
+.tv-ar-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.tv-ar-summary {
+  margin-bottom: 20px;
+}
+
+.tv-ar-summary-count {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.tv-ar-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.tv-ar-product-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--tv-border);
+}
+
+.tv-ar-card-actions {
+  margin: 10px 0 0;
+  font-size: 14px;
+}
+
 .tv-ar-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -2193,4 +2337,548 @@ html.dark .tv-icon-btn--danger:hover:not(:disabled) {
   font-size: 1rem;
   font-weight: 700;
   color: var(--tv-text);
+}
+
+/* TerraTakas (community exchange) */
+.tv-takas-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--tv-radius-lg);
+  border: 1px solid var(--tv-border);
+  padding: 28px 24px;
+  margin-bottom: 24px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tv-brand) 18%, var(--tv-bg-elevated) 82%) 0%,
+    var(--tv-bg-elevated) 55%,
+    color-mix(in srgb, var(--tv-brand-soft) 40%, var(--tv-bg-elevated) 60%) 100%
+  );
+  box-shadow: var(--tv-shadow);
+}
+
+.tv-takas-hero::after {
+  content: '🌿';
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 56px;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.tv-takas-hero-title {
+  font-size: clamp(1.5rem, 3vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+
+.tv-takas-hero-lead {
+  margin: 0;
+  max-width: 36rem;
+  color: var(--tv-text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.tv-takas-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.tv-takas-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tv-takas-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--tv-border);
+  background: var(--tv-bg-elevated);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tv-takas-stat strong {
+  color: var(--tv-brand);
+  font-size: 15px;
+}
+
+.tv-takas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border-radius: var(--tv-radius-lg);
+  border: 1px solid var(--tv-border);
+  background: var(--tv-bg-elevated);
+  box-shadow: var(--tv-shadow);
+}
+
+.tv-takas-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tv-takas-filter-btn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--tv-border);
+  background: var(--tv-bg);
+  color: var(--tv-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.tv-takas-filter-btn:hover {
+  border-color: color-mix(in srgb, var(--tv-brand) 40%, var(--tv-border) 60%);
+}
+
+.tv-takas-filter-btn--active {
+  background: var(--tv-brand);
+  border-color: var(--tv-brand);
+  color: var(--tv-btn-text);
+}
+
+.tv-takas-select {
+  min-width: 160px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--tv-border);
+  background: var(--tv-bg);
+  color: var(--tv-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tv-takas-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.tv-takas-card {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.tv-takas-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--tv-brand) 12%, transparent);
+}
+
+.tv-takas-card__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: color-mix(in srgb, var(--tv-brand-soft) 30%, var(--tv-border) 70%);
+  border-bottom: 1px solid var(--tv-border);
+}
+
+.tv-takas-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tv-takas-card__media--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 40px;
+  opacity: 0.35;
+}
+
+.tv-takas-card__badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tv-takas-pill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.tv-takas-pill--swap {
+  background: color-mix(in srgb, #0d9488 20%, var(--tv-bg-elevated) 80%);
+  color: #0f766e;
+  border-color: color-mix(in srgb, #0d9488 35%, transparent);
+}
+
+.tv-takas-pill--sale {
+  background: var(--tv-brand-soft);
+  color: var(--tv-brand);
+  border-color: color-mix(in srgb, var(--tv-brand) 25%, transparent);
+}
+
+.tv-takas-pill--condition {
+  background: color-mix(in srgb, var(--tv-text-muted) 12%, var(--tv-bg-elevated) 88%);
+  color: var(--tv-text-muted);
+  border-color: var(--tv-border);
+}
+
+.tv-takas-card__body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 6px;
+}
+
+.tv-takas-card__title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.tv-takas-card__owner {
+  font-size: 13px;
+  color: var(--tv-text-muted);
+  margin: 0;
+}
+
+.tv-takas-card__price {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--tv-brand);
+  margin: 4px 0 8px;
+}
+
+.tv-takas-card__cta {
+  margin-top: auto;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+}
+
+.tv-takas-empty {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.tv-takas-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.tv-takas-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 20px;
+  border-radius: var(--tv-radius-lg);
+  border: 1px solid var(--tv-border);
+  background: var(--tv-bg);
+}
+
+.tv-takas-tab {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tv-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tv-takas-tab:hover {
+  color: var(--tv-text);
+  background: var(--tv-bg-elevated);
+}
+
+.tv-takas-tab--active {
+  background: var(--tv-brand);
+  color: var(--tv-btn-text);
+  box-shadow: var(--tv-shadow);
+}
+
+.tv-takas-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.tv-takas-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tv-takas-form-row {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .tv-takas-form-row {
+    grid-template-columns: 1fr 140px;
+  }
+}
+
+.tv-takas-photo-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  border: 2px dashed var(--tv-border);
+  border-radius: 12px;
+  background: var(--tv-bg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.tv-takas-photo-drop:hover {
+  border-color: var(--tv-brand);
+  background: var(--tv-brand-soft);
+}
+
+.tv-takas-photo-preview {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--tv-border);
+}
+
+.tv-takas-offer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tv-takas-offer-card {
+  padding: 18px;
+}
+
+.tv-takas-offer-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tv-takas-offer-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.tv-takas-status {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.tv-takas-status--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.tv-takas-status--accepted {
+  background: var(--tv-brand-soft);
+  color: var(--tv-brand);
+}
+
+.tv-takas-status--rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.tv-takas-offer-meta {
+  font-size: 13px;
+  color: var(--tv-text-muted);
+  margin: 0 0 8px;
+}
+
+.tv-takas-offer-message {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--tv-bg);
+  border: 1px solid var(--tv-border);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tv-takas-offer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tv-takas-detail {
+  display: grid;
+  gap: 24px;
+}
+
+@media (min-width: 900px) {
+  .tv-takas-detail {
+    grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+    align-items: start;
+  }
+}
+
+.tv-takas-gallery {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.tv-takas-gallery img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--tv-border);
+}
+
+.tv-takas-detail-panel {
+  position: sticky;
+  top: 88px;
+}
+
+.tv-takas-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+@media (min-width: 560px) {
+  .tv-takas-modal-backdrop {
+    align-items: center;
+  }
+}
+
+.tv-takas-modal {
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: var(--tv-radius-lg);
+  animation: tv-takas-modal-in 0.2s ease-out;
+}
+
+@keyframes tv-takas-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tv-takas-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tv-takas-type-btn {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--tv-border);
+  background: var(--tv-bg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tv-takas-type-btn--active {
+  background: var(--tv-brand);
+  border-color: var(--tv-brand);
+  color: var(--tv-btn-text);
+}
+
+.tv-takas-loading {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.tv-takas-skeleton {
+  height: 280px;
+  border-radius: var(--tv-radius-lg);
+  background: linear-gradient(
+    90deg,
+    var(--tv-border) 0%,
+    color-mix(in srgb, var(--tv-border) 50%, var(--tv-bg-elevated) 50%) 50%,
+    var(--tv-border) 100%
+  );
+  background-size: 200% 100%;
+  animation: tv-takas-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes tv-takas-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }

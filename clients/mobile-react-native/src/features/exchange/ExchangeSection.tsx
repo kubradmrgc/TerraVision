@@ -1,13 +1,15 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  FlatList,
   Image,
   Modal,
-  ScrollView,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  type ListRenderItem
 } from 'react-native';
 import { errorCodes, isErrorWithCode, pick, types } from '@react-native-documents/picker';
 import {
@@ -22,18 +24,26 @@ import {
   ExchangeProductDto,
   formatTryCurrency
 } from '@terravision/shared';
+import { isAxiosError } from 'axios';
 import type { MobilePalette } from '../app/types';
 import { exchangeService } from '../../services/exchangeService';
 import { realtimeService } from '../../services/realtimeService';
 import { EXCHANGE_UI_MESSAGES, exchangeErrorForStatus } from './exchangeErrors';
 import { StateMessage } from '../../ui/StateMessage';
-import { isAxiosError } from 'axios';
+import { SectionHeader } from '../../ui/SectionHeader';
+import { mobileTypography } from '../../theme/mobileTypography';
 
 type Props = {
   palette: MobilePalette;
 };
 
 type ViewMode = 'market' | 'mine' | 'offers';
+
+const TABS: { key: ViewMode; label: string }[] = [
+  { key: 'market', label: 'Pazar' },
+  { key: 'mine', label: 'İlanlarım' },
+  { key: 'offers', label: 'Teklifler' }
+];
 
 export function ExchangeSection({ palette }: Props): React.JSX.Element {
   const [view, setView] = useState<ViewMode>('market');
@@ -54,6 +64,11 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
   const [newPrice, setNewPrice] = useState('0');
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
 
+  const pendingCount = useMemo(
+    () => received.filter((o) => o.status === EXCHANGE_OFFER_STATUS.Pending).length,
+    [received]
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -70,7 +85,7 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
       setSent(snt);
     } catch (err) {
       const status = isAxiosError(err) ? err.response?.status : undefined;
-      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.loadFailed));
+      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.loadFailed, err));
     } finally {
       setLoading(false);
     }
@@ -85,15 +100,9 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
     const unsubListed = realtimeService.onExchangeProductListed((event) => {
       setProducts((prev) => (prev.some((p) => p.id === event.product.id) ? prev : [event.product, ...prev]));
     });
-    const unsubReceived = realtimeService.onExchangeOfferReceived(() => {
-      void load();
-    });
-    const unsubStatus = realtimeService.onExchangeOfferStatusChanged(() => {
-      void load();
-    });
-    const unsubReconnect = realtimeService.onReconnected(() => {
-      void load();
-    });
+    const unsubReceived = realtimeService.onExchangeOfferReceived(() => void load());
+    const unsubStatus = realtimeService.onExchangeOfferStatusChanged(() => void load());
+    const unsubReconnect = realtimeService.onReconnected(() => void load());
     return () => {
       unsubListed();
       unsubReceived();
@@ -115,11 +124,9 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
       setNewPhotoUrl(url);
       setSuccess('Fotoğraf yüklendi.');
     } catch (err) {
-      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) {
-        return;
-      }
+      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) return;
       const status = isAxiosError(err) ? err.response?.status : undefined;
-      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.uploadFailed));
+      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.uploadFailed, err));
     } finally {
       setIsMutating(false);
     }
@@ -146,7 +153,7 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
       setView('mine');
     } catch (err) {
       const status = isAxiosError(err) ? err.response?.status : undefined;
-      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.listingFailed));
+      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.listingFailed, err));
     } finally {
       setIsMutating(false);
     }
@@ -168,7 +175,7 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
       await load();
     } catch (err) {
       const status = isAxiosError(err) ? err.response?.status : undefined;
-      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.offerFailed));
+      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.offerFailed, err));
     } finally {
       setIsMutating(false);
     }
@@ -178,195 +185,295 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
     setIsMutating(true);
     setError(null);
     try {
-      if (accept) {
-        await exchangeService.acceptOffer(offerId);
-      } else {
-        await exchangeService.rejectOffer(offerId);
-      }
+      if (accept) await exchangeService.acceptOffer(offerId);
+      else await exchangeService.rejectOffer(offerId);
       setSuccess(accept ? 'Teklif kabul edildi.' : 'Teklif reddedildi.');
       await load();
     } catch (err) {
       const status = isAxiosError(err) ? err.response?.status : undefined;
-      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.statusFailed));
+      setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.statusFailed, err));
     } finally {
       setIsMutating(false);
     }
   };
 
-  const renderProductCard = (product: ExchangeProductDto, showOffer?: boolean) => (
-    <View
-      key={product.id}
-      style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}
-    >
-      {product.photoUrls[0] ? (
-        <Image source={{ uri: product.photoUrls[0] }} style={styles.thumb} resizeMode="cover" />
-      ) : null}
-      <Text style={[styles.title, { color: palette.text }]}>{product.title}</Text>
-      <Text style={{ color: palette.subText }}>
-        {product.ownerDisplayName} · {EXCHANGE_CONDITION_LABELS[product.condition]}
-      </Text>
-      <Text style={{ color: palette.brandTitle, marginTop: 4 }}>
-        {product.isSwapOnly ? 'Takaslık' : formatTryCurrency(product.price)}
-      </Text>
-      {showOffer ? (
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: palette.button, opacity: isMutating ? 0.6 : 1 }]}
-          disabled={isMutating}
-          onPress={() => {
-            setSelectedProduct(product);
-            setOfferType(product.isSwapOnly ? EXCHANGE_OFFER_TYPE.Swap : EXCHANGE_OFFER_TYPE.Buy);
-            setOfferModalVisible(true);
-          }}
+  const renderMarketCard: ListRenderItem<ExchangeProductDto> = ({ item }) => (
+    <View style={[styles.productCard, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}>
+      {item.photoUrls[0] ? (
+        <Image source={{ uri: item.photoUrls[0] }} style={styles.thumb} resizeMode="cover" />
+      ) : (
+        <View style={[styles.thumbPlaceholder, { backgroundColor: palette.imagePlaceholder }]}>
+          <Text style={styles.placeholderEmoji}>🪴</Text>
+        </View>
+      )}
+      <View style={styles.badgeRow}>
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor: item.isSwapOnly ? palette.arPillBg : palette.stockPillBg,
+              borderColor: item.isSwapOnly ? palette.arPillBorder : palette.stockPillBorder
+            }
+          ]}
         >
-          <Text style={{ color: palette.buttonText, fontWeight: '700' }}>Teklif Ver</Text>
-        </TouchableOpacity>
+          <Text
+            style={[
+              styles.badgeText,
+              { color: item.isSwapOnly ? palette.arPillText : palette.stockPillText }
+            ]}
+          >
+            {item.isSwapOnly ? 'TAKAS' : 'SATILIK'}
+          </Text>
+        </View>
+        <View style={[styles.badge, { backgroundColor: palette.mutedCard, borderColor: palette.outlineVariant }]}>
+          <Text style={[styles.badgeText, { color: palette.subText }]}>
+            {EXCHANGE_CONDITION_LABELS[item.condition].toUpperCase()}
+          </Text>
+        </View>
+      </View>
+      <Text style={[styles.cardTitle, { color: palette.text }]}>{item.title}</Text>
+      <Text style={[styles.cardMeta, { color: palette.subText }]}>{item.ownerDisplayName}</Text>
+      <Text style={[styles.cardPrice, { color: palette.brandTitle }]}>
+        {item.isSwapOnly ? 'Takaslık' : formatTryCurrency(item.price)}
+      </Text>
+      <TouchableOpacity
+        style={[styles.cta, { backgroundColor: palette.button, opacity: isMutating ? 0.6 : 1 }]}
+        disabled={isMutating}
+        onPress={() => {
+          setSelectedProduct(item);
+          setOfferType(item.isSwapOnly ? EXCHANGE_OFFER_TYPE.Swap : EXCHANGE_OFFER_TYPE.Buy);
+          setOfferModalVisible(true);
+        }}
+      >
+        <Text style={[styles.ctaText, { color: palette.buttonText }]}>Teklif Ver</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderOffer = (offer: ExchangeOfferDto, incoming: boolean) => (
+    <View
+      key={`${incoming ? 'in' : 'out'}-${offer.id}`}
+      style={[styles.offerCard, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}
+    >
+      <View style={styles.offerHeader}>
+        <Text style={[styles.cardTitle, { color: palette.text, flex: 1 }]}>{offer.productTitle}</Text>
+        <View
+          style={[
+            styles.statusPill,
+            offer.status === EXCHANGE_OFFER_STATUS.Pending && { backgroundColor: palette.stockLowPillBg },
+            offer.status === EXCHANGE_OFFER_STATUS.Accepted && { backgroundColor: palette.stockPillBg },
+            offer.status === EXCHANGE_OFFER_STATUS.Rejected && { backgroundColor: palette.mutedCard }
+          ]}
+        >
+          <Text style={[styles.statusText, { color: palette.text }]}>
+            {EXCHANGE_OFFER_STATUS_LABELS[offer.status]}
+          </Text>
+        </View>
+      </View>
+      <Text style={[styles.cardMeta, { color: palette.subText }]}>
+        {incoming ? offer.senderDisplayName : 'Siz'} · {EXCHANGE_OFFER_TYPE_LABELS[offer.offerType]}
+      </Text>
+      {offer.message ? (
+        <Text style={[styles.offerMessage, { color: palette.text, backgroundColor: palette.mutedCard }]}>
+          {offer.message}
+        </Text>
+      ) : null}
+      {incoming && offer.status === EXCHANGE_OFFER_STATUS.Pending ? (
+        <View style={styles.offerActions}>
+          <TouchableOpacity
+            style={[styles.cta, { flex: 1, backgroundColor: palette.button }]}
+            disabled={isMutating}
+            onPress={() => void respondOffer(offer.id, true)}
+          >
+            <Text style={[styles.ctaText, { color: palette.buttonText }]}>Kabul</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.ctaOutline, { flex: 1, borderColor: palette.outlineVariant }]}
+            disabled={isMutating}
+            onPress={() => void respondOffer(offer.id, false)}
+          >
+            <Text style={{ color: palette.text, fontWeight: '600' }}>Red</Text>
+          </TouchableOpacity>
+        </View>
       ) : null}
     </View>
   );
 
-  return (
+  const listHeader = (
     <View>
-      <Text style={[styles.heading, { color: palette.text }]}>TerraTakas</Text>
-      <View style={styles.tabs}>
-        {(
-          [
-            ['market', 'Pazar'],
-            ['mine', 'İlanlarım'],
-            ['offers', 'Teklifler']
-          ] as const
-        ).map(([key, label]) => (
-          <TouchableOpacity
-            key={key}
-            style={[
-              styles.tab,
-              {
-                backgroundColor: view === key ? palette.secondaryContainer : palette.mutedCard,
-                borderColor: palette.outlineVariant
-              }
-            ]}
-            onPress={() => setView(key)}
-          >
-            <Text style={{ color: palette.text, fontWeight: view === key ? '700' : '500' }}>{label}</Text>
-          </TouchableOpacity>
-        ))}
+      <SectionHeader
+        title="TerraTakas"
+        subtitle="Bitki ve saksı takası · Canlı ilanlar"
+        titleColor={palette.text}
+        subtitleColor={palette.subText}
+      />
+      <View style={[styles.tabBar, { backgroundColor: palette.mutedCard, borderColor: palette.outlineVariant }]}>
+        {TABS.map((tab) => {
+          const active = view === tab.key;
+          const badge =
+            tab.key === 'offers' && pendingCount > 0 ? pendingCount : tab.key === 'mine' ? myProducts.length : 0;
+          return (
+            <Pressable
+              key={tab.key}
+              style={[
+                styles.tab,
+                active && { backgroundColor: palette.secondaryContainer, borderColor: palette.brandTitle }
+              ]}
+              onPress={() => setView(tab.key)}
+            >
+              <Text
+                style={[
+                  mobileTypography.navLabel,
+                  { color: active ? palette.onSecondaryContainer : palette.subText, fontWeight: active ? '700' : '500' }
+                ]}
+              >
+                {tab.label}
+                {badge > 0 ? ` (${badge})` : ''}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
-
       {error ? <StateMessage tone="error" text={error} color={palette.text} /> : null}
       {success ? <StateMessage text={success} color={palette.brandTitle} /> : null}
-      {loading ? <Text style={{ color: palette.subText }}>Yükleniyor…</Text> : null}
-
-      {view === 'market' && !loading ? (
-        <ScrollView>{products.map((p) => renderProductCard(p, true))}</ScrollView>
+      {view === 'mine' ? (
+        <View style={[styles.formCard, { backgroundColor: palette.elevatedSurface, borderColor: palette.outlineVariant }]}>
+          <Text style={[styles.formTitle, { color: palette.text }]}>Yeni ilan</Text>
+          <TextInput
+            style={[styles.input, { color: palette.text, borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
+            placeholder="Başlık"
+            placeholderTextColor={palette.subText}
+            value={newTitle}
+            editable={!isMutating}
+            onChangeText={setNewTitle}
+          />
+          <TextInput
+            style={[styles.input, styles.inputMultiline, { color: palette.text, borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
+            placeholder="Açıklama"
+            placeholderTextColor={palette.subText}
+            multiline
+            value={newDescription}
+            editable={!isMutating}
+            onChangeText={setNewDescription}
+          />
+          <TextInput
+            style={[styles.input, { color: palette.text, borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
+            placeholder="Fiyat (0 = takas)"
+            placeholderTextColor={palette.subText}
+            keyboardType="decimal-pad"
+            value={newPrice}
+            editable={!isMutating}
+            onChangeText={setNewPrice}
+          />
+          <TouchableOpacity
+            style={[styles.uploadBtn, { borderColor: palette.outlineVariant, backgroundColor: palette.surfaceDim }]}
+            disabled={isMutating}
+            onPress={() => void pickListingPhoto()}
+          >
+            {newPhotoUrl ? (
+              <Image source={{ uri: newPhotoUrl }} style={styles.uploadPreview} resizeMode="cover" />
+            ) : (
+              <Text style={{ color: palette.subText }}>📷 Galeriden fotoğraf seç</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.cta, { backgroundColor: palette.button, opacity: isMutating ? 0.6 : 1 }]}
+            disabled={isMutating}
+            onPress={() => void createListing()}
+          >
+            <Text style={[styles.ctaText, { color: palette.buttonText }]}>
+              {isMutating ? 'Kaydediliyor…' : 'İlanı yayınla'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       ) : null}
-
-      {view === 'mine' && !loading ? (
-        <ScrollView>
-          <View style={[styles.card, { backgroundColor: palette.mutedCard, borderColor: palette.border }]}>
-            <Text style={[styles.title, { color: palette.text }]}>Yeni ilan</Text>
-            <TextInput
-              style={[styles.input, { color: palette.text, borderColor: palette.border }]}
-              placeholder="Başlık"
-              placeholderTextColor={palette.subText}
-              value={newTitle}
-              editable={!isMutating}
-              onChangeText={setNewTitle}
-            />
-            <TextInput
-              style={[styles.input, { color: palette.text, borderColor: palette.border }]}
-              placeholder="Açıklama"
-              placeholderTextColor={palette.subText}
-              value={newDescription}
-              editable={!isMutating}
-              onChangeText={setNewDescription}
-            />
-            <TextInput
-              style={[styles.input, { color: palette.text, borderColor: palette.border }]}
-              placeholder="Fiyat (0=takas)"
-              placeholderTextColor={palette.subText}
-              keyboardType="decimal-pad"
-              value={newPrice}
-              editable={!isMutating}
-              onChangeText={setNewPrice}
-            />
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: palette.productCtaBg, borderColor: palette.productCtaBorder }]}
-              disabled={isMutating}
-              onPress={() => void pickListingPhoto()}
-            >
-              <Text style={{ color: palette.productCtaFg }}>Galeriden fotoğraf seç</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: palette.button, marginTop: 8, opacity: isMutating ? 0.6 : 1 }]}
-              disabled={isMutating}
-              onPress={() => void createListing()}
-            >
-              <Text style={{ color: palette.buttonText, fontWeight: '700' }}>
-                {isMutating ? 'Kaydediliyor…' : 'İlanı yayınla'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {myProducts.map((p) => renderProductCard(p, false))}
-        </ScrollView>
+      {view === 'offers' ? (
+        <Text style={[styles.sectionLabel, { color: palette.subText }]}>Gelen teklifler</Text>
       ) : null}
+    </View>
+  );
 
-      {view === 'offers' && !loading ? (
-        <ScrollView>
-          <Text style={[styles.subHeading, { color: palette.text }]}>Gelen teklifler</Text>
-          {received.map((offer) => (
-            <View
-              key={offer.id}
-              style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}
-            >
-              <Text style={{ color: palette.text, fontWeight: '700' }}>{offer.productTitle}</Text>
-              <Text style={{ color: palette.subText }}>
-                {offer.senderDisplayName} · {EXCHANGE_OFFER_TYPE_LABELS[offer.offerType]}
-              </Text>
-              <Text style={{ color: palette.subText }}>{offer.message}</Text>
-              <Text style={{ color: palette.subText }}>
-                {EXCHANGE_OFFER_STATUS_LABELS[offer.status]}
-              </Text>
-              {offer.status === EXCHANGE_OFFER_STATUS.Pending ? (
-                <View style={styles.row}>
-                  <TouchableOpacity
-                    style={[styles.btn, { backgroundColor: palette.button, flex: 1, opacity: isMutating ? 0.6 : 1 }]}
-                    disabled={isMutating}
-                    onPress={() => void respondOffer(offer.id, true)}
-                  >
-                    <Text style={{ color: palette.buttonText }}>Kabul</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.btn, { backgroundColor: palette.mutedCard, flex: 1, opacity: isMutating ? 0.6 : 1 }]}
-                    disabled={ isMutating}
-                    onPress={() => void respondOffer(offer.id, false)}
-                  >
-                    <Text style={{ color: palette.text }}>Red</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-            </View>
-          ))}
-          <Text style={[styles.subHeading, { color: palette.text, marginTop: 16 }]}>Gönderdiğim</Text>
-          {sent.map((offer) => (
-            <View
-              key={`sent-${offer.id}`}
-              style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}
-            >
-              <Text style={{ color: palette.text }}>{offer.productTitle}</Text>
-              <Text style={{ color: palette.subText }}>
-                {EXCHANGE_OFFER_STATUS_LABELS[offer.status]}
-              </Text>
-            </View>
-          ))}
-        </ScrollView>
-      ) : null}
+  const marketData = view === 'market' ? products : view === 'mine' ? myProducts : [];
+  const offersFooter =
+    view === 'offers' ? (
+      <View>
+        {received.length === 0 ? (
+          <Text style={[styles.emptyText, { color: palette.subText }]}>Henüz gelen teklif yok.</Text>
+        ) : (
+          received.map((o) => renderOffer(o, true))
+        )}
+        <Text style={[styles.sectionLabel, { color: palette.subText, marginTop: 16 }]}>Gönderdiğim</Text>
+        {sent.length === 0 ? (
+          <Text style={[styles.emptyText, { color: palette.subText }]}>Henüz teklif göndermediniz.</Text>
+        ) : (
+          sent.map((o) => renderOffer(o, false))
+        )}
+      </View>
+    ) : null;
+
+  if (loading) {
+    return (
+      <View>
+        <SectionHeader title="TerraTakas" subtitle="Yükleniyor…" titleColor={palette.text} subtitleColor={palette.subText} />
+        <Text style={{ color: palette.subText, paddingVertical: 24, textAlign: 'center' }}>Yükleniyor…</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.root}>
+      {view === 'offers' ? (
+        <FlatList
+          data={[]}
+          renderItem={() => null}
+          ListHeaderComponent={
+            <>
+              {listHeader}
+              {offersFooter}
+            </>
+          }
+          keyExtractor={() => 'offers'}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <FlatList
+          data={marketData}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={view === 'market' ? renderMarketCard : renderMarketCard}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            <Text style={[styles.emptyText, { color: palette.subText }]}>
+              {view === 'market' ? 'Henüz ilan yok.' : 'Henüz ilanınız yok.'}
+            </Text>
+          }
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       <Modal visible={offerModalVisible} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { backgroundColor: palette.card }]}>
-            <Text style={[styles.title, { color: palette.text }]}>Teklif türü</Text>
-            <View style={styles.row}>
+        <Pressable style={styles.modalBackdrop} onPress={() => !isMutating && setOfferModalVisible(false)}>
+          <Pressable
+            style={[styles.modalSheet, { backgroundColor: palette.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={[styles.modalHandle, { backgroundColor: palette.outlineVariant }]} />
+            <Text style={[styles.formTitle, { color: palette.text }]}>Teklif ver</Text>
+            {selectedProduct ? (
+              <Text style={[styles.cardMeta, { color: palette.subText, marginBottom: 12 }]}>
+                {selectedProduct.title}
+              </Text>
+            ) : null}
+            <View style={styles.typeRow}>
               <TouchableOpacity
-                style={[styles.tab, { backgroundColor: offerType === EXCHANGE_OFFER_TYPE.Swap ? palette.button : palette.mutedCard }]}
+                style={[
+                  styles.typeBtn,
+                  {
+                    backgroundColor: offerType === EXCHANGE_OFFER_TYPE.Swap ? palette.button : palette.mutedCard,
+                    borderColor: palette.outlineVariant
+                  }
+                ]}
                 disabled={isMutating}
                 onPress={() => setOfferType(EXCHANGE_OFFER_TYPE.Swap)}
               >
@@ -376,7 +483,13 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
               </TouchableOpacity>
               {selectedProduct && !selectedProduct.isSwapOnly ? (
                 <TouchableOpacity
-                  style={[styles.tab, { backgroundColor: offerType === EXCHANGE_OFFER_TYPE.Buy ? palette.button : palette.mutedCard }]}
+                  style={[
+                    styles.typeBtn,
+                    {
+                      backgroundColor: offerType === EXCHANGE_OFFER_TYPE.Buy ? palette.button : palette.mutedCard,
+                      borderColor: palette.outlineVariant
+                    }
+                  ]}
                   disabled={isMutating}
                   onPress={() => setOfferType(EXCHANGE_OFFER_TYPE.Buy)}
                 >
@@ -387,8 +500,8 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
               ) : null}
             </View>
             <TextInput
-              style={[styles.input, { color: palette.text, borderColor: palette.border }]}
-              placeholder="Mesajınız"
+              style={[styles.input, styles.inputMultiline, { color: palette.text, borderColor: palette.outlineVariant, backgroundColor: palette.mutedCard }]}
+              placeholder="Mesajınız (link yok)"
               placeholderTextColor={palette.subText}
               multiline
               value={offerMessage}
@@ -396,35 +509,136 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
               onChangeText={setOfferMessage}
             />
             <TouchableOpacity
-              style={[styles.btn, { backgroundColor: palette.button, opacity: isMutating ? 0.6 : 1 }]}
+              style={[styles.cta, { backgroundColor: palette.button, opacity: isMutating ? 0.6 : 1 }]}
               disabled={isMutating}
               onPress={() => void submitOffer()}
             >
-              <Text style={{ color: palette.buttonText, fontWeight: '700' }}>
+              <Text style={[styles.ctaText, { color: palette.buttonText }]}>
                 {isMutating ? 'Gönderiliyor…' : 'Gönder'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ marginTop: 8 }} disabled={isMutating} onPress={() => setOfferModalVisible(false)}>
-              <Text style={{ color: palette.subText, textAlign: 'center' }}>Kapat</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  heading: { fontSize: 22, fontWeight: '700', marginBottom: 12 },
-  subHeading: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
-  tabs: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  tab: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth },
-  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 12, marginBottom: 12 },
-  thumb: { width: '100%', height: 140, borderRadius: 8, marginBottom: 8 },
-  title: { fontSize: 16, fontWeight: '700' },
-  btn: { marginTop: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
-  input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, padding: 10, marginTop: 8 },
-  row: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  modalCard: { padding: 20, borderTopLeftRadius: 16, borderTopRightRadius: 16 }
+  root: { flex: 1 },
+  listContent: { paddingBottom: 24 },
+  tabBar: {
+    flexDirection: 'row',
+    gap: 6,
+    padding: 6,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 14
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'transparent',
+    alignItems: 'center'
+  },
+  productCard: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 14,
+    overflow: 'hidden'
+  },
+  thumb: { width: '100%', height: 160 },
+  thumbPlaceholder: { width: '100%', height: 160, alignItems: 'center', justifyContent: 'center' },
+  placeholderEmoji: { fontSize: 40, opacity: 0.5 },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, paddingTop: 10 },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
+  badgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+  cardTitle: { fontSize: 17, fontWeight: '700', paddingHorizontal: 12, marginTop: 8 },
+  cardMeta: { fontSize: 13, paddingHorizontal: 12, marginTop: 2 },
+  cardPrice: { fontSize: 16, fontWeight: '800', paddingHorizontal: 12, marginTop: 6 },
+  cta: { margin: 12, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  ctaText: { fontSize: 15, fontWeight: '700' },
+  ctaOutline: {
+    marginVertical: 0,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth
+  },
+  formCard: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    marginBottom: 16
+  },
+  formTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10 },
+  input: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    fontSize: 15
+  },
+  inputMultiline: { minHeight: 72, textAlignVertical: 'top' },
+  uploadBtn: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+    overflow: 'hidden'
+  },
+  uploadPreview: { width: '100%', height: 140, borderRadius: 8 },
+  offerCard: {
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    marginBottom: 10
+  },
+  offerHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  statusPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  offerMessage: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 10,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  offerActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8
+  },
+  emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 28
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16
+  },
+  typeRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  typeBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth
+  }
 });

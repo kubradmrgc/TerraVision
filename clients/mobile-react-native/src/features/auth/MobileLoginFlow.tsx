@@ -11,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { mobileTypography } from '../../theme/mobileTypography';
 import { BrandMark } from '../../ui/BrandMark';
+import { ThemeToggleButton } from '../../ui/ThemeToggleButton';
 import { FormField } from '../../ui/FormField';
 import { PrimaryButton } from '../../ui/PrimaryButton';
 import {
@@ -74,14 +75,13 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
             subtitleColor={palette.subText}
             size="sm"
           />
-          <TouchableOpacity
+          <ThemeToggleButton
+            themeMode={state.themeMode}
             onPress={controller.toggleTheme}
-            style={[styles.themeChip, { borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
-          >
-              <Text style={[styles.themeChipText, { color: palette.subText }]}>
-              {state.themeMode === 'dark' ? 'Açık tema' : 'Koyu tema'}
-            </Text>
-          </TouchableOpacity>
+            color={palette.subText}
+            borderColor={palette.outlineVariant}
+            backgroundColor={palette.card}
+          />
         </View>
 
         <ScrollView
@@ -381,12 +381,12 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
             <View style={styles.heroFadeDark} />
             <View style={[styles.heroHeader, { paddingTop: Math.max(insets.top, 10) }]}>
               <BrandMark accentColor={d.ctaMint} markColor={d.mint} subtitleColor={d.muted} size="sm" />
-              <TouchableOpacity
+              <ThemeToggleButton
+                themeMode={state.themeMode}
                 onPress={controller.toggleTheme}
-                style={[styles.themeChip, { borderColor: d.borderIndustrial }]}
-              >
-                <Text style={[styles.themeChipText, { color: d.muted }]}>Açık tema</Text>
-              </TouchableOpacity>
+                color={d.muted}
+                borderColor={d.borderIndustrial}
+              />
             </View>
           </View>
           {renderForm(portalConfig)}
@@ -423,12 +423,13 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
                 subtitleColor={palette.subText}
                 size="sm"
               />
-              <TouchableOpacity
+              <ThemeToggleButton
+                themeMode={state.themeMode}
                 onPress={controller.toggleTheme}
-                style={[styles.themeChip, { borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
-              >
-                <Text style={[styles.themeChipText, { color: palette.subText }]}>Koyu tema</Text>
-              </TouchableOpacity>
+                color={palette.subText}
+                borderColor={palette.outlineVariant}
+                backgroundColor={palette.card}
+              />
             </View>
           </View>
           {renderForm(portalConfig)}
@@ -453,14 +454,13 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
           subtitleColor={palette.subText}
           size="sm"
         />
-        <TouchableOpacity
+        <ThemeToggleButton
+          themeMode={state.themeMode}
           onPress={controller.toggleTheme}
-          style={[styles.themeChip, { borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
-        >
-              <Text style={[styles.themeChipText, { color: palette.subText }]}>
-              {state.themeMode === 'dark' ? 'Açık tema' : 'Koyu tema'}
-            </Text>
-        </TouchableOpacity>
+          color={palette.subText}
+          borderColor={palette.outlineVariant}
+          backgroundColor={palette.card}
+        />
       </View>
       <ScrollView
         keyboardShouldPersistTaps="handled"

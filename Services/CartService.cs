@@ -44,8 +44,9 @@ namespace TerraVision.Api.Services
             }
 
             var cart = await GetOrCreateCartAsync(userId);
+            // Unique index is on (CartId, ProductId) regardless of IsDeleted — revive soft-deleted rows instead of inserting.
             var existingItem = await _dbContext.CartItems
-                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId && !ci.IsDeleted);
+                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId);
 
             if (existingItem == null)
             {
@@ -58,7 +59,16 @@ namespace TerraVision.Api.Services
             }
             else
             {
-                existingItem.Quantity += request.Quantity;
+                if (existingItem.IsDeleted)
+                {
+                    existingItem.IsDeleted = false;
+                    existingItem.Quantity = request.Quantity;
+                }
+                else
+                {
+                    existingItem.Quantity += request.Quantity;
+                }
+
                 existingItem.UpdatedDate = DateTime.UtcNow;
             }
 

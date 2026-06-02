@@ -7,10 +7,10 @@ import type { MobilePalette, ThemeMode } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
 
 const appointmentStatusLabels: Record<number, string> = {
-  1: 'Pending',
-  2: 'Approved',
-  3: 'Completed',
-  4: 'Cancelled'
+  1: 'Beklemede',
+  2: 'Onaylandı',
+  3: 'Tamamlandı',
+  4: 'İptal'
 };
 
 const CONSULTANT_OPTIONS: { id: number; label: string }[] = [
@@ -74,10 +74,10 @@ type Props = {
 };
 
 function getRoleLabel(role: number | null): string {
-  if (role === 1) return 'Customer';
-  if (role === 2) return 'Consultant';
-  if (role === 3) return 'Admin';
-  return 'Unknown';
+  if (role === 1) return 'Müşteri';
+  if (role === 2) return 'Danışman';
+  if (role === 3) return 'Yönetici';
+  return 'Bilinmeyen';
 }
 
 function parseAppointmentDateInput(iso: string): Date {
@@ -150,7 +150,7 @@ function isStatusActionDisabled(
 
 function consultantWithLine(consultantId: number): string {
   const row = CONSULTANT_OPTIONS.find((o) => o.id === consultantId);
-  if (!row) return `with Consultant #${consultantId}`;
+  if (!row) return `Danışman #${consultantId} ile`;
   const name = row.label.split(' - ')[0];
   return `with ${name}`;
 }
@@ -375,7 +375,7 @@ export function AppointmentsSection({
           onPress={() => onAppointmentFilterChange(status)}
           accessibilityRole="button"
           accessibilityState={{ selected }}
-          accessibilityLabel={status === 'all' ? 'All appointments' : `Filter ${appointmentStatusLabels[status]}`}
+          accessibilityLabel={status === 'all' ? 'Tüm randevular' : `Filtre: ${appointmentStatusLabels[status]}`}
           style={[
             slStyles.filterChip,
             horizontal ? slStyles.filterChipH : slStyles.filterChipWrap,
@@ -387,7 +387,7 @@ export function AppointmentsSection({
           <Text
             style={[slStyles.filterChipText, { color: selected ? palette.buttonText : palette.subText }]}
           >
-            {status === 'all' ? 'All' : appointmentStatusLabels[status]}
+            {status === 'all' ? 'Tümü' : appointmentStatusLabels[status]}
           </Text>
         </TouchableOpacity>
       );
@@ -412,14 +412,14 @@ export function AppointmentsSection({
       const selected = appointmentFilterStatus === status;
       const isAll = status === 'all';
       const label =
-        isAll ? 'All Records' : status === 2 ? 'Confirmed' : appointmentStatusLabels[status];
+        isAll ? 'Tüm kayıtlar' : status === 2 ? 'Onaylı' : appointmentStatusLabels[status];
       return (
         <TouchableOpacity
           key={String(status)}
           onPress={() => onAppointmentFilterChange(status)}
           accessibilityRole="button"
           accessibilityState={{ selected }}
-          accessibilityLabel={isAll ? 'All appointment records' : `Filter ${appointmentStatusLabels[status]}`}
+          accessibilityLabel={isAll ? 'Tüm randevu kayıtları' : `Filtre: ${appointmentStatusLabels[status]}`}
           style={[
             darkStyles.filterChip,
             selected
@@ -559,9 +559,9 @@ export function AppointmentsSection({
               onPress={() => onUpdateStatus(appointment.id, 2)}
               disabled={isStatusActionDisabled(appointment, 2, isMutating)}
               accessibilityRole="button"
-              accessibilityLabel="Approve appointment"
+              accessibilityLabel="Randevuyu onayla"
             >
-              <Text style={[clStyles.actionBtnText, { color: palette.onSecondaryContainer }]}>Approve</Text>
+              <Text style={[clStyles.actionBtnText, { color: palette.onSecondaryContainer }]}>Onayla</Text>
             </TouchableOpacity>
             <TouchableOpacity
               testID={`appointment-row-${appointment.id}-set-3`}
@@ -577,7 +577,7 @@ export function AppointmentsSection({
               onPress={() => onUpdateStatus(appointment.id, 3)}
               disabled={isStatusActionDisabled(appointment, 3, isMutating)}
               accessibilityRole="button"
-              accessibilityLabel="Complete appointment"
+              accessibilityLabel="Randevuyu tamamla"
             >
               <Text style={[clStyles.actionBtnText, { color: palette.subText }]}>Complete</Text>
             </TouchableOpacity>
@@ -591,7 +591,7 @@ export function AppointmentsSection({
               onPress={() => onUpdateStatus(appointment.id, 4)}
               disabled={isStatusActionDisabled(appointment, 4, isMutating)}
               accessibilityRole="button"
-              accessibilityLabel="Cancel appointment"
+              accessibilityLabel="Randevuyu iptal et"
             >
               <Text style={[clStyles.actionBtnText, { color: LIGHT_ON_ERROR_CONTAINER }]}>Cancel</Text>
             </TouchableOpacity>
@@ -773,7 +773,7 @@ export function AppointmentsSection({
                     palette.onPrimaryContainer,
                     0,
                     undefined,
-                    'Approve',
+                    'Onayla',
                     () => onUpdateStatus(appointment.id, 2),
                     isStatusActionDisabled(appointment, 2, isMutating),
                     `appointment-row-${appointment.id}-set-2`
@@ -796,7 +796,7 @@ export function AppointmentsSection({
                     palette.onPrimaryContainer,
                     0,
                     undefined,
-                    'Approve',
+                    'Onayla',
                     () => onUpdateStatus(appointment.id, 2),
                     isStatusActionDisabled(appointment, 2, isMutating),
                     `appointment-row-${appointment.id}-set-2`
@@ -1004,7 +1004,7 @@ export function AppointmentsSection({
     <View style={slStyles.root}>
       {consultantStitchLight ? (
         <View style={slStyles.section}>
-          <Text style={[clStyles.consultHead, { color: palette.text }]}>Consultant Appointments</Text>
+          <Text style={[clStyles.consultHead, { color: palette.text }]}>Danışman randevuları</Text>
           <Text style={[clStyles.consultSub, { color: palette.subText }]}>
             Manage your daily field operation schedule
           </Text>
@@ -1043,7 +1043,7 @@ export function AppointmentsSection({
               </View>
               <View>
                 <Text style={[clStyles.bentoStat, { color: palette.text }]}>{pendingTotal}</Text>
-                <Text style={[clStyles.bentoLabel, { color: palette.subText }]}>Pending Approval</Text>
+                <Text style={[clStyles.bentoLabel, { color: palette.subText }]}>Onay bekliyor</Text>
               </View>
             </View>
           </View>
@@ -1067,9 +1067,9 @@ export function AppointmentsSection({
                 <Text style={{ fontSize: 16, color: DARK_PRIMARY_FIXED_DIM }}>◉</Text>
               </View>
               <View>
-                <Text style={[cdStyles.bentoHeadline, { color: palette.text }]}>{`${totalRecords} Scheduled`}</Text>
+                <Text style={[cdStyles.bentoHeadline, { color: palette.text }]}>{`${totalRecords} planlandı`}</Text>
                 <Text style={[cdStyles.bentoSubline, { color: DARK_PRIMARY_FIXED_DIM }]}>
-                  {`${pendingTotal} Pending Approval`}
+                  {`${pendingTotal} onay bekliyor`}
                 </Text>
               </View>
             </View>
@@ -1103,7 +1103,7 @@ export function AppointmentsSection({
             </View>
           </View>
           <View style={cdStyles.listHeadRow}>
-            <Text style={[cdStyles.listHeadTitle, { color: palette.text }]}>Consultant Appointments</Text>
+            <Text style={[cdStyles.listHeadTitle, { color: palette.text }]}>Danışman randevuları</Text>
             <View style={cdStyles.listHeadActions}>
               <TouchableOpacity
                 style={[cdStyles.iconBtn, { backgroundColor: palette.elevatedSurface }]}
@@ -1140,7 +1140,7 @@ export function AppointmentsSection({
             <View style={darkStyles.heroTextBlock}>
               <Text style={[darkStyles.heroTitle, { color: DARK_PRIMARY_FIXED_DIM }]}>Service Appointments</Text>
               <Text style={[darkStyles.heroBody, { color: palette.subText }]}>
-                Schedule and track your equipment inspections and field visits.
+                Ekipman kontrollerinizi ve saha ziyaretlerinizi planlayın ve takip edin.
               </Text>
             </View>
           </View>
@@ -1261,7 +1261,7 @@ export function AppointmentsSection({
               }
             ]}
           >
-            <Text style={[slStyles.inputLabel, { color: palette.subText }]}>Select Consultant</Text>
+            <Text style={[slStyles.inputLabel, { color: palette.subText }]}>Danışman seçin</Text>
             <View style={[slStyles.pickerWrap, { borderColor: palette.border, backgroundColor: palette.card }]}>
               <Picker
                 selectedValue={String(Number(consultantIdInput) || 2)}
@@ -1351,7 +1351,7 @@ export function AppointmentsSection({
               accessibilityLabel="Schedule appointment"
             >
               <Text style={[slStyles.submitBtnText, { color: palette.buttonText }]}>
-                {isMutating ? 'Scheduling…' : 'Schedule Appointment'}
+                {isMutating ? 'Planlanıyor…' : 'Randevu planla'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1361,7 +1361,7 @@ export function AppointmentsSection({
       {role !== 1 && !consultantStitchLight && !consultantStitchDark ? (
         <View style={[legacyStyles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <StateMessage
-            text="Bu rolde yeni randevu olusturma devre disi; mevcut randevularinizi asagida goruntuleyebilirsiniz."
+            text="Bu rolde yeni randevu oluşturma devre dışı; mevcut randevularınızı aşağıda görüntüleyebilirsiniz."
             color={palette.subText}
           />
         </View>
@@ -1386,11 +1386,11 @@ export function AppointmentsSection({
             <Text style={[slStyles.sectionTitle, { color: palette.text }]}>Upcoming Appointments</Text>
           ) : null}
           {isLoading ? (
-            <StateMessage text="Randevular yukleniyor..." color={palette.subText} />
+            <StateMessage text="Randevular yükleniyor…" color={palette.subText} />
           ) : errorMessage ? (
             <StateMessage tone="error" text={errorMessage} />
           ) : appointments.length === 0 ? (
-            <StateMessage text="Henuz randevu bulunmuyor." color={palette.subText} />
+            <StateMessage text="Henüz randevu bulunmuyor." color={palette.subText} />
           ) : (
             <View style={slStyles.apList}>{appointments.map(renderAppointmentRow)}</View>
           )}

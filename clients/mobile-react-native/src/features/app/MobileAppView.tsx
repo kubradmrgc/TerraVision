@@ -9,6 +9,7 @@ import { MobileLoginFlow } from '../auth/MobileLoginFlow';
 import { RealtimeStatusBadge } from '../realtime/RealtimeStatusBadge';
 import { StateMessage } from '../../ui/StateMessage';
 import { BrandMark } from '../../ui/BrandMark';
+import { ThemeToggleButton } from '../../ui/ThemeToggleButton';
 import { NavTabIcon } from '../../ui/NavTabIcon';
 import { ProductsSection } from '../products/ProductsSection';
 import { CartSection } from '../cart/CartSection';
@@ -18,6 +19,7 @@ import { EventsSection } from '../realtime/EventsSection';
 import { CareCalendarSection } from '../care/CareCalendarSection';
 import { ExchangeSection } from '../exchange/ExchangeSection';
 import { ProfileSection } from '../profile/ProfileSection';
+import { ArRoomsSection } from '../ar/ArRoomsSection';
 import { USER_ROLE } from '@terravision/shared';
 
 type Props = {
@@ -78,18 +80,16 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
                 compactDotColor={palette.realtimeCapsuleDotColor}
               />
             </View>
-            <TouchableOpacity
-              style={[styles.themeChip, styles.headerGhostTight, { borderColor: palette.outlineVariant }]}
+            <ThemeToggleButton
+              themeMode={state.themeMode}
               onPress={controller.toggleTheme}
-              accessibilityRole="button"
-              accessibilityLabel="Toggle theme"
-            >
-              <Text style={[styles.themeChipText, { color: palette.subText }]}>
-                {state.themeMode === 'dark' ? 'Light' : 'Dark'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={controller.handleLogout} accessibilityRole="button" accessibilityLabel="Logout">
-              <Text style={[styles.logoutText, { color: palette.subText }]}>Logout</Text>
+              color={palette.subText}
+              borderColor={palette.outlineVariant}
+              style={styles.headerGhostTight}
+              size="sm"
+            />
+            <TouchableOpacity onPress={controller.handleLogout} accessibilityRole="button" accessibilityLabel="Çıkış yap">
+              <Text style={[styles.logoutText, { color: palette.subText }]}>Çıkış</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -113,14 +113,14 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
         {isCommerceLoading && (
           <StateMessage
             variant="banner"
-            text="Loading data…"
+            text="Veriler yükleniyor…"
             color={palette.subText}
             backgroundColor={palette.mutedCard}
             borderColor={palette.outlineVariant}
           />
         )}
         {commerceError && (
-          <StateMessage variant="banner" tone="error" text="Could not load data. Please try again." />
+          <StateMessage variant="banner" tone="error" text="Veriler yüklenemedi. Lütfen tekrar deneyin." />
         )}
         {orderSuccessMessage && <StateMessage text={orderSuccessMessage} color={palette.text} />}
 
@@ -166,7 +166,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             palette={palette}
             themeMode={state.themeMode}
             isLoading={isCommerceLoading}
-            errorMessage={orderErrorMessage ?? (commerceError ? 'Could not load orders.' : null)}
+            errorMessage={orderErrorMessage ?? (commerceError ? 'Siparişler yüklenemedi.' : null)}
           />
         )}
         {state.activeSection === 'appointments' && (
@@ -189,7 +189,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             onAppointmentFilterChange={controller.setAppointmentFilterStatus}
             onCreateAppointment={controller.handleCreateAppointment}
             onUpdateStatus={controller.handleUpdateAppointmentStatus}
-            errorMessage={commerceError ? 'Could not load appointments.' : null}
+            errorMessage={commerceError ? 'Randevular yüklenemedi.' : null}
             totalAppointmentsCount={controller.totalAppointmentsCount}
             pendingAppointmentsCount={controller.pendingAppointmentsCount}
             completedAppointmentsCount={controller.completedAppointmentsCount}
@@ -210,13 +210,25 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
         )}
         {state.activeSection === 'exchange' && <ExchangeSection palette={palette} />}
         {state.activeSection === 'profile' && (
-          <ProfileSection
-            profile={state.profile}
-            palette={palette}
-            themeMode={state.themeMode}
-            onToggleTheme={controller.toggleTheme}
-            onLogout={controller.handleLogout}
-          />
+          <>
+            <ProfileSection
+              profile={state.profile}
+              palette={palette}
+              themeMode={state.themeMode}
+              onToggleTheme={controller.toggleTheme}
+              onLogout={controller.handleLogout}
+            />
+            {state.role === USER_ROLE.Customer ? (
+              <ArRoomsSection
+                sessions={controller.arSessions}
+                palette={palette}
+                isLoading={controller.isArSessionsLoading}
+                isRefreshing={controller.isArSessionsRefreshing}
+                errorMessage={controller.arSessionsErrorMessage}
+                onRefresh={controller.refreshArSessions}
+              />
+            ) : null}
+          </>
         )}
         {state.activeSection === 'events' && (
           <EventsSection
@@ -258,8 +270,6 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
                 section={section}
                 active={active}
                 activeBg={palette.brandTitle}
-                activeFg={palette.buttonText}
-                inactiveFg={palette.navInactive}
                 borderColor={palette.outlineVariant}
               />
               <Text

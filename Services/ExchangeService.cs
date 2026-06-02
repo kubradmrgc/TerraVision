@@ -17,19 +17,22 @@ namespace TerraVision.Api.Services
         private readonly IRepository<User> _userRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IRealtimeSyncService _realtimeSyncService;
+        private readonly INotificationService _notificationService;
 
         public ExchangeService(
             IRepository<ExchangeProduct> productRepository,
             IRepository<ExchangeOffer> offerRepository,
             IRepository<User> userRepository,
             IUnitOfWork unitOfWork,
-            IRealtimeSyncService realtimeSyncService)
+            IRealtimeSyncService realtimeSyncService,
+            INotificationService notificationService)
         {
             _productRepository = productRepository;
             _offerRepository = offerRepository;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
             _realtimeSyncService = realtimeSyncService;
+            _notificationService = notificationService;
         }
 
         public async Task<IReadOnlyList<ExchangeProductDto>> ListActiveProductsAsync(
@@ -214,6 +217,15 @@ namespace TerraVision.Api.Services
                 Message = offer.Message
             });
 
+            await _notificationService.CreateAsync(
+                product.OwnerId,
+                NotificationType.ExchangeOfferReceived,
+                "Yeni takas teklifi",
+                $"{FormatDisplayName(sender)}, \"{product.Title}\" ilanınıza {DescribeOfferType(offer.OfferType)} teklifi gönderdi.",
+                relatedEntityType: "ExchangeOffer",
+                relatedEntityId: offer.Id,
+                cancellationToken: cancellationToken);
+
             return dto;
         }
 
@@ -301,6 +313,15 @@ namespace TerraVision.Api.Services
                 SenderId = offer.SenderId,
                 Status = offer.Status
             });
+
+            await _notificationService.CreateAsync(
+                offer.SenderId,
+                NotificationType.ExchangeOfferStatusChanged,
+                "Takas teklifiniz güncellendi",
+                $"\"{offer.Product.Title}\" ilanına gönderdiğiniz teklif {DescribeOfferStatus(offer.Status)}.",
+                relatedEntityType: "ExchangeOffer",
+                relatedEntityId: offer.Id,
+                cancellationToken: cancellationToken);
 
             return await MapOfferAsync(offer, offer.Product, offer.Sender, cancellationToken);
         }
@@ -417,5 +438,20 @@ namespace TerraVision.Api.Services
 
         private static string FormatDisplayName(User user) =>
             $"{user.FirstName} {user.LastName}".Trim();
+
+        private static string DescribeOfferType(ExchangeOfferType offerType) => offerType switch
+        {
+            ExchangeOfferType.Swap => "takas",
+            ExchangeOfferType.Buy => "satın alma",
+            _ => offerType.ToString()
+        };
+
+        private static string DescribeOfferStatus(ExchangeOfferStatus status) => status switch
+        {
+            ExchangeOfferStatus.Accepted => "kabul edildi",
+            ExchangeOfferStatus.Rejected => "reddedildi",
+            ExchangeOfferStatus.Pending => "beklemede",
+            _ => status.ToString()
+        };
     }
 }

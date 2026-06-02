@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { formatRelativeTimeTr } from '../../i18n/tr';
 import { getOrderStatusLabel } from '../../theme/mobileTheme';
 import type { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '../../types/realtime';
 import type { MobilePalette, ThemeMode } from '../app/types';
@@ -52,25 +53,6 @@ function parseEventTime(iso?: string): number {
   return Number.isNaN(t) ? 0 : t;
 }
 
-function formatRelativeTime(iso?: string): string {
-  if (!iso?.trim()) {
-    return 'Just now';
-  }
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) {
-    return 'Recently';
-  }
-  const diffMs = Date.now() - t;
-  const sec = Math.floor(diffMs / 1000);
-  if (sec < 60) return 'Just now';
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const d = Math.floor(hr / 24);
-  return `${d}d ago`;
-}
-
 function buildFeedRows(
   events: CartChangedEvent[],
   orderCreatedEvents: OrderCreatedEvent[],
@@ -85,10 +67,10 @@ function buildFeedRows(
       accent: 'secondary',
       darkKind: 'user',
       iconLabel: 'CT',
-      title: 'Cart Updated',
-      body: `User #${item.userId} ${item.action.toLowerCase()} product #${item.productId} (qty ${item.quantity}).`,
+      title: 'Sepet güncellendi',
+      body: `Kullanıcı #${item.userId}, ürün #${item.productId} için ${item.action.toLowerCase()} (adet ${item.quantity}).`,
       sortTime: t || Date.now() - idx * 120000,
-      timeLabel: formatRelativeTime(item.occurredAtUtc)
+      timeLabel: formatRelativeTimeTr(item.occurredAtUtc)
     });
   });
 
@@ -99,10 +81,10 @@ function buildFeedRows(
       accent: 'primary',
       darkKind: 'critical',
       iconLabel: 'OR',
-      title: `Order #${item.orderId} Created`,
-      body: `New order total ${item.totalAmount.toFixed(2)} (${getOrderStatusLabel(item.status)}).`,
+      title: `Sipariş #${item.orderId} oluşturuldu`,
+      body: `Yeni sipariş tutarı ${item.totalAmount.toFixed(2)} TL (${getOrderStatusLabel(item.status)}).`,
       sortTime: t || Date.now() - idx * 900000,
-      timeLabel: formatRelativeTime(item.occurredAtUtc)
+      timeLabel: formatRelativeTimeTr(item.occurredAtUtc)
     });
   });
 
@@ -118,17 +100,17 @@ function buildFeedRows(
       darkKind,
       iconLabel: cancelled ? 'AL' : shipped ? 'SH' : 'ST',
       title: shipped
-        ? `Order #${item.orderId} Shipped`
+        ? `Sipariş #${item.orderId} kargoya verildi`
         : cancelled
-          ? `Order #${item.orderId} Cancelled`
-          : `Order #${item.orderId} Updated`,
+          ? `Sipariş #${item.orderId} iptal edildi`
+          : `Sipariş #${item.orderId} güncellendi`,
       body: shipped
-        ? 'Package status moved to shipped in the fulfillment network.'
+        ? 'Paket durumu dağıtım ağında kargoya verildi olarak güncellendi.'
         : cancelled
-          ? 'Order lifecycle closed; inventory and billing hooks may still be processing.'
-          : `Status ${getOrderStatusLabel(item.previousStatus)}→${getOrderStatusLabel(item.newStatus)}.`,
+          ? 'Sipariş yaşam döngüsü kapandı; stok ve faturalama işlemleri sürebilir.'
+          : `Durum: ${getOrderStatusLabel(item.previousStatus)} → ${getOrderStatusLabel(item.newStatus)}.`,
       sortTime: t || Date.now() - idx * 600000,
-      timeLabel: formatRelativeTime(item.occurredAtUtc)
+      timeLabel: formatRelativeTimeTr(item.occurredAtUtc)
     });
   });
 
@@ -169,25 +151,25 @@ function darkPill(row: FeedRow, palette: MobilePalette): { label: string; fg: st
   switch (row.darkKind) {
     case 'critical':
       return {
-        label: 'NODE UPDATE',
+        label: 'DÜĞÜM GÜNCELLEMESİ',
         fg: DARK_PRIMARY_FIXED_DIM,
         bg: 'rgba(0, 82, 45, 0.35)'
       };
     case 'user':
       return {
-        label: 'CART CHANNEL',
+        label: 'SEPET KANALI',
         fg: palette.onSecondaryContainer,
         bg: 'rgba(64, 71, 88, 0.45)'
       };
     case 'warning':
       return {
-        label: 'SYSTEM WARNING',
+        label: 'SİSTEM UYARISI',
         fg: DARK_ERROR,
         bg: 'rgba(147, 0, 10, 0.35)'
       };
     default:
       return {
-        label: 'ROUTINE CYCLE',
+        label: 'RUTİN DÖNGÜ',
         fg: palette.border,
         bg: palette.imagePlaceholder
       };
@@ -240,10 +222,10 @@ export function EventsSection(props: Props): React.JSX.Element {
               }
             ]}
           >
-            <Text style={[edStyles.heroKicker, { color: DARK_PRIMARY_FIXED_DIM }]}>LIVE STATUS</Text>
-            <Text style={[edStyles.heroTitle, { color: palette.text }]}>System Monitoring Active</Text>
+            <Text style={[edStyles.heroKicker, { color: DARK_PRIMARY_FIXED_DIM }]}>CANLI DURUM</Text>
+            <Text style={[edStyles.heroTitle, { color: palette.text }]}>Sistem izleme aktif</Text>
             <Text style={[edStyles.heroBody, { color: palette.subText }]}>
-              All terraforming nodes in Sector 7 are reporting optimal atmospheric conversion rates.
+              Tüm operasyon düğümleri normal çalışma aralığında rapor veriyor.
             </Text>
             <Text style={[edStyles.heroWatermark, { color: palette.border }]}>⎘</Text>
           </View>
@@ -258,12 +240,12 @@ export function EventsSection(props: Props): React.JSX.Element {
           >
             <Text style={{ fontSize: 36, marginBottom: 6 }}>⚡</Text>
             <Text style={[edStyles.heroStatValue, { color: palette.onPrimaryContainer }]}>{nodePct}%</Text>
-            <Text style={[edStyles.heroStatCap, { color: palette.onPrimaryContainer }]}>NODE EFFICIENCY</Text>
+            <Text style={[edStyles.heroStatCap, { color: palette.onPrimaryContainer }]}>DÜĞÜM VERİMLİLİĞİ</Text>
           </View>
         </View>
 
         <View style={edStyles.streamHead}>
-          <Text style={[edStyles.streamTitle, { color: palette.text }]}>Activity Stream</Text>
+          <Text style={[edStyles.streamTitle, { color: palette.text }]}>Etkinlik akışı</Text>
           <View style={edStyles.chipRow}>
             <TouchableOpacity
               onPress={() => setDarkFilter('all')}
@@ -276,7 +258,7 @@ export function EventsSection(props: Props): React.JSX.Element {
               ]}
               accessibilityRole="button"
               accessibilityState={{ selected: darkFilter === 'all' }}
-              accessibilityLabel="Show all activity"
+              accessibilityLabel="Tüm etkinlikleri göster"
             >
               <Text
                 style={[
@@ -284,7 +266,7 @@ export function EventsSection(props: Props): React.JSX.Element {
                   { color: darkFilter === 'all' ? palette.onPrimaryContainer : palette.subText }
                 ]}
               >
-                All
+                Tümü
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -298,7 +280,7 @@ export function EventsSection(props: Props): React.JSX.Element {
               ]}
               accessibilityRole="button"
               accessibilityState={{ selected: darkFilter === 'alerts' }}
-              accessibilityLabel="Show alerts only"
+              accessibilityLabel="Yalnızca uyarıları göster"
             >
               <Text
                 style={[
@@ -306,7 +288,7 @@ export function EventsSection(props: Props): React.JSX.Element {
                   { color: darkFilter === 'alerts' ? palette.onPrimaryContainer : palette.subText }
                 ]}
               >
-                Alerts
+                Uyarılar
               </Text>
             </TouchableOpacity>
           </View>
@@ -317,8 +299,8 @@ export function EventsSection(props: Props): React.JSX.Element {
             <StateMessage
               text={
                 darkFilter === 'alerts'
-                  ? 'No alert-level events in the current buffer.'
-                  : 'No live events yet. Cart and order activity will appear here.'
+                  ? 'Geçerli arabellekte uyarı düzeyinde olay yok.'
+                  : 'Henüz canlı olay yok. Sepet ve sipariş hareketleri burada görünür.'
               }
               color={palette.subText}
             />
@@ -373,9 +355,9 @@ export function EventsSection(props: Props): React.JSX.Element {
                     </View>
                     <TouchableOpacity
                       style={edStyles.chevronBtn}
-                      onPress={() => Alert.alert('Event', row.title)}
+                      onPress={() => Alert.alert('Olay', row.title)}
                       accessibilityRole="button"
-                      accessibilityLabel="Open event details"
+                      accessibilityLabel="Olay ayrıntılarını aç"
                     >
                       <Text style={{ color: palette.outlineVariant, fontSize: 22 }}>›</Text>
                     </TouchableOpacity>
@@ -387,8 +369,8 @@ export function EventsSection(props: Props): React.JSX.Element {
 
           <View style={[edStyles.mapCard, { backgroundColor: palette.mutedCard, borderColor: palette.outlineVariant }]}>
             <View style={[edStyles.mapHead, { borderBottomColor: `${palette.outlineVariant}55` }]}>
-              <Text style={[edStyles.mapTitle, { color: palette.text }]}>Regional Activity Map</Text>
-              <Text style={[edStyles.mapLive, { color: DARK_PRIMARY_FIXED_DIM }]}>Updating live…</Text>
+              <Text style={[edStyles.mapTitle, { color: palette.text }]}>Bölgesel etkinlik haritası</Text>
+              <Text style={[edStyles.mapLive, { color: DARK_PRIMARY_FIXED_DIM }]}>Canlı güncelleniyor…</Text>
             </View>
             <View style={[edStyles.mapBody, { backgroundColor: palette.imagePlaceholder }]}>
               <Image source={{ uri: MAP_HERO_URI }} style={edStyles.mapImg} resizeMode="cover" />
@@ -409,25 +391,25 @@ export function EventsSection(props: Props): React.JSX.Element {
   return (
     <View style={elStyles.root}>
       <View style={elStyles.headerBlock}>
-        <Text style={[elStyles.headline, { color: palette.text }]}>Operations Live Feed</Text>
+        <Text style={[elStyles.headline, { color: palette.text }]}>Operasyon canlı akışı</Text>
         <Text style={[elStyles.subhead, { color: palette.subText }]}>
-          Real-time event tracking and system updates
+          Gerçek zamanlı olay takibi ve sistem güncellemeleri
         </Text>
       </View>
 
       <View style={elStyles.statsRow}>
         <View style={[elStyles.statCard, { backgroundColor: palette.surfaceLowest, borderColor: borderSoft }]}>
-          <Text style={[elStyles.statLabel, { color: palette.subText }]}>Total Today</Text>
+          <Text style={[elStyles.statLabel, { color: palette.subText }]}>Bugün toplam</Text>
           <Text style={[elStyles.statValue, { color: palette.button }]}>
-            {Math.max(totalToday, 0).toLocaleString('en-US')}
+            {Math.max(totalToday, 0).toLocaleString('tr-TR')}
           </Text>
         </View>
         <View style={[elStyles.statCard, { backgroundColor: palette.surfaceLowest, borderColor: borderSoft }]}>
-          <Text style={[elStyles.statLabel, { color: palette.subText }]}>Active Carts</Text>
+          <Text style={[elStyles.statLabel, { color: palette.subText }]}>Aktif sepetler</Text>
           <Text style={[elStyles.statValue, { color: LIGHT_SECONDARY_ACCENT }]}>{activeCartQuantity}</Text>
         </View>
         <View style={[elStyles.statCard, { backgroundColor: palette.surfaceLowest, borderColor: borderSoft }]}>
-          <Text style={[elStyles.statLabel, { color: palette.subText }]}>Avg. Fulfillment</Text>
+          <Text style={[elStyles.statLabel, { color: palette.subText }]}>Ort. hazırlık</Text>
           <Text style={[elStyles.statValue, { color: LIGHT_TERTIARY_ACCENT }]}>14m</Text>
         </View>
       </View>
@@ -435,7 +417,7 @@ export function EventsSection(props: Props): React.JSX.Element {
       <View style={elStyles.mainRow}>
         <View style={elStyles.feedCol}>
           {feedRows.length === 0 ? (
-            <StateMessage text="No live events yet. Cart and order activity will appear here." color={palette.subText} />
+            <StateMessage text="Henüz canlı olay yok. Sepet ve sipariş hareketleri burada görünür." color={palette.subText} />
           ) : (
             feedRows.map((row) => {
               const bubble = iconBubbleStyle(row.accent, palette);
@@ -480,21 +462,21 @@ export function EventsSection(props: Props): React.JSX.Element {
           <View style={[elStyles.hero, { backgroundColor: palette.imagePlaceholder }]}>
             <Image source={{ uri: LOGISTICS_HERO_URI }} style={elStyles.heroImg} resizeMode="cover" />
             <View style={elStyles.heroGradient} />
-            <Text style={elStyles.heroCaption}>Logistics Center North</Text>
+            <Text style={elStyles.heroCaption}>Kuzey lojistik merkezi</Text>
           </View>
 
           <View style={[elStyles.assistCard, { backgroundColor: palette.button }]}>
-            <Text style={[elStyles.assistTitle, { color: palette.buttonText }]}>Need Assistance?</Text>
+            <Text style={[elStyles.assistTitle, { color: palette.buttonText }]}>Yardım mı lazım?</Text>
             <Text style={[elStyles.assistBody, { color: palette.buttonText }]}>
-              Our field operations team is active 24/7 for support.
+              Saha operasyon ekibimiz 7/24 destek için hazır.
             </Text>
             <TouchableOpacity
               style={[elStyles.dispatchBtn, { backgroundColor: palette.buttonText }]}
-              onPress={() => Alert.alert('Dispatch', 'Connecting to dispatch is not wired in this preview build.')}
+              onPress={() => Alert.alert('Destek', 'Destek hattı bu önizleme sürümünde henüz bağlı değil.')}
               accessibilityRole="button"
-              accessibilityLabel="Contact dispatch"
+              accessibilityLabel="Destek ile iletişime geç"
             >
-              <Text style={[elStyles.dispatchBtnText, { color: palette.button }]}>Contact Dispatch</Text>
+              <Text style={[elStyles.dispatchBtnText, { color: palette.button }]}>Destek ile iletişim</Text>
             </TouchableOpacity>
           </View>
         </View>

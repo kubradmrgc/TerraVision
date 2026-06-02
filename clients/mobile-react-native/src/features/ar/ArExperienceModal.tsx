@@ -65,8 +65,8 @@ export function ArExperienceModal({
       await launchNativeAr(preview);
       setHasLaunchedAr(true);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Native AR baslatilamadi.';
-      Alert.alert('AR Hatasi', message);
+      const message = error instanceof Error ? error.message : 'Yerel AR başlatılamadı.';
+      Alert.alert('AR hatası', message);
     } finally {
       setIsLaunching(false);
     }
@@ -101,7 +101,7 @@ export function ArExperienceModal({
         throw error;
       }
       if (!screenshot) {
-        Alert.alert('Ekran goruntusu', 'AR yerlesimini kaydetmek icin bir ekran goruntusu secin.');
+        Alert.alert('Ekran görüntüsü', 'AR yerleşimini kaydetmek için bir ekran görüntüsü seçin.');
         return;
       }
 
@@ -122,7 +122,7 @@ export function ArExperienceModal({
     ? `Kaydediliyor %${saveProgress}`
     : saveErrorMessage
       ? 'Tekrar dene'
-      : 'Tasarimi Odama Kaydet';
+      : 'Tasarımı odama kaydet';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -149,7 +149,7 @@ export function ArExperienceModal({
                 backgroundColor: palette.mutedCard
               }
             ]}
-            placeholder="Ortam notlari (isik, alan genisligi...)"
+            placeholder="Ortam notları (ışık, alan genişliği…)"
             placeholderTextColor={palette.subText}
             value={environmentNotes}
             onChangeText={setEnvironmentNotes}
@@ -174,7 +174,7 @@ export function ArExperienceModal({
             onPress={handleStartAr}
           >
             <Text style={[styles.primaryButtonText, { color: palette.buttonText }]}>
-              {isLaunching ? 'AR aciliyor…' : 'Native AR Baslat'}
+              {isLaunching ? 'AR açılıyor…' : 'Yerel AR başlat'}
             </Text>
           </TouchableOpacity>
 

@@ -15,17 +15,20 @@ namespace TerraVision.Api.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IRealtimeSyncService _realtimeSyncService;
         private readonly ICareService _careService;
+        private readonly INotificationService _notificationService;
 
         public OrderService(
             TerraVisionDbContext dbContext,
             IUnitOfWork unitOfWork,
             IRealtimeSyncService realtimeSyncService,
-            ICareService careService)
+            ICareService careService,
+            INotificationService notificationService)
         {
             _dbContext = dbContext;
             _unitOfWork = unitOfWork;
             _realtimeSyncService = realtimeSyncService;
             _careService = careService;
+            _notificationService = notificationService;
         }
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
@@ -132,6 +135,14 @@ namespace TerraVision.Api.Services
             {
                 await _realtimeSyncService.BroadcastProductLowStockAsync(lowStockEvent);
             }
+
+            await _notificationService.CreateAsync(
+                userId,
+                NotificationType.OrderCreated,
+                "Siparişiniz alındı",
+                $"#{order.Id} numaralı siparişiniz oluşturuldu. Toplam tutar: {order.TotalAmount:N2} ₺.",
+                relatedEntityType: "Order",
+                relatedEntityId: order.Id);
 
             return await GetMyOrderByIdAsync(userId, order.Id);
         }
@@ -366,6 +377,23 @@ namespace TerraVision.Api.Services
                 OccurredAtUtc = DateTime.UtcNow
             });
 
+            if (previousStatus != order.Status)
+            {
+                var statusMessage = $"#{order.Id} numaralı siparişinizin durumu \"{DescribeOrderStatus(order.Status)}\" olarak güncellendi.";
+                if (!string.IsNullOrWhiteSpace(request.Reason))
+                {
+                    statusMessage += $" Açıklama: {request.Reason.Trim()}";
+                }
+
+                await _notificationService.CreateAsync(
+                    order.UserId,
+                    NotificationType.OrderStatusChanged,
+                    "Sipariş durumu güncellendi",
+                    statusMessage,
+                    relatedEntityType: "Order",
+                    relatedEntityId: order.Id);
+            }
+
             var items = await _dbContext.OrderItems
                 .Where(oi => oi.OrderId == order.Id && !oi.IsDeleted)
                 .Join(_dbContext.Products,
@@ -407,6 +435,16 @@ namespace TerraVision.Api.Services
                 StatusHistory = history
             };
         }
+
+        private static string DescribeOrderStatus(OrderStatus status) => status switch
+        {
+            OrderStatus.Pending => "Beklemede",
+            OrderStatus.Confirmed => "Onaylandı",
+            OrderStatus.Shipped => "Kargoya verildi",
+            OrderStatus.Delivered => "Teslim edildi",
+            OrderStatus.Cancelled => "İptal edildi",
+            _ => status.ToString()
+        };
 
         private static bool IsStatusTransitionAllowed(OrderStatus current, OrderStatus next)
         {

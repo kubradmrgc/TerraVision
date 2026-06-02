@@ -16,13 +16,13 @@ export function validateArUploadFile(file: CandidateArFile): string | null {
   const hasAllowedMime = !type || ALLOWED_MIME_TYPES.includes(type);
 
   if (!hasAllowedExtension) {
-    return 'Desteklenen AR formatlari: .gltf, .glb, .usdz';
+    return 'Desteklenen AR formatları: .gltf, .glb, .usdz';
   }
   if (!hasAllowedMime) {
-    return 'Dosya tipi desteklenmiyor. Lutfen gecerli bir AR modeli secin.';
+    return 'Dosya tipi desteklenmiyor. Lütfen geçerli bir AR modeli seçin.';
   }
   if (typeof file.size === 'number' && file.size > MAX_AR_FILE_SIZE_BYTES) {
-    return 'Dosya boyutu 25MB sinirini asmamali.';
+    return 'Dosya boyutu 25MB sınırını aşmamalı.';
   }
   return null;
 }

@@ -12,6 +12,11 @@ export function createOrderService(client: ApiHttpClient) {
     async getMyOrders(): Promise<OrderDto[]> {
       const { data } = await client.get<OrderDto[]>(API_ROUTES.ordersMe);
       return data;
+    },
+
+    async getMyOrderById(orderId: number): Promise<OrderDto> {
+      const { data } = await client.get<OrderDto>(API_ROUTES.ordersMeById(orderId));
+      return data;
     }
   };
 }

@@ -24,6 +24,11 @@ export const productService = {
     return data;
   },
 
+  async getProduct(id: number): Promise<ProductDto> {
+    const { data } = await apiClient.get<ProductDto>(API_ROUTES.productById(id));
+    return data;
+  },
+
   async createWithImage(input: CreateProductWithImageInput): Promise<ProductDto> {
     const formData = new FormData();
     formData.append('name', input.name);

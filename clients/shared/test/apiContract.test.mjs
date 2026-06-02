@@ -10,6 +10,7 @@ import {
   buildApiBaseUrl,
   buildSignalRHubUrl
 } from '../src/apiContract.ts';
+import { AR_SESSION_DTO_KEYS } from '../src/ar/environmentNotes.ts';
 
 describe('apiContract', () => {
   it('builds API and SignalR URLs consistently', () => {
@@ -58,5 +59,7 @@ describe('apiContract', () => {
   it('documents DTO key contracts for smoke tests', () => {
     assert.ok(PRODUCT_DTO_KEYS.includes('isArCompatible'));
     assert.ok(AUTH_RESPONSE_KEYS.includes('refreshToken'));
+    assert.ok(AR_SESSION_DTO_KEYS.includes('screenshotUrl'));
+    assert.ok(AR_SESSION_DTO_KEYS.includes('environmentMetadata'));
   });
 });

@@ -4,21 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { ArSessionResponseDto } from '@terravision/shared';
+import { ArSessionResponseDto, parseArEnvironmentNotes } from '@terravision/shared';
 import { OptimizedMediaImage } from '@/components/OptimizedMediaImage';
 import { arSessionService } from '@/services/arSessionService';
 import { authService } from '@/services/authService';
 import { realtimeService } from '@/services/realtimeService';
 import { tokenStore } from '@/services/tokenStore';
-
-function parseEnvironmentNotes(metadata: string): string {
-  try {
-    const parsed = JSON.parse(metadata) as { environmentNotes?: string };
-    return parsed.environmentNotes?.trim() || '—';
-  } catch {
-    return '—';
-  }
-}
 
 export default function AdminArInsightsPage() {
   const router = useRouter();
@@ -163,7 +154,7 @@ export default function AdminArInsightsPage() {
               <p className="tv-ar-scale">
                 Ölçek X/Y/Z: {session.scaleX} / {session.scaleY} / {session.scaleZ}
               </p>
-              <p className="tv-ar-notes">{parseEnvironmentNotes(session.environmentMetadata)}</p>
+              <p className="tv-ar-notes">{parseArEnvironmentNotes(session.environmentMetadata)}</p>
             </div>
           </article>
         ))}

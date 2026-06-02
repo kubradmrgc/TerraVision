@@ -28,7 +28,7 @@ export const WEB_LOGIN_PANELS: Record<LoginPortal, Omit<LoginPanelProps, 'portal
     ],
     defaultEmail: 'customer@terravision.com',
     defaultPassword: 'customer123',
-    redirectPath: '/products',
+    redirectPath: '/',
     loginHref: '/login'
   },
   admin: {

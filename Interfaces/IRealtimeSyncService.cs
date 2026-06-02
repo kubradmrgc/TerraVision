@@ -14,5 +14,6 @@ namespace TerraVision.Api.Interfaces
         Task BroadcastExchangeOfferReceivedAsync(ExchangeOfferReceivedEvent offerEvent);
         Task BroadcastExchangeOfferStatusChangedAsync(ExchangeOfferStatusChangedEvent offerEvent);
         Task BroadcastExchangeProductListedAsync(ExchangeProductDto product);
+        Task BroadcastNotificationCreatedAsync(NotificationCreatedEvent notificationEvent);
     }
 }

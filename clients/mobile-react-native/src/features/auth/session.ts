@@ -8,10 +8,10 @@ type SessionStore = {
 };
 
 export const AUTH_UI_MESSAGES = {
-  loginFailed: 'Email veya sifre gecersiz olabilir.',
-  registerFailed: 'Kayit tamamlanamadi. Bilgilerinizi kontrol edip tekrar deneyin.',
-  sessionExpired: 'Oturumunuz sonlandi. Lutfen tekrar giris yapin.',
-  sessionPartial: 'Oturum bilgisi eksik bulundu. Lutfen tekrar giris yapin.'
+  loginFailed: 'E-posta veya şifre geçersiz olabilir.',
+  registerFailed: 'Kayıt tamamlanamadı. Bilgilerinizi kontrol edip tekrar deneyin.',
+  sessionExpired: 'Oturumunuz sonlandı. Lütfen tekrar giriş yapın.',
+  sessionPartial: 'Oturum bilgisi eksik bulundu. Lütfen tekrar giriş yapın.'
 } as const;
 
 export async function getSessionRestoreStatus(

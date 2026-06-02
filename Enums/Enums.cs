@@ -69,4 +69,14 @@ namespace TerraVision.Api.Enums
         Accepted = 2,
         Rejected = 3
     }
+
+    public enum NotificationType
+    {
+        OrderCreated = 1,
+        OrderStatusChanged = 2,
+        AppointmentCreated = 3,
+        AppointmentStatusChanged = 4,
+        ExchangeOfferReceived = 5,
+        ExchangeOfferStatusChanged = 6
+    }
 }

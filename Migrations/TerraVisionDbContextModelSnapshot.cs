@@ -449,6 +449,62 @@ namespace TerraVision.Api.Migrations
                     b.ToTable("ExchangeProducts");
                 });
 
+            modelBuilder.Entity("TerraVision.Api.Entities.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RelatedEntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelatedEntityType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "IsRead", "IsDeleted", "CreatedDate");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("TerraVision.Api.Entities.Order", b =>
                 {
                     b.Property<int>("Id")
@@ -992,6 +1048,17 @@ namespace TerraVision.Api.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("TerraVision.Api.Entities.Notification", b =>
+                {
+                    b.HasOne("TerraVision.Api.Entities.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TerraVision.Api.Entities.Order", b =>
                 {
                     b.HasOne("TerraVision.Api.Entities.User", "User")
@@ -1112,6 +1179,8 @@ namespace TerraVision.Api.Migrations
                     b.Navigation("ExchangeOffersSent");
 
                     b.Navigation("ExchangeProducts");
+
+                    b.Navigation("Notifications");
 
                     b.Navigation("Orders");
 

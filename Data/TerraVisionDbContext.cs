@@ -49,6 +49,7 @@ namespace TerraVision.Api.Data
         public DbSet<CareLog> CareLogs { get; set; }
         public DbSet<ExchangeProduct> ExchangeProducts { get; set; }
         public DbSet<ExchangeOffer> ExchangeOffers { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -279,6 +280,27 @@ namespace TerraVision.Api.Data
 
             modelBuilder.Entity<ExchangeOffer>()
                 .HasIndex(o => new { o.ProductId, o.Status, o.IsDeleted });
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Notification>()
+                .Property(n => n.Title)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<Notification>()
+                .Property(n => n.Message)
+                .HasMaxLength(1000);
+
+            modelBuilder.Entity<Notification>()
+                .Property(n => n.RelatedEntityType)
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => new { n.UserId, n.IsRead, n.IsDeleted, n.CreatedDate });
 
             SeedData.ApplyConfiguration(modelBuilder);
         }

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import axios from 'axios';
 import {
   EXCHANGE_CONDITION_LABELS,
   EXCHANGE_OFFER_TYPE,
@@ -78,7 +77,7 @@ export default function MarketplaceDetailPage() {
         offerType,
         message
       });
-      setSuccess('Teklifiniz gönderildi.');
+      setSuccess('Teklifiniz gönderildi. İlan sahibi anında bilgilendirilir.');
       setOfferOpen(false);
       setMessage('');
     } catch (err) {
@@ -94,109 +93,160 @@ export default function MarketplaceDetailPage() {
   };
 
   if (loading) {
-    return <p className="tv-muted">Yükleniyor…</p>;
+    return (
+      <div className="tv-takas-loading" aria-busy="true">
+        <div className="tv-takas-skeleton" style={{ height: 360 }} />
+      </div>
+    );
   }
 
   if (!product) {
     return (
-      <div>
+      <div className="tv-card tv-takas-empty">
         <p className="tv-error">{error ?? 'İlan bulunamadı.'}</p>
-        <Link href="/marketplace">← Pazara dön</Link>
+        <Link href="/marketplace" className="tv-btn tv-btn--primary">
+          ← Pazara dön
+        </Link>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="tv-takas-detail-page">
       <p className="tv-page-actions">
-        <Link href="/marketplace">← TerraTakas</Link>
+        <Link href="/marketplace">← TerraTakas pazarı</Link>
       </p>
-      <h1 className="tv-page-title">{product.title}</h1>
-      <p className="tv-page-lead">
-        {product.ownerDisplayName} · {EXCHANGE_CONDITION_LABELS[product.condition]} ·{' '}
-        {product.isSwapOnly ? 'Takaslık' : formatTryCurrency(product.price)}
-      </p>
-      <p>{product.description}</p>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '16px 0' }}>
-        {product.photoUrls.map((url) => (
-          <OptimizedMediaImage key={url} src={url} alt={product.title} width={200} height={140} />
-        ))}
-      </div>
-
-      {error ? (
-        <p className="tv-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="tv-success" role="status">
-          {success}
-        </p>
-      ) : null}
-
-      <button
-        type="button"
-        className="tv-btn tv-btn--primary"
-        disabled={isMutating}
-        onClick={() => {
-          if (!tokenStore.getToken()) {
-            router.push('/login');
-            return;
-          }
-          setOfferOpen(true);
-        }}
-      >
-        Teklif ver
-      </button>
-
-      {offerOpen ? (
-        <div className="tv-card" style={{ marginTop: 16, padding: 16 }}>
-          <h2 className="tv-section-title">Teklif türü</h2>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <button
-              type="button"
-              className={`tv-btn${offerType === EXCHANGE_OFFER_TYPE.Swap ? ' tv-btn--primary' : ''}`}
-              disabled={isMutating}
-              onClick={() => setOfferType(EXCHANGE_OFFER_TYPE.Swap)}
-            >
-              {EXCHANGE_OFFER_TYPE_LABELS[1]}
-            </button>
-            {!product.isSwapOnly ? (
-              <button
-                type="button"
-                className={`tv-btn${offerType === EXCHANGE_OFFER_TYPE.Buy ? ' tv-btn--primary' : ''}`}
-                disabled={isMutating}
-                onClick={() => setOfferType(EXCHANGE_OFFER_TYPE.Buy)}
-              >
-                {EXCHANGE_OFFER_TYPE_LABELS[2]}
-              </button>
-            ) : null}
+      <div className="tv-takas-detail">
+        <section>
+          <div className="tv-takas-card__badges" style={{ position: 'static', marginBottom: 12 }}>
+            <span className={`tv-takas-pill ${product.isSwapOnly ? 'tv-takas-pill--swap' : 'tv-takas-pill--sale'}`}>
+              {product.isSwapOnly ? 'Takas' : 'Satılık'}
+            </span>
+            <span className="tv-takas-pill tv-takas-pill--condition">
+              {EXCHANGE_CONDITION_LABELS[product.condition]}
+            </span>
           </div>
-          <label className="tv-label" htmlFor="offer-message">
-            Mesajınız
-          </label>
-          <textarea
-            id="offer-message"
-            className="tv-input"
-            rows={3}
-            value={message}
-            disabled={isMutating}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Takas teklifinizi kısaca yazın (link içermeyin)"
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <h1 className="tv-page-title">{product.title}</h1>
+          <p className="tv-page-lead">
+            {product.ownerDisplayName} ·{' '}
+            {product.isSwapOnly ? 'Takaslık ilan' : formatTryCurrency(product.price)}
+          </p>
+          <p style={{ lineHeight: 1.6, marginBottom: 20 }}>{product.description}</p>
+
+          {product.photoUrls.length > 0 ? (
+            <div className="tv-takas-gallery">
+              {product.photoUrls.map((url) => (
+                <OptimizedMediaImage key={url} src={url} alt={product.title} width={320} height={240} />
+              ))}
+            </div>
+          ) : (
+            <div className="tv-card tv-takas-empty" style={{ padding: 32 }}>
+              <span className="tv-takas-empty-icon">📷</span>
+              <p className="tv-muted">Fotoğraf eklenmemiş</p>
+            </div>
+          )}
+        </section>
+
+        <aside className="tv-takas-detail-panel">
+          <div className="tv-card">
+            <h2 className="tv-section-title">Teklif ver</h2>
+            <p className="tv-muted" style={{ marginBottom: 16 }}>
+              Mesajınızda link paylaşmayın. İlan sahibi teklifinizi kabul veya reddedebilir.
+            </p>
+            {success ? (
+              <p className="tv-success" role="status">
+                {success}
+              </p>
+            ) : null}
+            {error ? (
+              <p className="tv-error" role="alert">
+                {error}
+              </p>
+            ) : null}
             <button
               type="button"
               className="tv-btn tv-btn--primary"
+              style={{ width: '100%' }}
               disabled={isMutating}
-              onClick={() => void submitOffer()}
+              onClick={() => {
+                if (!tokenStore.getToken()) {
+                  router.push('/login');
+                  return;
+                }
+                setOfferOpen(true);
+              }}
             >
-              {isMutating ? 'Gönderiliyor…' : 'Gönder'}
+              Teklif gönder
             </button>
-            <button type="button" className="tv-btn" disabled={isMutating} onClick={() => setOfferOpen(false)}>
-              İptal
-            </button>
+          </div>
+        </aside>
+      </div>
+
+      {offerOpen ? (
+        <div
+          className="tv-takas-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="offer-dialog-title"
+          onClick={() => !isMutating && setOfferOpen(false)}
+        >
+          <div className="tv-card tv-takas-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 id="offer-dialog-title" className="tv-section-title">
+              Teklifiniz
+            </h2>
+            <p className="tv-muted">{product.title}</p>
+
+            <div className="tv-takas-type-toggle">
+              <button
+                type="button"
+                className={`tv-takas-type-btn${offerType === EXCHANGE_OFFER_TYPE.Swap ? ' tv-takas-type-btn--active' : ''}`}
+                disabled={isMutating}
+                onClick={() => setOfferType(EXCHANGE_OFFER_TYPE.Swap)}
+              >
+                {EXCHANGE_OFFER_TYPE_LABELS[1]}
+              </button>
+              {!product.isSwapOnly ? (
+                <button
+                  type="button"
+                  className={`tv-takas-type-btn${offerType === EXCHANGE_OFFER_TYPE.Buy ? ' tv-takas-type-btn--active' : ''}`}
+                  disabled={isMutating}
+                  onClick={() => setOfferType(EXCHANGE_OFFER_TYPE.Buy)}
+                >
+                  {EXCHANGE_OFFER_TYPE_LABELS[2]}
+                </button>
+              ) : (
+                <span className="tv-takas-type-btn tv-muted" style={{ cursor: 'default', opacity: 0.6 }}>
+                  Yalnızca takas
+                </span>
+              )}
+            </div>
+
+            <div className="tv-field">
+              <label htmlFor="offer-message">Mesaj</label>
+              <textarea
+                id="offer-message"
+                rows={4}
+                value={message}
+                disabled={isMutating}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Örn. Monstera ile takas yapabilirim…"
+              />
+            </div>
+
+            <div className="tv-takas-offer-actions">
+              <button
+                type="button"
+                className="tv-btn tv-btn--primary"
+                disabled={isMutating}
+                onClick={() => void submitOffer()}
+              >
+                {isMutating ? 'Gönderiliyor…' : 'Gönder'}
+              </button>
+              <button type="button" className="tv-btn" disabled={isMutating} onClick={() => setOfferOpen(false)}>
+                İptal
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

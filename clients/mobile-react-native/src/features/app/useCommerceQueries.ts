@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { USER_ROLE, type CareActionType } from '@terravision/shared';
 import { appointmentService } from '../../services/appointmentService';
+import { arSessionService } from '../../services/arSessionService';
 import { cartService } from '../../services/cartService';
 import { orderService } from '../../services/orderService';
 import { productService } from '../../services/productService';
+import { categoryService } from '../../services/categoryService';
 import { careService } from '../../services/careService';
-import type { CareActionType } from '@terravision/shared';
 
 export function useCommerceQueries(enabled: boolean, role: number | null) {
   const queryClient = useQueryClient();
@@ -12,6 +14,12 @@ export function useCommerceQueries(enabled: boolean, role: number | null) {
   const productsQuery = useQuery({
     queryKey: ['products'],
     queryFn: productService.getProducts,
+    enabled
+  });
+
+  const categoriesQuery = useQuery({
+    queryKey: ['categories'],
+    queryFn: categoryService.getCategories,
     enabled
   });
 
@@ -36,7 +44,13 @@ export function useCommerceQueries(enabled: boolean, role: number | null) {
   const careCalendarQuery = useQuery({
     queryKey: ['care', 'calendar'],
     queryFn: careService.getMyCalendar,
-    enabled: enabled && role === 1
+    enabled: enabled && role === USER_ROLE.Customer
+  });
+
+  const arSessionsQuery = useQuery({
+    queryKey: ['ar', 'sessions', 'me'],
+    queryFn: arSessionService.getMySessions,
+    enabled: enabled && role === USER_ROLE.Customer
   });
 
   const createAppointmentMutation = useMutation({
@@ -90,10 +104,12 @@ export function useCommerceQueries(enabled: boolean, role: number | null) {
 
   return {
     productsQuery,
+    categoriesQuery,
     cartQuery,
     ordersQuery,
     appointmentsQuery,
     careCalendarQuery,
+    arSessionsQuery,
     createAppointmentMutation,
     updateAppointmentStatusMutation,
     addItemMutation,

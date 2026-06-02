@@ -1,18 +1,17 @@
-import { ORDER_STATUS_LABELS, getOrderStatusLabel as sharedGetOrderStatusLabel } from '@terravision/shared';
 import { MobilePalette, MobileSection } from '../features/app/types';
+import { getOrderStatusLabelTr } from '../i18n/tr';
 
-export const orderStatusLabels = ORDER_STATUS_LABELS;
+export { sectionLabels } from '../i18n/tr';
 
-export const sectionLabels: Record<MobileSection, string> = {
-  products: 'Products',
-  cart: 'Cart',
-  orders: 'Orders',
-  appointments: 'Appointments',
-  care: 'Takvimim',
-  exchange: 'TerraTakas',
-  events: 'Events',
-  profile: 'Profil'
-};
+export const orderStatusLabels = {
+  1: 'Beklemede',
+  2: 'Onaylandı',
+  3: 'Kargoda',
+  4: 'Teslim edildi',
+  5: 'İptal'
+} as const;
+
+export const getOrderStatusLabel = getOrderStatusLabelTr;
 
 export const sectionIcons: Record<MobileSection, string> = {
   products: '🧩',
@@ -20,12 +19,10 @@ export const sectionIcons: Record<MobileSection, string> = {
   orders: '📦',
   appointments: '🗓️',
   care: '🌿',
-  exchange: '🔄',
+  exchange: '🌱',
   events: '⚡',
   profile: '👤'
 };
-
-export const getOrderStatusLabel = sharedGetOrderStatusLabel;
 
 export const getPalette = (themeMode: 'light' | 'dark'): MobilePalette =>
   themeMode === 'dark'

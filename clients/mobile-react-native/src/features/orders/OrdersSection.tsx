@@ -9,9 +9,13 @@ import {
   View
 } from 'react-native';
 import type { OrderDto } from '../../types/order';
+import { formatRelativeSinceTr } from '../../i18n/tr';
 import { getOrderStatusLabel } from '../../theme/mobileTheme';
 import type { MobilePalette, ThemeMode } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
+import { OrderTrackingModal } from './OrderTrackingModal';
+
+type OpenTracking = (order: OrderDto) => void;
 
 type Props = {
   orders: OrderDto[];
@@ -24,10 +28,10 @@ type Props = {
 type FilterKey = 'all' | 'processing' | 'shipped' | 'flagged';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'All Orders' },
-  { key: 'processing', label: 'Processing' },
-  { key: 'shipped', label: 'Shipped' },
-  { key: 'flagged', label: 'Flagged' }
+  { key: 'all', label: 'Tümü' },
+  { key: 'processing', label: 'Hazırlanıyor' },
+  { key: 'shipped', label: 'Kargoda' },
+  { key: 'flagged', label: 'İptal' }
 ];
 
 const LIGHT_SURFACE_HIGH = '#eae7eb';
@@ -39,25 +43,12 @@ const LIGHT_ON_TERTIARY_FIXED_VARIANT = '#792d3b';
 const DARK_PRIMARY_FIXED_DIM = '#73db9a';
 const DARK_SHIPPED_TINT = 'rgba(115, 219, 154, 0.08)';
 
-function formatRelativeSince(iso: string): string {
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return 'recently';
-  const diffMs = Date.now() - t;
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 function hubLabel(orderId: number): string {
-  return orderId % 2 === 0 ? 'Regional Depot' : 'Logistics Hub A';
+  return orderId % 2 === 0 ? 'Bölge deposu' : 'Lojistik merkezi A';
 }
 
 function darkFeaturedHub(orderId: number): string {
-  return orderId % 2 === 0 ? 'Denver Hub' : 'Logistics Hub A';
+  return orderId % 2 === 0 ? 'Ankara merkezi' : 'Lojistik merkezi A';
 }
 
 function orderTvRef(id: number): string {
@@ -68,20 +59,20 @@ function orderSubtitle(order: OrderDto): string {
   const hub = hubLabel(order.id);
   switch (order.status) {
     case 1:
-      return `Placed ${formatRelativeSince(order.createdDate)} • ${hub}`;
+      return `${formatRelativeSinceTr(order.createdDate)} verildi • ${hub}`;
     case 2:
-      return `Confirmed ${formatRelativeSince(order.createdDate)} • ${hub}`;
+      return `${formatRelativeSinceTr(order.createdDate)} onaylandı • ${hub}`;
     case 3:
-      return 'In Transit • Estimated arrival Tomorrow';
+      return 'Yolda • Tahmini varış yarın';
     case 4: {
       const d = new Date(order.createdDate);
       const dateStr = Number.isNaN(d.getTime())
         ? order.createdDate
-        : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      return `Delivered ${dateStr}`;
+        : d.toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      return `Teslim edildi ${dateStr}`;
     }
     case 5:
-      return 'Cancelled • Review required';
+      return 'İptal edildi • İnceleme gerekli';
     default:
       return hub;
   }
@@ -109,18 +100,18 @@ function activePipelineCount(list: OrderDto[]): number {
 function primaryLineSummary(order: OrderDto): { title: string; amount: string | null } {
   const items = order.items ?? [];
   if (items.length === 0) {
-    return { title: 'Order contents', amount: formatTryCurrency(order.totalAmount) };
+    return { title: 'Sipariş içeriği', amount: formatTryCurrency(order.totalAmount) };
   }
   const first = items[0];
   const extra = items.length - 1;
   const title =
-    extra > 0 ? `${first.productName} (+${extra} more)` : `${first.productName} (x${first.quantity})`;
+    extra > 0 ? `${first.productName} (+${extra} ürün)` : `${first.productName} (x${first.quantity})`;
   return { title, amount: formatTryCurrency(first.lineTotal) };
 }
 
 function productHeadline(order: OrderDto): string {
   const items = order.items ?? [];
-  if (items.length === 0) return 'Order bundle';
+  if (items.length === 0) return 'Sipariş paketi';
   const first = items[0];
   const extra = items.length - 1;
   return extra > 0 ? `${first.productName} (+${extra})` : first.productName;
@@ -130,21 +121,21 @@ function formatEtaShort(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
   d.setDate(d.getDate() + 2);
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
 }
 
 function darkStatusCopy(order: OrderDto): string {
   switch (order.status) {
     case 1:
-      return 'Awaiting quality control clearance before dispatch.';
+      return 'Sevkiyat öncesi kalite kontrolü bekleniyor.';
     case 2:
-      return 'Processing for dispatch within 24 hours.';
+      return '24 saat içinde sevkiyata hazırlanıyor.';
     case 3:
-      return 'Shipment is on the way to the destination hub.';
+      return 'Gönderi hedef merkeze doğru yolda.';
     case 4:
-      return order.notes?.trim() ? order.notes : 'Signed for at delivery. Receipt archived.';
+      return order.notes?.trim() ? order.notes : 'Teslimatta imzalandı. Makbuz arşivlendi.';
     case 5:
-      return 'This order was cancelled. Open details for next steps.';
+      return 'Bu sipariş iptal edildi. Sonraki adımlar için ayrıntıları açın.';
     default:
       return '';
   }
@@ -171,8 +162,11 @@ function OrdersSectionDark({
   orders,
   palette,
   isLoading,
-  errorMessage
-}: Pick<Props, 'orders' | 'palette' | 'isLoading' | 'errorMessage'>): React.JSX.Element {
+  errorMessage,
+  onOpenTracking
+}: Pick<Props, 'orders' | 'palette' | 'isLoading' | 'errorMessage'> & {
+  onOpenTracking: OpenTracking;
+}): React.JSX.Element {
   const { featuredShipped, gridOrders } = useMemo(() => {
     const shipped = orders.find((o) => o.status === 3);
     const rest = shipped ? orders.filter((o) => o.id !== shipped.id) : orders;
@@ -188,14 +182,14 @@ function OrdersSectionDark({
   return (
     <View style={darkStyles.root}>
       <View style={darkStyles.pageHeader}>
-        <Text style={[darkStyles.pageTitle, { color: palette.text }]}>Active Orders</Text>
+        <Text style={[darkStyles.pageTitle, { color: palette.text }]}>Aktif siparişler</Text>
         <Text style={[darkStyles.pageSubtitle, { color: palette.subText }]}>
-          Real-time logistics and fulfillment tracking.
+          Gerçek zamanlı lojistik ve sipariş takibi.
         </Text>
       </View>
 
       {isLoading ? (
-        <StateMessage text="Siparisler yukleniyor..." color={palette.subText} />
+        <StateMessage text="Siparişler yükleniyor…" color={palette.subText} />
       ) : errorMessage ? (
         <StateMessage tone="error" text={errorMessage} />
       ) : null}
@@ -207,14 +201,14 @@ function OrdersSectionDark({
             <View style={darkStyles.heroBadgeSlot}>
               <View style={[darkStyles.shippedPillHero, { backgroundColor: palette.primaryContainer }]}>
                 <Text style={{ fontSize: 12 }}>🚚</Text>
-                <Text style={[darkStyles.shippedPillHeroText, { color: palette.onPrimaryContainer }]}>Shipped</Text>
+                <Text style={[darkStyles.shippedPillHeroText, { color: palette.onPrimaryContainer }]}>Kargoda</Text>
               </View>
             </View>
           </View>
           <View style={darkStyles.featuredBody}>
             <View style={darkStyles.featuredTopRow}>
-              <Text style={[darkStyles.refUpper, { color: palette.border }]}>{`ORDER #${orderTvRef(featuredShipped.id).toUpperCase()}`}</Text>
-              <Text style={[darkStyles.inTransitLabel, { color: palette.brandTitle }]}>In Transit</Text>
+              <Text style={[darkStyles.refUpper, { color: palette.border }]}>{`SİPARİŞ #${orderTvRef(featuredShipped.id).toUpperCase()}`}</Text>
+              <Text style={[darkStyles.inTransitLabel, { color: palette.brandTitle }]}>Yolda</Text>
             </View>
             <Text style={[darkStyles.featuredTitle, { color: palette.text }]} numberOfLines={2}>
               {productHeadline(featuredShipped)}
@@ -229,11 +223,11 @@ function OrdersSectionDark({
             </View>
             <TouchableOpacity
               style={[darkStyles.viewLogBtn, { backgroundColor: palette.primaryContainer }]}
-              onPress={() => Alert.alert('Order log', 'Detailed shipment log is not connected yet.')}
+              onPress={() => onOpenTracking(featuredShipped)}
               accessibilityRole="button"
-              accessibilityLabel="View detailed order log"
+              accessibilityLabel="Sipariş günlüğünü görüntüle"
             >
-              <Text style={[darkStyles.viewLogBtnText, { color: palette.onPrimaryContainer }]}>View Detailed Log</Text>
+              <Text style={[darkStyles.viewLogBtnText, { color: palette.onPrimaryContainer }]}>Ayrıntılı günlük</Text>
               <Text style={[darkStyles.viewLogArrow, { color: palette.onPrimaryContainer }]}>→</Text>
             </TouchableOpacity>
           </View>
@@ -249,13 +243,14 @@ function OrdersSectionDark({
               border={border}
               surface={surface}
               surfaceHighest={surfaceHighest}
+              onOpenTracking={onOpenTracking}
             />
           ))
         : null}
 
       {!isLoading && !errorMessage && orders.length === 0 ? (
         <StateMessage
-          text="No orders yet. They will appear here after you place an order from the cart."
+          text="Henüz sipariş yok. Sepetten sipariş verdiğinizde burada görünür."
           color={palette.subText}
         />
       ) : null}
@@ -263,9 +258,9 @@ function OrdersSectionDark({
       {!isLoading && !errorMessage ? (
         <TouchableOpacity
           style={[darkStyles.newOrderCard, { backgroundColor: palette.surfaceLowest, borderColor: border }]}
-          onPress={() => Alert.alert('New order', 'Browse products to build a new order.')}
+          onPress={() => Alert.alert('Yeni sipariş', 'Yeni sipariş için ürünler sekmesine gidin.')}
           accessibilityRole="button"
-          accessibilityLabel="Start new order"
+          accessibilityLabel="Yeni sipariş başlat"
           activeOpacity={0.85}
         >
           <View style={[darkStyles.newOrderIconCircle, { backgroundColor: surfaceHigh }]}>
@@ -284,13 +279,15 @@ function DarkCompactOrderCard({
   palette,
   border,
   surface,
-  surfaceHighest
+  surfaceHighest,
+  onOpenTracking
 }: {
   order: OrderDto;
   palette: MobilePalette;
   border: string;
   surface: string;
   surfaceHighest: string;
+  onOpenTracking: OpenTracking;
 }): React.JSX.Element {
   const ref = orderTvRef(order.id);
   const price = formatTryCurrency(order.totalAmount);
@@ -301,7 +298,13 @@ function DarkCompactOrderCard({
   const delivered = order.status === 4;
 
   return (
-    <View style={[darkStyles.compactCard, { backgroundColor: surface, borderColor: border }]}>
+    <TouchableOpacity
+      style={[darkStyles.compactCard, { backgroundColor: surface, borderColor: border }]}
+      onPress={() => onOpenTracking(order)}
+      accessibilityRole="button"
+      accessibilityLabel={`Sipariş ${ref} takibini aç`}
+      activeOpacity={0.85}
+    >
       <View style={darkStyles.compactHeader}>
         {pendingPill ? (
           <View style={[darkStyles.pillMuted, { backgroundColor: surfaceHighest }]}>
@@ -361,16 +364,16 @@ function DarkCompactOrderCard({
           </View>
         ) : (
           <TouchableOpacity
-            onPress={() => Alert.alert('More', 'Order actions are not wired yet.')}
+            onPress={() => onOpenTracking(order)}
             accessibilityRole="button"
-            accessibilityLabel="More options"
+            accessibilityLabel="Sipariş takibini aç"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={[darkStyles.moreGlyph, { color: palette.border }]}>⋮</Text>
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -378,8 +381,11 @@ function OrdersSectionLight({
   orders,
   palette,
   isLoading,
-  errorMessage
-}: Pick<Props, 'orders' | 'palette' | 'isLoading' | 'errorMessage'>): React.JSX.Element {
+  errorMessage,
+  onOpenTracking
+}: Pick<Props, 'orders' | 'palette' | 'isLoading' | 'errorMessage'> & {
+  onOpenTracking: OpenTracking;
+}): React.JSX.Element {
   const [filter, setFilter] = useState<FilterKey>('all');
   const filtered = useMemo(() => orders.filter((o) => matchesFilter(o, filter)), [orders, filter]);
   const activeCount = useMemo(() => activePipelineCount(orders), [orders]);
@@ -403,10 +409,10 @@ function OrdersSectionLight({
           }
         ]}
       >
-        <Text style={[styles.pipelineCaption, { color: palette.subText }]}>Active Pipeline</Text>
+        <Text style={[styles.pipelineCaption, { color: palette.subText }]}>Aktif süreç</Text>
         <View style={styles.summaryRow}>
           <Text style={[styles.activeOrdersTitle, { color: palette.brandTitle }]}>
-            {activeCount} Active {activeCount === 1 ? 'Order' : 'Orders'}
+            {activeCount} aktif sipariş
           </Text>
           <Text style={[styles.trendIcon, { color: palette.brandTitle }]}>↗</Text>
         </View>
@@ -448,16 +454,16 @@ function OrdersSectionLight({
       </ScrollView>
 
       {isLoading ? (
-        <StateMessage text="Siparisler yukleniyor..." color={palette.subText} />
+        <StateMessage text="Siparişler yükleniyor…" color={palette.subText} />
       ) : errorMessage ? (
         <StateMessage tone="error" text={errorMessage} />
       ) : orders.length === 0 ? (
         <StateMessage
-          text="No orders yet. They will appear here after you place an order from the cart."
+          text="Henüz sipariş yok. Sepetten sipariş verdiğinizde burada görünür."
           color={palette.subText}
         />
       ) : filtered.length === 0 ? (
-        <StateMessage text="No orders in this filter." color={palette.subText} />
+        <StateMessage text="Bu filtrede sipariş yok." color={palette.subText} />
       ) : (
         <View style={styles.orderList}>
           {filtered.map((order) => {
@@ -482,7 +488,13 @@ function OrdersSectionLight({
                   }
                 ]}
               >
-                <View style={styles.orderHeader}>
+                <TouchableOpacity
+                  style={styles.orderHeader}
+                  onPress={() => onOpenTracking(order)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sipariş TV-${String(order.id).padStart(4, '0')} takibini aç`}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.orderHeaderText}>
                     <Text
                       style={[
@@ -490,7 +502,7 @@ function OrdersSectionLight({
                         { color: isDelivered ? palette.subText : palette.text }
                       ]}
                     >
-                      {`Order #TV-${String(order.id).padStart(4, '0')}`}
+                      {`Sipariş #TV-${String(order.id).padStart(4, '0')}`}
                     </Text>
                     <Text style={[styles.orderMeta, { color: palette.subText }]}>{orderSubtitle(order)}</Text>
                   </View>
@@ -499,7 +511,7 @@ function OrdersSectionLight({
                       {getOrderStatusLabel(order.status)}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {!isDelivered ? (
                   <View style={[styles.lineRow, { borderTopColor: borderSoft, borderBottomColor: borderSoft }]}>
@@ -533,18 +545,18 @@ function OrdersSectionLight({
                     <TouchableOpacity
                       style={[styles.btnPrimary, { backgroundColor: palette.button }]}
                       onPress={() =>
-                        Alert.alert('Approve order', `Approve order #TV-${String(order.id).padStart(4, '0')}?`)
+                        Alert.alert('Siparişi onayla', `Sipariş #TV-${String(order.id).padStart(4, '0')} onaylansın mı?`)
                       }
                       accessibilityRole="button"
-                      accessibilityLabel="Approve order"
+                      accessibilityLabel="Siparişi onayla"
                     >
-                      <Text style={[styles.btnPrimaryLabel, { color: palette.buttonText }]}>Approve Order</Text>
+                      <Text style={[styles.btnPrimaryLabel, { color: palette.buttonText }]}>Siparişi onayla</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.btnIconOutline, { borderColor: borderSoft }]}
-                      onPress={() => Alert.alert('More', 'Additional order actions are not wired yet.')}
+                      onPress={() => onOpenTracking(order)}
                       accessibilityRole="button"
-                      accessibilityLabel="More options"
+                      accessibilityLabel="Sipariş takibini aç"
                     >
                       <Text style={{ color: palette.subText, fontSize: 18 }}>⋮</Text>
                     </TouchableOpacity>
@@ -554,11 +566,11 @@ function OrdersSectionLight({
                 {isConfirmed ? (
                   <TouchableOpacity
                     style={[styles.btnOutlinePrimary, { borderColor: palette.button }]}
-                    onPress={() => Alert.alert('Generate label', 'Label generation is not connected yet.')}
+                    onPress={() => Alert.alert('Kargo etiketi', 'Etiket oluşturma bu önizleme sürümünde henüz bağlı değil.')}
                     accessibilityRole="button"
-                    accessibilityLabel="Generate shipping label"
+                    accessibilityLabel="Kargo etiketi oluştur"
                   >
-                    <Text style={[styles.btnOutlinePrimaryLabel, { color: palette.button }]}>Generate Label</Text>
+                    <Text style={[styles.btnOutlinePrimaryLabel, { color: palette.button }]}>Etiket oluştur</Text>
                   </TouchableOpacity>
                 ) : null}
 
@@ -568,17 +580,17 @@ function OrdersSectionLight({
                       <View style={[styles.progressFill, { width: '75%', backgroundColor: palette.button }]} />
                     </View>
                     <View style={styles.progressLabels}>
-                      <Text style={[styles.captionMuted, { color: palette.border }]}>Dispatch</Text>
-                      <Text style={[styles.captionMuted, { color: palette.border }]}>Destination</Text>
+                      <Text style={[styles.captionMuted, { color: palette.border }]}>Çıkış</Text>
+                      <Text style={[styles.captionMuted, { color: palette.border }]}>Varış</Text>
                     </View>
                     <TouchableOpacity
                       style={[styles.btnTrack, { backgroundColor: trackBtnBg }]}
-                      onPress={() => Alert.alert('Track shipment', 'Tracking is not connected yet.')}
+                      onPress={() => onOpenTracking(order)}
                       accessibilityRole="button"
-                      accessibilityLabel="Track shipment"
+                      accessibilityLabel="Kargoyu takip et"
                     >
                       <Text style={{ fontSize: 16 }}>🚚</Text>
-                      <Text style={[styles.btnTrackLabel, { color: palette.text }]}>Track Shipment</Text>
+                      <Text style={[styles.btnTrackLabel, { color: palette.text }]}>Kargoyu takip et</Text>
                     </TouchableOpacity>
                   </View>
                 ) : null}
@@ -598,10 +610,38 @@ export function OrdersSection({
   isLoading,
   errorMessage
 }: Props): React.JSX.Element {
-  if (themeMode === 'dark') {
-    return <OrdersSectionDark orders={orders} palette={palette} isLoading={isLoading} errorMessage={errorMessage} />;
-  }
-  return <OrdersSectionLight orders={orders} palette={palette} isLoading={isLoading} errorMessage={errorMessage} />;
+  const [trackingOrder, setTrackingOrder] = useState<OrderDto | null>(null);
+  const openTracking: OpenTracking = (order) => setTrackingOrder(order);
+
+  return (
+    <>
+      {themeMode === 'dark' ? (
+        <OrdersSectionDark
+          orders={orders}
+          palette={palette}
+          isLoading={isLoading}
+          errorMessage={errorMessage}
+          onOpenTracking={openTracking}
+        />
+      ) : (
+        <OrdersSectionLight
+          orders={orders}
+          palette={palette}
+          isLoading={isLoading}
+          errorMessage={errorMessage}
+          onOpenTracking={openTracking}
+        />
+      )}
+      <OrderTrackingModal
+        orderId={trackingOrder?.id ?? null}
+        visible={trackingOrder != null}
+        onClose={() => setTrackingOrder(null)}
+        palette={palette}
+        themeMode={themeMode}
+        fallbackOrder={trackingOrder}
+      />
+    </>
+  );
 }
 
 const darkStyles = StyleSheet.create({

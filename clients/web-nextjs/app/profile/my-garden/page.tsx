@@ -11,6 +11,7 @@ import {
   CareTaskUrgency,
   PlantCareCalendarDto
 } from '@terravision/shared';
+import { ProfileSubnav } from '@/components/profile/ProfileSubnav';
 import { careService } from '@/services/careService';
 import { authService } from '@/services/authService';
 import { tokenStore } from '@/services/tokenStore';
@@ -104,6 +105,7 @@ export default function MyGardenPage() {
 
   return (
     <div>
+      <ProfileSubnav />
       <h1 className="tv-page-title">Bahçem</h1>
       <p className="tv-page-lead">
         Satın aldığınız bitkilerin sulama, gübreleme ve temizlik takvimi. Teslim edilen siparişler otomatik eklenir.

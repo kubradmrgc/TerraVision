@@ -1,4 +1,5 @@
 import { API_ROUTES, RegisterRequest, USER_ROLE } from '@terravision/shared';
+import { notifyAuthChanged } from '@/constants/authEvents';
 import { apiClient } from './apiClient';
 import { tokenStore } from './tokenStore';
 import { AuthResponse, LoginRequest } from '../types/auth';
@@ -8,7 +9,9 @@ const ROLE_KEY = 'terravision_web_role';
 function persistAuthSession(data: AuthResponse): void {
   tokenStore.setTokens(data.token, data.refreshToken);
   if (typeof window !== 'undefined') {
+    window.localStorage.setItem(ROLE_KEY, String(data.role));
     window.sessionStorage.setItem(ROLE_KEY, String(data.role));
+    notifyAuthChanged();
   }
 }
 
@@ -33,7 +36,9 @@ export const authService = {
     }
     tokenStore.clearTokens();
     if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(ROLE_KEY);
       window.sessionStorage.removeItem(ROLE_KEY);
+      notifyAuthChanged();
     }
   },
 
@@ -41,7 +46,8 @@ export const authService = {
     if (typeof window === 'undefined') {
       return null;
     }
-    const raw = window.sessionStorage.getItem(ROLE_KEY);
+    const raw =
+      window.localStorage.getItem(ROLE_KEY) ?? window.sessionStorage.getItem(ROLE_KEY);
     const value = Number(raw);
     return Number.isFinite(value) ? value : null;
   },

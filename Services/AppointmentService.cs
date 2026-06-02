@@ -20,19 +20,22 @@ namespace TerraVision.Api.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly TerraVisionDbContext _dbContext;
         private readonly IAppointmentInstrumentation _instrumentation;
+        private readonly INotificationService _notificationService;
 
         public AppointmentService(
             IRepository<Appointment> appointmentRepository,
             IRepository<User> userRepository,
             IUnitOfWork unitOfWork,
             TerraVisionDbContext dbContext,
-            IAppointmentInstrumentation instrumentation)
+            IAppointmentInstrumentation instrumentation,
+            INotificationService notificationService)
         {
             _appointmentRepository = appointmentRepository;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
             _dbContext = dbContext;
             _instrumentation = instrumentation;
+            _notificationService = notificationService;
         }
 
         public async Task<AppointmentDto> CreateAppointmentAsync(int customerId, CreateAppointmentRequest request)
@@ -89,6 +92,16 @@ namespace TerraVision.Api.Services
 
             var dto = appointment.Adapt<AppointmentDto>();
             _instrumentation.RecordCreateSucceeded(dto, customerId);
+
+            var slotText = appointment.AppointmentDate.ToString("dd.MM.yyyy HH:mm");
+            await _notificationService.CreateAsync(
+                appointment.ConsultantId,
+                NotificationType.AppointmentCreated,
+                "Yeni randevu talebi",
+                $"{slotText} tarihli yeni bir randevu talebiniz var.",
+                relatedEntityType: "Appointment",
+                relatedEntityId: appointment.Id);
+
             return dto;
         }
 
@@ -148,8 +161,30 @@ namespace TerraVision.Api.Services
 
             var dto = appointment.Adapt<AppointmentDto>();
             _instrumentation.RecordUpdateSucceeded(dto, userId, userRole, previousStatus, request.Status);
+
+            if (previousStatus != appointment.Status)
+            {
+                var slotText = appointment.AppointmentDate.ToString("dd.MM.yyyy HH:mm");
+                await _notificationService.CreateAsync(
+                    appointment.CustomerId,
+                    NotificationType.AppointmentStatusChanged,
+                    "Randevu durumu güncellendi",
+                    $"{slotText} tarihli randevunuzun durumu \"{DescribeAppointmentStatus(appointment.Status)}\" olarak güncellendi.",
+                    relatedEntityType: "Appointment",
+                    relatedEntityId: appointment.Id);
+            }
+
             return dto;
         }
+
+        private static string DescribeAppointmentStatus(AppointmentStatus status) => status switch
+        {
+            AppointmentStatus.Pending => "Beklemede",
+            AppointmentStatus.Approved => "Onaylandı",
+            AppointmentStatus.Completed => "Tamamlandı",
+            AppointmentStatus.Cancelled => "İptal edildi",
+            _ => status.ToString()
+        };
 
         public async Task<IEnumerable<AppointmentDto>> GetCustomerAppointmentsAsync(int customerId)
         {

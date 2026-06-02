@@ -54,7 +54,7 @@ export function CartSection(props: Props): React.JSX.Element {
         >
           <Text style={[styles.errorBannerIcon, { color: isDark ? '#ffb4ab' : '#93000a' }]}>!</Text>
           <View style={styles.errorBannerText}>
-            <Text style={[styles.errorBannerTitle, { color: isDark ? '#ffb4ab' : '#93000a' }]}>Cart update</Text>
+            <Text style={[styles.errorBannerTitle, { color: isDark ? '#ffb4ab' : '#93000a' }]}>Sepet güncellemesi</Text>
             <Text style={[styles.errorBannerBody, { color: isDark ? palette.subText : '#5c1f1f' }]}>
               {props.errorMessage}
             </Text>
@@ -63,8 +63,8 @@ export function CartSection(props: Props): React.JSX.Element {
       ) : null}
 
       <SectionHeader
-        title={isCartEmpty ? 'Your Cart' : `Your Cart (${itemCount} ${itemCount === 1 ? 'item' : 'items'})`}
-        subtitle={isCartEmpty ? 'Add products from the catalog' : 'Review items before checkout'}
+        title={isCartEmpty ? 'Sepetiniz' : `Sepetiniz (${itemCount} ürün)`}
+        subtitle={isCartEmpty ? 'Katalogdan ürün ekleyin' : 'Ödeme öncesi ürünleri kontrol edin'}
         titleColor={palette.text}
         subtitleColor={palette.subText}
         right={
@@ -73,7 +73,7 @@ export function CartSection(props: Props): React.JSX.Element {
               onPress={props.onClearCart}
               disabled={props.isMutating || isCartEmpty}
               accessibilityRole="button"
-              accessibilityLabel="Clear cart"
+              accessibilityLabel="Sepeti temizle"
             >
               <Text
                 style={[
@@ -88,19 +88,19 @@ export function CartSection(props: Props): React.JSX.Element {
                   }
                 ]}
               >
-                Clear
+                Temizle
               </Text>
             </TouchableOpacity>
           ) : undefined
         }
       />
 
-      {props.isLoading ? <StateMessage text="Loading cart…" color={palette.subText} /> : null}
+      {props.isLoading ? <StateMessage text="Sepet yükleniyor…" color={palette.subText} /> : null}
 
       {isCartEmpty && !props.isLoading && !props.errorMessage ? (
         <StateMessage
           variant="banner"
-          text="Your cart is empty. Browse Products to add items."
+          text="Sepetiniz boş. Ürünler sekmesinden ürün ekleyebilirsiniz."
           color={palette.subText}
           backgroundColor={palette.mutedCard}
           borderColor={palette.outlineVariant}
@@ -139,7 +139,7 @@ export function CartSection(props: Props): React.JSX.Element {
                   <Text style={[styles.deleteIcon, { color: deleteColor }]}>🗑</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={[styles.itemMeta, { color: palette.subText }]}>Ref #{item.productId}</Text>
+              <Text style={[styles.itemMeta, { color: palette.subText }]}>Ürün #{item.productId}</Text>
               <View style={styles.itemFooterRow}>
                 <Text style={[styles.itemPrice, isDark && styles.itemPriceDark, { color: linePriceColor }]}>
                   {formatTryCurrency(item.lineTotal)}
@@ -156,7 +156,7 @@ export function CartSection(props: Props): React.JSX.Element {
                     disabled={props.isMutating}
                     onPress={() => props.onDecrease(item.productId, item.quantity)}
                     accessibilityRole="button"
-                    accessibilityLabel="Decrease quantity"
+                    accessibilityLabel="Adedi azalt"
                   >
                     <Text style={[styles.stepperBtnText, { color: palette.text }]}>−</Text>
                   </TouchableOpacity>
@@ -168,7 +168,7 @@ export function CartSection(props: Props): React.JSX.Element {
                     disabled={props.isMutating}
                     onPress={() => props.onIncrease(item.productId, item.quantity)}
                     accessibilityRole="button"
-                    accessibilityLabel="Increase quantity"
+                    accessibilityLabel="Adedi artır"
                   >
                     <Text style={[styles.stepperBtnText, { color: palette.text }]}>+</Text>
                   </TouchableOpacity>
@@ -188,32 +188,32 @@ export function CartSection(props: Props): React.JSX.Element {
                 { backgroundColor: palette.elevatedSurface, borderColor: palette.outlineVariant, shadowColor: '#000' }
               ]}
             >
-              <Text style={[styles.darkSummaryTitle, { color: palette.text }]}>Order Summary</Text>
+              <Text style={[styles.darkSummaryTitle, { color: palette.text }]}>Sipariş özeti</Text>
               <View style={styles.totalRow}>
-                <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>Subtotal</Text>
+                <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>Ara toplam</Text>
                 <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>{formatTryCurrency(subtotal)}</Text>
               </View>
               <View style={styles.totalRow}>
-                <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>Logistics Fee</Text>
+                <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>Kargo ücreti</Text>
                 <Text style={[styles.darkSummaryRow, { color: palette.subText }]}>{formatTryCurrency(logisticsFee)}</Text>
               </View>
               <View style={[styles.darkSummaryTotalRow, { borderTopColor: palette.outlineVariant }]}>
-                <Text style={[styles.darkSummaryTotalLabel, { color: palette.text }]}>Total</Text>
+                <Text style={[styles.darkSummaryTotalLabel, { color: palette.text }]}>Toplam</Text>
                 <Text style={[styles.darkSummaryTotalValue, { color: palette.primaryContainer }]}>{formatTryCurrency(total)}</Text>
               </View>
             </View>
           ) : (
             <View style={[styles.totalsBlock, { borderTopColor: palette.outlineVariant }]}>
               <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: palette.subText }]}>Subtotal</Text>
+                <Text style={[styles.totalLabel, { color: palette.subText }]}>Ara toplam</Text>
                 <Text style={[styles.totalValue, { color: palette.text }]}>{formatTryCurrency(subtotal)}</Text>
               </View>
               <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: palette.subText }]}>Logistics Fee</Text>
+                <Text style={[styles.totalLabel, { color: palette.subText }]}>Kargo ücreti</Text>
                 <Text style={[styles.totalValue, { color: palette.text }]}>{formatTryCurrency(logisticsFee)}</Text>
               </View>
               <View style={[styles.totalRow, styles.totalRowGrand]}>
-                <Text style={[styles.totalGrandLabel, { color: palette.text }]}>Total Amount</Text>
+                <Text style={[styles.totalGrandLabel, { color: palette.text }]}>Genel toplam</Text>
                 <Text style={[styles.totalGrandValue, { color: palette.brandTitle }]}>{formatTryCurrency(total)}</Text>
               </View>
             </View>
@@ -233,10 +233,10 @@ export function CartSection(props: Props): React.JSX.Element {
         disabled={isPrimaryDisabled}
         onPress={props.onPlaceOrder}
         accessibilityRole="button"
-        accessibilityLabel="Place order"
+        accessibilityLabel="Siparişi tamamla"
       >
         <Text style={[styles.placeOrderLabel, isDark && styles.placeOrderLabelDark, { color: isDark ? palette.onPrimaryContainer : palette.buttonText }]}>
-          {isDark ? 'Place order' : 'Place Order'}
+          Siparişi tamamla
         </Text>
         <Text style={[styles.placeOrderArrow, { color: isDark ? palette.onPrimaryContainer : palette.buttonText }]}>
           →

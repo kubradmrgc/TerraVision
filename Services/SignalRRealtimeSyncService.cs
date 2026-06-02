@@ -75,5 +75,12 @@ namespace TerraVision.Api.Services
                 TerraVisionHub.ExchangeProductListedEventName,
                 new ExchangeProductListedEvent { Product = product });
         }
+
+        public async Task BroadcastNotificationCreatedAsync(NotificationCreatedEvent notificationEvent)
+        {
+            var userGroup = TerraVisionHub.BuildUserGroup(notificationEvent.UserId.ToString());
+            await _hubContext.Clients.Group(userGroup)
+                .SendAsync(TerraVisionHub.NotificationCreatedEventName, notificationEvent);
+        }
     }
 }

@@ -15,6 +15,7 @@ namespace TerraVision.Api.Hubs
         public const string ExchangeOfferReceivedEventName = "exchange.offer.received";
         public const string ExchangeOfferStatusChangedEventName = "exchange.offer.status.changed";
         public const string ExchangeProductListedEventName = "exchange.product.listed";
+        public const string NotificationCreatedEventName = "notification.created";
 
         public static string AdminDashboardGroup => "admins";
 

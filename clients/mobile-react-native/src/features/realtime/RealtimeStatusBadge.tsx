@@ -22,36 +22,36 @@ const STATUS_COPY: Record<
   { title: string; subtitle: string; shortTitle: string; accent: string; accessibility: string; showSpinner: boolean }
 > = {
   connected: {
-    title: 'Canli baglanti',
-    subtitle: 'Olaylar aninda guncellenir; sepet/siparis otomatik yenilenir.',
-    shortTitle: 'Connected',
+    title: 'Canlı bağlantı',
+    subtitle: 'Olaylar anında güncellenir; sepet ve sipariş otomatik yenilenir.',
+    shortTitle: 'Bağlı',
     accent: '#16a34a',
-    accessibility: 'Realtime baglanti durumu: bagli. Olaylar canli akmaya devam ediyor.',
+    accessibility: 'Canlı bağlantı durumu: bağlı. Olaylar canlı akmaya devam ediyor.',
     showSpinner: false
   },
   connecting: {
-    title: 'Sunucuya baglaniliyor',
-    subtitle: 'Hub aciliyor... Kisa sure icinde hazir olur.',
-    shortTitle: 'Connecting',
+    title: 'Sunucuya bağlanılıyor',
+    subtitle: 'Hub açılıyor… Kısa süre içinde hazır olur.',
+    shortTitle: 'Bağlanıyor',
     accent: '#ca8a04',
-    accessibility: 'Realtime baglanti durumu: baglaniyor.',
+    accessibility: 'Canlı bağlantı durumu: bağlanıyor.',
     showSpinner: true
   },
   degraded: {
-    title: 'Yeniden baglaniyor veya yedek kanal',
-    subtitle: 'Mobil ag kesintisi: WebSocket sonrasi uzun yoklama kullanilabilir.',
-    shortTitle: 'Degraded',
+    title: 'Yeniden bağlanıyor veya yedek kanal',
+    subtitle: 'Mobil ağ kesintisi: WebSocket sonrası uzun yoklama kullanılabilir.',
+    shortTitle: 'Zayıf',
     accent: '#ea580c',
     accessibility:
-      'Realtime baglanti durumu: zayif veya yeniden baglaniyor. Veriler yine de REST ile guncellenebilir.',
+      'Canlı bağlantı durumu: zayıf veya yeniden bağlanıyor. Veriler yine de REST ile güncellenebilir.',
     showSpinner: true
   },
   offline: {
-    title: 'Realtime kapali',
-    subtitle: 'Giris yok veya baglanti kapandi. Liste asagida cache/elle yenile ile calisir.',
-    shortTitle: 'Offline',
+    title: 'Canlı bağlantı kapalı',
+    subtitle: 'Giriş yok veya bağlantı kapandı. Liste önbellek veya elle yenileme ile çalışır.',
+    shortTitle: 'Kapalı',
     accent: '#dc2626',
-    accessibility: 'Realtime baglanti durumu: cevrimdisi.',
+    accessibility: 'Canlı bağlantı durumu: çevrimdışı.',
     showSpinner: false
   }
 };
@@ -89,7 +89,7 @@ export function RealtimeStatusBadge({
         accessibilityLabel={meta.accessibility}
       >
         {meta.showSpinner ? (
-          <ActivityIndicator size="small" color={spinnerColor} style={styles.compactSpinner} accessibilityLabel="Baglaniyor" />
+          <ActivityIndicator size="small" color={spinnerColor} style={styles.compactSpinner} accessibilityLabel="Bağlanıyor" />
         ) : (
           <View style={[styles.compactDot, { backgroundColor: dotColor }]} />
         )}
@@ -113,7 +113,7 @@ export function RealtimeStatusBadge({
     >
       <View style={styles.row}>
         {meta.showSpinner && (
-          <ActivityIndicator size="small" color={spinnerColor} style={styles.spinner} accessibilityLabel="Baglaniyor" />
+          <ActivityIndicator size="small" color={spinnerColor} style={styles.spinner} accessibilityLabel="Bağlanıyor" />
         )}
         <View style={styles.labels}>
           <Text style={[styles.title, { color: titleColor }]}>{meta.title}</Text>

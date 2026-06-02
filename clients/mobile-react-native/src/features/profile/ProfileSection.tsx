@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { USER_ROLE } from '@terravision/shared';
 import { mobileTypography } from '../../theme/mobileTypography';
 import { StateMessage } from '../../ui/StateMessage';
+import { themeToggleAccessibilityLabel, themeToggleGlyph } from '../../ui/ThemeToggleButton';
 import type { MobilePalette, ThemeMode, UserProfile } from '../app/types';
 
 type Props = {
@@ -83,11 +84,11 @@ export function ProfileSection({
           style={[styles.settingRow, { borderBottomColor: palette.outlineVariant }]}
           onPress={onToggleTheme}
           accessibilityRole="button"
-          accessibilityLabel="Temayı değiştir"
+          accessibilityLabel={themeToggleAccessibilityLabel(themeMode)}
         >
           <Text style={[styles.settingLabel, { color: palette.text }]}>Tema</Text>
           <Text style={[styles.settingValue, { color: palette.brandTitle }]}>
-            {themeMode === 'dark' ? 'Koyu → Açık' : 'Açık → Koyu'}
+            {themeToggleGlyph(themeMode)}
           </Text>
         </TouchableOpacity>
       </View>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -10,9 +10,12 @@ import {
   EXCHANGE_OFFER_STATUS_LABELS,
   EXCHANGE_OFFER_TYPE_LABELS,
   ExchangeOfferDto,
+  ExchangeOfferStatus,
   ExchangeProductDto,
   formatTryCurrency
 } from '@terravision/shared';
+import { OptimizedMediaImage } from '@/components/OptimizedMediaImage';
+import { ProfileSubnav } from '@/components/profile/ProfileSubnav';
 import { exchangeService } from '@/services/exchangeService';
 import { realtimeService } from '@/services/realtimeService';
 import { tokenStore } from '@/services/tokenStore';
@@ -20,8 +23,59 @@ import { getApiErrorMessage, isUnauthorized } from '@/utils/apiError';
 
 type Tab = 'listings' | 'received' | 'sent';
 
+function offerStatusClass(status: ExchangeOfferStatus): string {
+  if (status === EXCHANGE_OFFER_STATUS.Accepted) return 'tv-takas-status--accepted';
+  if (status === EXCHANGE_OFFER_STATUS.Rejected) return 'tv-takas-status--rejected';
+  return 'tv-takas-status--pending';
+}
+
+function OfferCard({
+  offer,
+  showActions,
+  isMutating,
+  onAccept,
+  onReject
+}: {
+  offer: ExchangeOfferDto;
+  showActions?: boolean;
+  isMutating: boolean;
+  onAccept?: () => void;
+  onReject?: () => void;
+}) {
+  return (
+    <li className="tv-card tv-takas-offer-card">
+      <div className="tv-takas-offer-header">
+        <h3 className="tv-takas-offer-title">{offer.productTitle}</h3>
+        <span className={`tv-takas-status ${offerStatusClass(offer.status)}`}>
+          {EXCHANGE_OFFER_STATUS_LABELS[offer.status]}
+        </span>
+      </div>
+      <p className="tv-takas-offer-meta">
+        {offer.senderDisplayName} · {EXCHANGE_OFFER_TYPE_LABELS[offer.offerType]}
+      </p>
+      {offer.message ? <p className="tv-takas-offer-message">{offer.message}</p> : null}
+      {showActions && offer.status === EXCHANGE_OFFER_STATUS.Pending ? (
+        <div className="tv-takas-offer-actions">
+          <button
+            type="button"
+            className="tv-btn tv-btn--primary tv-btn--compact"
+            disabled={isMutating}
+            onClick={onAccept}
+          >
+            Kabul et
+          </button>
+          <button type="button" className="tv-btn tv-btn--compact" disabled={isMutating} onClick={onReject}>
+            Reddet
+          </button>
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 export default function ProfileExchangePage() {
   const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>('listings');
   const [myProducts, setMyProducts] = useState<ExchangeProductDto[]>([]);
   const [received, setReceived] = useState<ExchangeOfferDto[]>([]);
@@ -35,6 +89,11 @@ export default function ProfileExchangePage() {
   const [newPrice, setNewPrice] = useState('0');
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  const pendingReceived = useMemo(
+    () => received.filter((o) => o.status === EXCHANGE_OFFER_STATUS.Pending).length,
+    [received]
+  );
 
   const load = useCallback(async () => {
     if (!tokenStore.getToken()) {
@@ -112,8 +171,12 @@ export default function ProfileExchangePage() {
   };
 
   const handleCreateListing = async () => {
+    if (!newTitle.trim()) {
+      setError('Başlık zorunludur.');
+      return;
+    }
     if (!newPhotoUrl.trim()) {
-      setError('En az bir fotoğraf URL’si ekleyin.');
+      setError('En az bir fotoğraf yükleyin.');
       return;
     }
     setIsMutating(true);
@@ -131,7 +194,7 @@ export default function ProfileExchangePage() {
       setNewDescription('');
       setNewPrice('0');
       setNewPhotoUrl('');
-      setSuccess('İlanınız yayınlandı.');
+      setSuccess('İlanınız yayınlandı ve pazarda görünür.');
       await load();
     } catch (err) {
       setError(getApiErrorMessage(err, 'İlan oluşturulamadı.'));
@@ -155,32 +218,46 @@ export default function ProfileExchangePage() {
   };
 
   if (loading) {
-    return <p className="tv-muted">Yükleniyor…</p>;
+    return (
+      <div className="tv-takas-loading" aria-busy="true">
+        <div className="tv-takas-skeleton" style={{ height: 120 }} />
+        <div className="tv-takas-skeleton" style={{ height: 280 }} />
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1 className="tv-page-title">TerraTakas — İlanlarım</h1>
-      <p className="tv-page-lead">İlanlarınızı yönetin, gelen teklifleri kabul edin veya reddedin.</p>
-      <p className="tv-page-actions">
-        <Link href="/marketplace">Pazarı görüntüle →</Link>
-      </p>
+    <div className="tv-takas-dashboard">
+      <ProfileSubnav />
+      <header className="tv-takas-hero" style={{ marginBottom: 20 }}>
+        <span className="tv-login-pill">TerraTakas</span>
+        <h1 className="tv-takas-hero-title">İlanlarım ve teklifler</h1>
+        <p className="tv-takas-hero-lead">İlanlarınızı yönetin, gelen teklifleri anında görün ve yanıtlayın.</p>
+        <div className="tv-takas-hero-actions">
+          <Link href="/marketplace" className="tv-btn">
+            Pazarı görüntüle
+          </Link>
+        </div>
+      </header>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div className="tv-takas-tabs" role="tablist">
         {(
           [
-            ['listings', 'İlanlarım'],
-            ['received', 'Gelen teklifler'],
-            ['sent', 'Gönderdiğim teklifler']
+            ['listings', 'İlanlarım', myProducts.length],
+            ['received', 'Gelen teklifler', pendingReceived],
+            ['sent', 'Gönderdiğim', sent.length]
           ] as const
-        ).map(([key, label]) => (
+        ).map(([key, label, badge]) => (
           <button
             key={key}
             type="button"
-            className={`tv-btn${tab === key ? ' tv-btn--primary' : ''}`}
+            role="tab"
+            aria-selected={tab === key}
+            className={`tv-takas-tab${tab === key ? ' tv-takas-tab--active' : ''}`}
             onClick={() => setTab(key)}
           >
             {label}
+            {badge > 0 ? <span className="tv-takas-tab-badge">{badge}</span> : null}
           </button>
         ))}
       </div>
@@ -198,126 +275,157 @@ export default function ProfileExchangePage() {
 
       {tab === 'listings' ? (
         <>
-          <div className="tv-card" style={{ padding: 16, marginBottom: 16 }}>
-            <h2 className="tv-section-title">Yeni ilan</h2>
-            <input
-              className="tv-input"
-              placeholder="Başlık"
-              value={newTitle}
-              disabled={isMutating}
-              onChange={(e) => setNewTitle(e.target.value)}
-            />
-            <textarea
-              className="tv-input"
-              style={{ marginTop: 8 }}
-              placeholder="Açıklama"
-              rows={2}
-              value={newDescription}
-              disabled={isMutating}
-              onChange={(e) => setNewDescription(e.target.value)}
-            />
-            <input
-              className="tv-input"
-              style={{ marginTop: 8 }}
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="Fiyat (0 = takas)"
-              value={newPrice}
-              disabled={isMutating}
-              onChange={(e) => setNewPrice(e.target.value)}
-            />
-            <input
-              className="tv-input"
-              style={{ marginTop: 8 }}
-              type="file"
-              accept="image/*"
-              disabled={isMutating || uploading}
-              onChange={(e) => void handleImageUpload(e.target.files?.[0] ?? null)}
-            />
-            {newPhotoUrl ? (
-              <p className="tv-muted" style={{ marginTop: 8 }}>
-                Fotoğraf hazır
-              </p>
-            ) : null}
-            <button
-              type="button"
-              className="tv-btn tv-btn--primary"
-              style={{ marginTop: 12 }}
-              disabled={isMutating || uploading}
-              onClick={() => void handleCreateListing()}
-            >
-              {isMutating ? 'Kaydediliyor…' : 'İlanı yayınla'}
-            </button>
-          </div>
-          <ul className="tv-product-grid">
-            {myProducts.map((p) => (
-              <li key={p.id} className="tv-card tv-product-card">
-                <div className="tv-product-card__body">
-                  <h2 className="tv-product-card__title">{p.title}</h2>
-                  <p className="tv-muted">
-                    {EXCHANGE_CONDITION_LABELS[p.condition]} ·{' '}
-                    {p.isSwapOnly ? 'Takaslık' : formatTryCurrency(p.price)}
-                  </p>
-                  <Link href={`/marketplace/${p.id}`}>Detay</Link>
+          <div className="tv-card" style={{ marginBottom: 24 }}>
+            <h2 className="tv-section-title">Yeni ilan oluştur</h2>
+            <div className="tv-takas-form">
+              <div className="tv-field">
+                <label htmlFor="listing-title">Başlık</label>
+                <input
+                  id="listing-title"
+                  type="text"
+                  value={newTitle}
+                  disabled={isMutating}
+                  placeholder="Örn. Sağlıklı Monstera"
+                  onChange={(e) => setNewTitle(e.target.value)}
+                />
+              </div>
+              <div className="tv-field">
+                <label htmlFor="listing-desc">Açıklama</label>
+                <textarea
+                  id="listing-desc"
+                  rows={3}
+                  value={newDescription}
+                  disabled={isMutating}
+                  placeholder="Bitkinin durumu, bakım geçmişi…"
+                  onChange={(e) => setNewDescription(e.target.value)}
+                />
+              </div>
+              <div className="tv-takas-form-row">
+                <div className="tv-field">
+                  <label htmlFor="listing-price">Fiyat (₺)</label>
+                  <input
+                    id="listing-price"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={newPrice}
+                    disabled={isMutating}
+                    onChange={(e) => setNewPrice(e.target.value)}
+                  />
+                  <p className="tv-field-hint">0 girerseniz ilan yalnızca takas için listelenir.</p>
                 </div>
-              </li>
-            ))}
-          </ul>
+              </div>
+              <div
+                className="tv-takas-photo-drop"
+                role="button"
+                tabIndex={0}
+                onClick={() => fileRef.current?.click()}
+                onKeyDown={(e) => e.key === 'Enter' && fileRef.current?.click()}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={isMutating || uploading}
+                  onChange={(e) => void handleImageUpload(e.target.files?.[0] ?? null)}
+                />
+                {newPhotoUrl ? (
+                  <OptimizedMediaImage
+                    src={newPhotoUrl}
+                    alt="Önizleme"
+                    width={400}
+                    height={240}
+                    className="tv-takas-photo-preview"
+                  />
+                ) : (
+                  <>
+                    <span style={{ fontSize: 28 }}>📷</span>
+                    <span className="tv-muted">{uploading ? 'Yükleniyor…' : 'Fotoğraf seç veya sürükle'}</span>
+                  </>
+                )}
+              </div>
+              <button
+                type="button"
+                className="tv-btn tv-btn--primary"
+                disabled={isMutating || uploading}
+                onClick={() => void handleCreateListing()}
+              >
+                {isMutating ? 'Yayınlanıyor…' : 'İlanı yayınla'}
+              </button>
+            </div>
+          </div>
+
+          {myProducts.length === 0 ? (
+            <div className="tv-card tv-takas-empty">
+              <p className="tv-muted">Henüz ilanınız yok.</p>
+            </div>
+          ) : (
+            <ul className="tv-takas-grid">
+              {myProducts.map((p) => (
+                <li key={p.id} className="tv-card tv-takas-card">
+                  <div className="tv-takas-card__media">
+                    {p.photoUrls[0] ? (
+                      <OptimizedMediaImage
+                        src={p.photoUrls[0]}
+                        alt={p.title}
+                        width={320}
+                        height={240}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className="tv-takas-card__media tv-takas-card__media--empty">🪴</div>
+                    )}
+                  </div>
+                  <div className="tv-takas-card__body">
+                    <h2 className="tv-takas-card__title">{p.title}</h2>
+                    <p className="tv-takas-card__price">
+                      {p.isSwapOnly ? 'Takaslık' : formatTryCurrency(p.price)}
+                    </p>
+                    <Link href={`/marketplace/${p.id}`} className="tv-btn tv-takas-card__cta">
+                      İlanı görüntüle
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       ) : null}
 
       {tab === 'received' ? (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <ul className="tv-takas-offer-list">
           {received.length === 0 ? (
-            <li className="tv-muted">Henüz teklif yok.</li>
+            <li className="tv-card tv-takas-empty">
+              <p className="tv-muted">Henüz gelen teklif yok.</p>
+            </li>
           ) : (
             received.map((offer) => (
-              <li key={offer.id} className="tv-card" style={{ padding: 16, marginBottom: 12 }}>
-                <strong>{offer.productTitle}</strong>
-                <p>
-                  {offer.senderDisplayName} · {EXCHANGE_OFFER_TYPE_LABELS[offer.offerType]} ·{' '}
-                  {EXCHANGE_OFFER_STATUS_LABELS[offer.status]}
-                </p>
-                <p>{offer.message}</p>
-                {offer.status === EXCHANGE_OFFER_STATUS.Pending ? (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <button
-                      type="button"
-                      className="tv-btn tv-btn--primary"
-                      disabled={isMutating}
-                      onClick={() => void handleOfferAction(offer.id, true)}
-                    >
-                      Kabul et
-                    </button>
-                    <button
-                      type="button"
-                      className="tv-btn"
-                      disabled={isMutating}
-                      onClick={() => void handleOfferAction(offer.id, false)}
-                    >
-                      Reddet
-                    </button>
-                  </div>
-                ) : null}
-              </li>
+              <OfferCard
+                key={offer.id}
+                offer={offer}
+                showActions
+                isMutating={isMutating}
+                onAccept={() => void handleOfferAction(offer.id, true)}
+                onReject={() => void handleOfferAction(offer.id, false)}
+              />
             ))
           )}
         </ul>
       ) : null}
 
       {tab === 'sent' ? (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {sent.map((offer) => (
-            <li key={offer.id} className="tv-card" style={{ padding: 16, marginBottom: 12 }}>
-              <strong>{offer.productTitle}</strong>
-              <p>
-                {EXCHANGE_OFFER_TYPE_LABELS[offer.offerType]} ·{' '}
-                {EXCHANGE_OFFER_STATUS_LABELS[offer.status]}
-              </p>
-              <p>{offer.message}</p>
+        <ul className="tv-takas-offer-list">
+          {sent.length === 0 ? (
+            <li className="tv-card tv-takas-empty">
+              <p className="tv-muted">Henüz teklif göndermediniz.</p>
+              <Link href="/marketplace" className="tv-btn tv-btn--primary" style={{ marginTop: 12 }}>
+                Pazara git
+              </Link>
             </li>
-          ))}
+          ) : (
+            sent.map((offer) => <OfferCard key={offer.id} offer={offer} isMutating={isMutating} />)
+          )}
         </ul>
       ) : null}
     </div>

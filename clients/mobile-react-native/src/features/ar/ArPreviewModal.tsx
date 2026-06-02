@@ -39,8 +39,8 @@ export function ArPreviewModal({
   const scanLineBg = isLight ? `${palette.primaryContainer}66` : 'rgba(134, 239, 172, 0.42)';
   const scanShadow = isLight ? palette.primaryContainer : '#86efac';
 
-  const subtitle = preview?.productName ?? 'Industrial module';
-  const formatLabel = preview?.modelFormat ? `${preview.modelFormat} format` : 'glTF format';
+  const subtitle = preview?.productName ?? 'Ürün';
+  const formatLabel = preview?.modelFormat ? `${preview.modelFormat} biçimi` : 'glTF biçimi';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -57,7 +57,7 @@ export function ArPreviewModal({
           >
             <View style={[stitchStyles.header, { borderBottomColor: `${palette.outlineVariant}33` }]}>
               <View style={stitchStyles.headerText}>
-                <Text style={[stitchStyles.title, { color: palette.text }]}>AR Preview</Text>
+                <Text style={[stitchStyles.title, { color: palette.text }]}>AR önizleme</Text>
                 <Text style={[stitchStyles.subtitle, { color: palette.subText }]} numberOfLines={1}>
                   {subtitle}
                 </Text>
@@ -66,7 +66,7 @@ export function ArPreviewModal({
                 style={stitchStyles.closeRound}
                 onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel="Close AR preview"
+                accessibilityLabel="AR önizlemeyi kapat"
               >
                 <Text style={{ color: palette.subText, fontSize: 22, fontWeight: '300' }}>✕</Text>
               </TouchableOpacity>
@@ -108,7 +108,7 @@ export function ArPreviewModal({
               <View style={[stitchStyles.disclaimer, { backgroundColor: disclaimerBg }]}>
                 <Text style={{ fontSize: 16, color: palette.subText }}>ⓘ</Text>
                 <Text style={[stitchStyles.disclaimerText, { color: palette.subText }]}>
-                  {`AR visualization is for spatial reference only. Scale accuracy depends on your mobile device's camera calibration and lighting conditions.`}
+                  {`AR görüntüsü yalnızca mekânsal referans içindir. Ölçek doğruluğu cihaz kamerası kalibrasyonu ve ışık koşullarına bağlıdır.`}
                 </Text>
               </View>
 
@@ -121,11 +121,11 @@ export function ArPreviewModal({
                 disabled={!preview}
                 onPress={onStartAr}
                 accessibilityRole="button"
-                accessibilityLabel="Start AR experience"
+                accessibilityLabel="AR deneyimini başlat"
               >
                 <Text style={{ fontSize: 18, color: palette.onPrimaryContainer }}>▶</Text>
                 <Text style={[stitchStyles.primaryBtnText, { color: palette.onPrimaryContainer }]}>
-                  Start AR Experience
+                  AR deneyimini başlat
                 </Text>
               </TouchableOpacity>
 
@@ -133,9 +133,9 @@ export function ArPreviewModal({
                 style={[stitchStyles.secondaryBtn, { borderColor: palette.outlineVariant }]}
                 onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel="Close preview"
+                accessibilityLabel="Önizlemeyi kapat"
               >
-                <Text style={[stitchStyles.secondaryBtnText, { color: palette.text }]}>Close Preview</Text>
+                <Text style={[stitchStyles.secondaryBtnText, { color: palette.text }]}>Önizlemeyi kapat</Text>
               </TouchableOpacity>
             </View>
           </View>

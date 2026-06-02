@@ -3,13 +3,16 @@ import {
   FlatList,
   Image,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   StyleSheet,
   type ListRenderItem
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { PRODUCT_SORT_OPTIONS, isProductFilterActive, type ProductSortKey } from '@terravision/shared';
 import type { ProductDto } from '../../types/product';
+import type { CategoryDto } from '../../services/categoryService';
 import { API_BASE_URL } from '../../config/env';
 import type { UploadFileInput } from '../../services/mediaService';
 import type { MobilePalette } from '../app/types';
@@ -19,6 +22,7 @@ import { AR_UPLOAD_HELP_TEXT } from '../ar/arUploadValidation';
 
 type Props = {
   products: ProductDto[];
+  totalProductCount: number;
   isAdmin: boolean;
   arPendingProducts: ProductDto[];
   selectedUploadProductId: number | null;
@@ -29,6 +33,19 @@ type Props = {
   arUploadErrorMessage: string | null;
   arUploadSuccessMessage: string | null;
   palette: MobilePalette;
+  categories: CategoryDto[];
+  productSearch: string;
+  productCategoryId: number | null;
+  productArOnly: boolean;
+  productInStockOnly: boolean;
+  productSort: ProductSortKey;
+  onChangeSearch: (value: string) => void;
+  onChangeCategory: (value: number | null) => void;
+  onToggleArOnly: () => void;
+  onToggleInStockOnly: () => void;
+  onChangeSort: (value: ProductSortKey) => void;
+  onClearFilters: () => void;
+  onOpenDetail: (productId: number) => void;
   onAddToCart: (productId: number) => void;
   onPreviewAr: (productId: number) => void;
   onPickArFile: () => void;
@@ -61,12 +78,14 @@ function ProductCard({
   item,
   palette,
   onAddToCart,
-  onPreviewAr
+  onPreviewAr,
+  onOpenDetail
 }: {
   item: ProductDto;
   palette: MobilePalette;
   onAddToCart: (id: number) => void;
   onPreviewAr: (id: number) => void;
+  onOpenDetail: (id: number) => void;
 }): React.JSX.Element {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(item.imageUrl?.trim()) && !imageFailed;
@@ -80,20 +99,20 @@ function ProductCard({
         backgroundColor: palette.mutedCard,
         borderColor: palette.outlineVariant,
         color: palette.subText,
-        label: 'OUT OF STOCK'
+        label: 'STOKTA YOK'
       }
     : lowStock
       ? {
           backgroundColor: palette.stockLowPillBg,
           borderColor: palette.stockLowPillBorder,
           color: palette.stockLowPillText,
-          label: `LOW STOCK (${stockQty})`
+          label: `AZ STOK (${stockQty})`
         }
       : {
           backgroundColor: palette.stockPillBg,
           borderColor: palette.stockPillBorder,
           color: palette.stockPillText,
-          label: 'IN STOCK'
+          label: 'STOKTA'
         };
 
   const addToCartOutline = palette.productUseOutlineAddToCart;
@@ -105,54 +124,63 @@ function ProductCard({
         { backgroundColor: palette.elevatedSurface, borderColor: palette.outlineVariant }
       ]}
     >
-      <View style={[styles.imageWrap, { backgroundColor: palette.surfaceDim }]}>
-        {showImage ? (
-          <Image
-            source={{ uri: resolveProductImageUrl(item.imageUrl) }}
-            style={styles.productImage}
-            resizeMode="cover"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <View style={[styles.imageFallback, { backgroundColor: palette.imagePlaceholder }]}>
-            <Text style={[styles.imageFallbackText, { color: palette.subText }]}>No image</Text>
-          </View>
-        )}
-        <View style={styles.badgeStack}>
-          {item.isArCompatible ? (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => onOpenDetail(item.id)}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name} detayını aç`}
+      >
+        <View style={[styles.imageWrap, { backgroundColor: palette.surfaceDim }]}>
+          {showImage ? (
+            <Image
+              source={{ uri: resolveProductImageUrl(item.imageUrl) }}
+              style={styles.productImage}
+              resizeMode="cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <View style={[styles.imageFallback, { backgroundColor: palette.imagePlaceholder }]}>
+              <Text style={[styles.imageFallbackText, { color: palette.subText }]}>Görsel yok</Text>
+            </View>
+          )}
+          <View style={styles.badgeStack}>
+            {item.isArCompatible ? (
+              <View
+                style={[
+                  styles.badgeMint,
+                  { backgroundColor: palette.arPillBg, borderColor: palette.arPillBorder, borderWidth: 1 }
+                ]}
+              >
+                <Text style={[styles.badgeMintText, { color: palette.arPillText }]}>AR hazır</Text>
+              </View>
+            ) : null}
             <View
               style={[
-                styles.badgeMint,
-                { backgroundColor: palette.arPillBg, borderColor: palette.arPillBorder, borderWidth: 1 }
+                styles.badgeStock,
+                {
+                  backgroundColor: stockBadgeStyle.backgroundColor,
+                  borderColor: stockBadgeStyle.borderColor,
+                  borderWidth: 1
+                }
               ]}
             >
-              <Text style={[styles.badgeMintText, { color: palette.arPillText }]}>AR Ready</Text>
+              <Text style={[styles.badgeStockText, { color: stockBadgeStyle.color }]}>{stockBadgeStyle.label}</Text>
             </View>
-          ) : null}
-          <View
-            style={[
-              styles.badgeStock,
-              {
-                backgroundColor: stockBadgeStyle.backgroundColor,
-                borderColor: stockBadgeStyle.borderColor,
-                borderWidth: 1
-              }
-            ]}
-          >
-            <Text style={[styles.badgeStockText, { color: stockBadgeStyle.color }]}>{stockBadgeStyle.label}</Text>
           </View>
         </View>
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.productName, { color: palette.text }]} numberOfLines={2}>
-            {item.name}
+        <View style={styles.cardBodyTop}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.productName, { color: palette.text }]} numberOfLines={2}>
+              {item.name}
+            </Text>
+            <Text style={[styles.productPrice, { color: palette.brandTitle }]}>{formatPriceTry(price)}</Text>
+          </View>
+          <Text style={[styles.productDesc, { color: palette.subText }]} numberOfLines={2}>
+            {item.description?.trim() ? item.description : '—'}
           </Text>
-          <Text style={[styles.productPrice, { color: palette.brandTitle }]}>{formatPriceTry(price)}</Text>
         </View>
-        <Text style={[styles.productDesc, { color: palette.subText }]} numberOfLines={2}>
-          {item.description?.trim() ? item.description : '—'}
-        </Text>
+      </TouchableOpacity>
+      <View style={styles.cardBodyActions}>
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={[
@@ -165,15 +193,15 @@ function ProductCard({
             ]}
             onPress={() => onAddToCart(item.id)}
             accessibilityRole="button"
-            accessibilityLabel={`Add ${item.name} to cart`}
+            accessibilityLabel={`${item.name} sepete ekle`}
           >
-            <Text style={[styles.primaryCtaText, { color: palette.productCtaFg }]}>+ Add to cart</Text>
+            <Text style={[styles.primaryCtaText, { color: palette.productCtaFg }]}>+ Sepete ekle</Text>
           </TouchableOpacity>
           {!addToCartOutline ? (
             <TouchableOpacity
               style={[styles.iconGhost, { borderColor: palette.outlineVariant }]}
               accessibilityRole="button"
-              accessibilityLabel="Favorites placeholder"
+              accessibilityLabel="Favoriler (yakında)"
               disabled
             >
               <Text style={[styles.heartIcon, { color: palette.subText }]}>♡</Text>
@@ -185,7 +213,7 @@ function ProductCard({
             style={[styles.arLink, { borderColor: palette.outlineVariant, backgroundColor: palette.surfaceLowest }]}
             onPress={() => onPreviewAr(item.id)}
           >
-            <Text style={[styles.arLinkText, { color: palette.brandTitle }]}>View in AR</Text>
+            <Text style={[styles.arLinkText, { color: palette.brandTitle }]}>AR'da görüntüle</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -210,8 +238,8 @@ export function ProductsSection(props: Props): React.JSX.Element {
           ]}
         >
           <SectionHeader
-            title="AR Model Ingestion"
-            subtitle="Upload spatial assets for field deployment"
+            title="AR model yükleme"
+            subtitle="Saha dağıtımı için 3B varlıkları yükleyin"
             titleColor={palette.text}
             subtitleColor={palette.subText}
             right={
@@ -220,24 +248,24 @@ export function ProductsSection(props: Props): React.JSX.Element {
                 onPress={props.onPickArFile}
                 disabled={props.arPendingProducts.length === 0}
               >
-                <Text style={[styles.newAssetBtnText, { color: palette.onPrimaryContainer }]}>New asset</Text>
+                <Text style={[styles.newAssetBtnText, { color: palette.onPrimaryContainer }]}>Yeni dosya</Text>
               </TouchableOpacity>
             }
           />
           <View style={styles.adminGrid}>
             <View style={[styles.adminCol, styles.adminColFirst]}>
-              <Text style={[styles.caption, { color: palette.subText }]}>Upload AR model</Text>
+              <Text style={[styles.caption, { color: palette.subText }]}>AR modeli yükle</Text>
               <TouchableOpacity
                 style={[styles.dashedUpload, { borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
                 onPress={props.onPickArFile}
                 disabled={props.arPendingProducts.length === 0}
                 accessibilityRole="button"
-                accessibilityLabel="Select AR model file"
+                accessibilityLabel="AR model dosyası seç"
               >
                 <View style={[styles.uploadBadge, { borderColor: palette.outlineVariant }]}>
-                  <Text style={[styles.uploadBadgeText, { color: palette.brandTitle }]}>UP</Text>
+                  <Text style={[styles.uploadBadgeText, { color: palette.brandTitle }]}>↑</Text>
                 </View>
-                <Text style={[styles.uploadHint, { color: palette.subText }]}>Tap to select (.usdz, .glb)</Text>
+                <Text style={[styles.uploadHint, { color: palette.subText }]}>Dosya seçmek için dokunun (.usdz, .glb)</Text>
               </TouchableOpacity>
               <View style={[styles.pickerShell, { borderColor: palette.outlineVariant }]}>
                 <Picker
@@ -256,7 +284,7 @@ export function ProductsSection(props: Props): React.JSX.Element {
             </View>
             <View style={[styles.adminCol, styles.adminColSecond]}>
               {props.arPendingProducts.length === 0 ? (
-                <StateMessage text="No products awaiting an AR model." color={palette.subText} />
+                <StateMessage text="AR modeli bekleyen ürün yok." color={palette.subText} />
               ) : null}
               {props.selectedUploadFile ? (
                 <Text style={[styles.fileName, { color: palette.text }]} numberOfLines={1}>
@@ -266,7 +294,7 @@ export function ProductsSection(props: Props): React.JSX.Element {
               {props.isArUploading ? (
                 <>
                   <View style={styles.progressLabels}>
-                    <Text style={[styles.bodyCompact, { color: palette.text }]}>Uploading</Text>
+                    <Text style={[styles.bodyCompact, { color: palette.text }]}>Yükleniyor</Text>
                     <Text style={[styles.caption, { color: palette.subText }]}>{props.arUploadProgress}%</Text>
                   </View>
                   <View style={[styles.progressTrack, { backgroundColor: palette.card }]}>
@@ -278,19 +306,19 @@ export function ProductsSection(props: Props): React.JSX.Element {
                     />
                   </View>
                   <Text style={[styles.caption, { color: palette.subText }]}>
-                    Processing mesh for mobile visualization...
+                    Mobil görüntüleme için model işleniyor…
                   </Text>
                 </>
               ) : (
                 <Text style={[styles.caption, { color: palette.subText }]}>
-                  {props.selectedUploadFile ? 'Ready to upload when you confirm below.' : AR_UPLOAD_HELP_TEXT}
+                  {props.selectedUploadFile ? 'Aşağıdan onayladığınızda yüklenecek.' : AR_UPLOAD_HELP_TEXT}
                 </Text>
               )}
             </View>
           </View>
           {props.selectedUploadFile && (
             <TouchableOpacity style={styles.clearFileBtn} onPress={props.onClearSelectedArFile}>
-              <Text style={[styles.clearFileText, { color: palette.brandTitle }]}>Clear selected file</Text>
+              <Text style={[styles.clearFileText, { color: palette.brandTitle }]}>Seçili dosyayı kaldır</Text>
             </TouchableOpacity>
           )}
           {props.arUploadErrorMessage ? <StateMessage tone="error" text={props.arUploadErrorMessage} /> : null}
@@ -307,24 +335,24 @@ export function ProductsSection(props: Props): React.JSX.Element {
           >
             <Text style={[styles.primaryCtaText, { color: palette.buttonText }]}>
               {props.isArUploading
-                ? `Uploading ${props.arUploadProgress}%`
+                ? `Yükleniyor %${props.arUploadProgress}`
                 : props.arUploadErrorMessage
-                  ? 'Retry upload'
-                  : 'Upload and bind model'}
+                  ? 'Yüklemeyi tekrar dene'
+                  : 'Yükle ve ürüne bağla'}
             </Text>
           </TouchableOpacity>
         </View>
       )}
 
       <SectionHeader
-        title="Active Inventory"
-        subtitle={`${props.products.length} product${props.products.length === 1 ? '' : 's'} in catalog`}
+        title="Ürün kataloğu"
+        subtitle={`Katalogda ${props.products.length} ürün`}
         titleColor={palette.text}
         subtitleColor={palette.subText}
       />
 
       {props.products.length === 0 ? (
-        <StateMessage variant="banner" text="No products found." color={palette.subText} backgroundColor={palette.mutedCard} borderColor={palette.outlineVariant} />
+        <StateMessage variant="banner" text="Ürün bulunamadı." color={palette.subText} backgroundColor={palette.mutedCard} borderColor={palette.outlineVariant} />
       ) : (
         <FlatList
           data={props.products}

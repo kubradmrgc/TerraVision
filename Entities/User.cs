@@ -24,5 +24,6 @@ namespace TerraVision.Api.Entities
         public virtual ICollection<PlantCareCalendar> PlantCareCalendars { get; set; } = new HashSet<PlantCareCalendar>();
         public virtual ICollection<ExchangeProduct> ExchangeProducts { get; set; } = new HashSet<ExchangeProduct>();
         public virtual ICollection<ExchangeOffer> ExchangeOffersSent { get; set; } = new HashSet<ExchangeOffer>();
+        public virtual ICollection<Notification> Notifications { get; set; } = new HashSet<Notification>();
     }
 }

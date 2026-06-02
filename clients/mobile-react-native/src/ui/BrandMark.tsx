@@ -1,5 +1,5 @@
-import React from 'react';
-import { Image, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import React, { useState } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { terravisionLogo } from '../assets/brand';
 
 type Props = {
@@ -17,15 +17,23 @@ export function BrandMark({
   showSubtitle = true
 }: Props): React.JSX.Element {
   const dim = size === 'sm' ? 44 : 60;
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <View style={styles.wrap}>
-      <Image
-        source={terravisionLogo as ImageSourcePropType}
-        style={[styles.logo, { width: dim, height: dim }]}
-        resizeMode="contain"
-        accessibilityLabel="TerraVision"
-      />
+      <View style={[styles.logoFrame, { width: dim, height: dim }]}>
+        {imageFailed ? (
+          <Text style={[styles.logoFallback, { color: markColor, fontSize: dim * 0.42 }]}>T</Text>
+        ) : (
+          <Image
+            source={terravisionLogo}
+            style={styles.logoImage}
+            resizeMode="contain"
+            accessibilityLabel="TerraVision"
+            onError={() => setImageFailed(true)}
+          />
+        )}
+      </View>
       {showSubtitle ? (
         <View style={styles.textCol}>
           <Text style={[styles.title, { color: markColor }]}>TerraVision</Text>
@@ -38,8 +46,21 @@ export function BrandMark({
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center' },
-  logo: {
-    borderRadius: 999
+  logoFrame: {
+    borderRadius: 12,
+    backgroundColor: '#FBF8FC',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0, 76, 34, 0.12)'
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%'
+  },
+  logoFallback: {
+    fontWeight: '800'
   },
   textCol: { marginLeft: 12 },
   title: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },

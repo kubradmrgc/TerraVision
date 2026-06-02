@@ -1,35 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { MobileSection } from '../features/app/types';
-
-const ABBREV: Record<MobileSection, string> = {
-  products: 'Pr',
-  cart: 'Ca',
-  orders: 'Or',
-  appointments: 'Ap',
-  care: 'Tk',
-  exchange: 'Tt',
-  events: 'Ev',
-  profile: 'Pf'
-};
+import { sectionIcons } from '../theme/mobileTheme';
 
 type Props = {
   section: MobileSection;
   active: boolean;
   activeBg: string;
-  activeFg: string;
-  inactiveFg: string;
   borderColor: string;
 };
 
-export function NavTabIcon({
-  section,
-  active,
-  activeBg,
-  activeFg,
-  inactiveFg,
-  borderColor
-}: Props): React.JSX.Element {
+export function NavTabIcon({ section, active, activeBg, borderColor }: Props): React.JSX.Element {
   return (
     <View
       style={[
@@ -39,21 +20,27 @@ export function NavTabIcon({
           borderColor: active ? activeBg : borderColor
         }
       ]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
     >
-      <Text style={[styles.text, { color: active ? activeFg : inactiveFg }]}>{ABBREV[section]}</Text>
+      <Text style={styles.icon}>{sectionIcons[section]}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   box: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    borderWidth: 1,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4
   },
-  text: { fontSize: 10, fontWeight: '700', letterSpacing: -0.2 }
+  icon: {
+    fontSize: 18,
+    lineHeight: 22,
+    textAlign: 'center'
+  }
 });

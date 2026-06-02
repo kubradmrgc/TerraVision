@@ -318,5 +318,7 @@ public class CartAbandonmentTests
         public Task BroadcastExchangeOfferStatusChangedAsync(ExchangeOfferStatusChangedEvent offerEvent) => Task.CompletedTask;
 
         public Task BroadcastExchangeProductListedAsync(ExchangeProductDto product) => Task.CompletedTask;
+
+        public Task BroadcastNotificationCreatedAsync(NotificationCreatedEvent notificationEvent) => Task.CompletedTask;
     }
 }

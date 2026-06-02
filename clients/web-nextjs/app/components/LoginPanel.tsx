@@ -32,6 +32,7 @@ export function LoginPanel({ portal }: Props) {
         return;
       }
       router.push(config.redirectPath);
+      router.refresh();
     } catch (err) {
       setError(
         getApiErrorMessage(err, 'Giriş başarısız. E-posta veya şifreyi kontrol edin.')

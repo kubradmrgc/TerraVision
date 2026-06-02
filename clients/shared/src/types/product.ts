@@ -11,4 +11,9 @@ export interface ProductDto {
   /** Present when an AR model is bound on the server. */
   arModelFileName?: string;
   categoryId: number;
+  /** Optional plant-care metadata surfaced on the product detail screen. */
+  wateringIntervalDays?: number | null;
+  fertilizingIntervalDays?: number | null;
+  cleaningIntervalDays?: number | null;
+  careInstructions?: string | null;
 }
