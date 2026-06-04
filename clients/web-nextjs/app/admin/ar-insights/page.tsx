@@ -1,35 +1,21 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { ArSessionResponseDto, parseArEnvironmentNotes } from '@terravision/shared';
+import { AdminPageShell } from '@/components/admin/AdminPageShell';
 import { OptimizedMediaImage } from '@/components/OptimizedMediaImage';
 import { arSessionService } from '@/services/arSessionService';
-import { authService } from '@/services/authService';
 import { realtimeService } from '@/services/realtimeService';
 import { tokenStore } from '@/services/tokenStore';
 
 export default function AdminArInsightsPage() {
-  const router = useRouter();
   const [sessions, setSessions] = useState<ArSessionResponseDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liveNotice, setLiveNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const token = tokenStore.getToken();
-    if (!token) {
-      router.replace('/login/admin');
-      return;
-    }
-    if (!authService.isAdmin()) {
-      setError('Bu panel yalnızca yöneticiler içindir.');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
@@ -38,7 +24,7 @@ export default function AdminArInsightsPage() {
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         tokenStore.clearTokens();
-        router.replace('/login/admin');
+        window.location.assign('/login/admin');
         return;
       }
       if (axios.isAxiosError(err) && err.response?.status === 403) {
@@ -49,26 +35,19 @@ export default function AdminArInsightsPage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    if (!authService.isAdmin() || !tokenStore.getToken()) {
-      return;
-    }
-
     void realtimeService.connect();
     const unsubscribe = realtimeService.onArSessionCreated((event) => {
       setLiveNotice(`Yeni AR denemesi: ${event.productName} (${event.customerEmail})`);
       void load();
     });
-    const unsubReconnect = realtimeService.onReconnected(() => {
-      void load();
-    });
-
+    const unsubReconnect = realtimeService.onReconnected(() => void load());
     return () => {
       unsubscribe();
       unsubReconnect();
@@ -84,35 +63,28 @@ export default function AdminArInsightsPage() {
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
   }, [sessions]);
 
-  if (loading) {
-    return <p className="tv-muted">Yükleniyor…</p>;
-  }
-
   return (
-    <div>
-      <h1 className="tv-page-title">AR İçgörüleri</h1>
-      <p className="tv-page-lead">
-        Müşterilerin mobil AR denemeleri, yerleşim ölçekleri ve oda ekran görüntüleri.
-      </p>
-      <p className="tv-page-actions">
-        <Link href="/admin/orders">Sipariş yönetimi</Link>
-        {' · '}
-        <Link href="/admin/consultant-performance">Danışman karnesi</Link>
-        {' · '}
-        <Link href="/admin/dashboard">Dashboard</Link>
-      </p>
-
+    <AdminPageShell
+      title="AR içgörüleri"
+      lead="Müşteri AR denemeleri, ölçek ve ortam notları — canlı güncellenir."
+      actions={
+        <button type="button" className="tv-btn" onClick={() => void load()} disabled={loading}>
+          {loading ? 'Yükleniyor…' : 'Yenile'}
+        </button>
+      }
+    >
       {liveNotice ? (
         <p className="tv-success" role="status">
           {liveNotice}
         </p>
       ) : null}
-
       {error ? (
         <p className="tv-error" role="alert">
           {error}
         </p>
       ) : null}
+
+      {loading ? <p className="tv-muted">Oturumlar yükleniyor…</p> : null}
 
       {!error && productStats.length > 0 ? (
         <section className="tv-card tv-ar-stats">
@@ -128,9 +100,9 @@ export default function AdminArInsightsPage() {
         </section>
       ) : null}
 
-      {!error && sessions.length === 0 ? (
-        <div className="tv-card tv-card--empty">
-          <p>Henüz kayıtlı AR oturumu yok.</p>
+      {!loading && !error && sessions.length === 0 ? (
+        <div className="tv-card tv-admin-empty">
+          <p className="tv-muted">Henüz kayıtlı AR oturumu yok.</p>
         </div>
       ) : null}
 
@@ -159,6 +131,6 @@ export default function AdminArInsightsPage() {
           </article>
         ))}
       </div>
-    </div>
+    </AdminPageShell>
   );
 }

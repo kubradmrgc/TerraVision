@@ -6,6 +6,8 @@ namespace TerraVision.Api.Interfaces
     {
         Task ProvisionCalendarsForDeliveredOrderAsync(int orderId);
         Task<MyPlantCareCalendarResponse> GetMyCalendarAsync(int userId);
+        Task<PlantCareCalendarDto> AddPlantToGardenAsync(int userId, int productId);
+        Task<IReadOnlyList<CareCatalogPlantDto>> GetCatalogPlantsAsync(int userId);
         Task<PlantCareCalendarDto> CompleteActionAsync(int userId, int calendarId, CompleteCareActionRequest request);
     }
 }

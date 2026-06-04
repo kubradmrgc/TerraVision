@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "setup:android": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/write-android-sdk-path.ps1",
+    "setup:device": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/setup-device.ps1",
     "android:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-android.ps1",
     "start": "react-native start --port 8082",
     "android": "react-native run-android",
@@ -26,6 +27,7 @@
     "axios": "^1.12.2",
     "react": "19.2.3",
     "react-native": "0.85.2",
+    "react-native-image-picker": "^8.2.1",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-url-polyfill": "^3.0.0"
   },

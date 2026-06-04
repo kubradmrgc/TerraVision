@@ -1,9 +1,10 @@
-import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
 import {
   CARE_ACTION_LABELS,
   CARE_URGENCY_LABELS,
   CareActionType,
+  CareCatalogPlantDto,
   CareTaskDto,
   CareTaskUrgency,
   PlantCareCalendarDto
@@ -13,13 +14,17 @@ import { StateMessage } from '../../ui/StateMessage';
 
 type Props = {
   plants: PlantCareCalendarDto[];
+  catalogPlants: CareCatalogPlantDto[];
   palette: MobilePalette;
   isLoading: boolean;
   errorMessage: string | null;
   successMessage: string | null;
   isMutating: boolean;
   mutatingKey: string | null;
+  onAddPlant: (productId: number) => void;
   onCompleteAction: (calendarId: number, actionType: CareActionType) => void;
+  /** Hub içinde kullanıldığında üst boşlukları sıfırlar. */
+  embedded?: boolean;
 };
 
 function urgencyColor(urgency: CareTaskUrgency, palette: MobilePalette): string {
@@ -93,40 +98,93 @@ function TaskRow({
 
 export function CareCalendarSection({
   plants,
+  catalogPlants,
   palette,
   isLoading,
   errorMessage,
   successMessage,
   isMutating,
   mutatingKey,
-  onCompleteAction
+  onAddPlant,
+  onCompleteAction,
+  embedded = false
 }: Props): React.JSX.Element {
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const availableCatalog = catalogPlants.filter((p) => !p.isInMyGarden);
   if (isLoading) {
-    return <StateMessage tone="loading" text="Bakım takvimi yükleniyor…" color={palette.subText} />;
+    return (
+      <StateMessage
+        tone="loading"
+        text="Bakım takvimi yükleniyor…"
+        color={palette.subText}
+      />
+    );
   }
 
   if (errorMessage) {
     return <StateMessage tone="error" text={errorMessage} />;
   }
 
-  if (plants.length === 0) {
-    return (
-      <View style={[styles.emptyCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
-        <Text style={[styles.emptyTitle, { color: palette.text }]}>Henüz bitki yok</Text>
-        <Text style={[styles.emptySub, { color: palette.subText }]}>
-          Teslim edilen bitki siparişleriniz burada görünür. Siparişiniz ulaştığında sulama ve gübre hatırlatmaları
-          otomatik oluşur.
-        </Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, embedded && styles.wrapEmbedded]}>
       {successMessage ? (
         <Text style={[styles.success, { color: palette.brandTitle }]}>
           {successMessage}
         </Text>
+      ) : null}
+
+      <View style={[styles.addCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+        <Text style={[styles.addTitle, { color: palette.text }]}>Satın almadan bahçeme ekle</Text>
+        <Text style={[styles.addSub, { color: palette.subText }]}>
+          Mağazadaki bir bitkiyi takviminize ekleyin; bakım hatırlatmaları oluşur.
+        </Text>
+        {availableCatalog.length === 0 ? (
+          <Text style={[styles.addSub, { color: palette.subText }]}>
+            {catalogPlants.length === 0
+              ? 'Bitki kataloğu yüklenemedi. Müşteri hesabıyla giriş yapın ve API\'nin çalıştığını kontrol edin.'
+              : 'Tüm bitkiler zaten bahçenizde.'}
+          </Text>
+        ) : (
+          <View style={styles.addRow}>
+            {availableCatalog.slice(0, 6).map((item) => {
+              const selected = selectedProductId === item.id;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.catalogChip,
+                    { borderColor: palette.border, backgroundColor: selected ? palette.productCtaBg : palette.mutedCard }
+                  ]}
+                  onPress={() => setSelectedProductId(item.id)}
+                >
+                  <Text style={{ color: selected ? palette.productCtaFg : palette.text, fontSize: 12, fontWeight: '600' }}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.addBtn,
+            { backgroundColor: palette.productCtaBg, borderColor: palette.productCtaBorder },
+            (!selectedProductId || isMutating) && styles.actionBtnDisabled
+          ]}
+          disabled={!selectedProductId || isMutating}
+          onPress={() => selectedProductId && onAddPlant(selectedProductId)}
+        >
+          <Text style={[styles.addBtnText, { color: palette.productCtaFg }]}>Bahçeme ekle</Text>
+        </TouchableOpacity>
+      </View>
+
+      {plants.length === 0 ? (
+        <View style={[styles.emptyCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <Text style={[styles.emptyTitle, { color: palette.text }]}>Henüz bitki yok</Text>
+          <Text style={[styles.emptySub, { color: palette.subText }]}>
+            Yukarıdan bitki ekleyebilir veya Asistan sekmesinde satın almadan bakım sorusu sorabilirsiniz.
+          </Text>
+        </View>
       ) : null}
 
       {plants.map((plant) => (
@@ -160,7 +218,15 @@ export function CareCalendarSection({
 
 const styles = StyleSheet.create({
   wrap: { gap: 12, paddingHorizontal: 16, paddingTop: 8 },
+  wrapEmbedded: { paddingTop: 0 },
   success: { fontSize: 14, fontWeight: '600', paddingHorizontal: 16 },
+  addCard: { marginHorizontal: 16, padding: 16, borderRadius: 12, borderWidth: 1, gap: 10 },
+  addTitle: { fontSize: 16, fontWeight: '700' },
+  addSub: { fontSize: 13, lineHeight: 18 },
+  addRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  catalogChip: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  addBtn: { alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1 },
+  addBtnText: { fontSize: 14, fontWeight: '700' },
   emptyCard: { margin: 16, padding: 20, borderRadius: 12, borderWidth: 1 },
   emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
   emptySub: { fontSize: 14, lineHeight: 20 },

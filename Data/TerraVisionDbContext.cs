@@ -50,6 +50,8 @@ namespace TerraVision.Api.Data
         public DbSet<ExchangeProduct> ExchangeProducts { get; set; }
         public DbSet<ExchangeOffer> ExchangeOffers { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<StoreCampaign> StoreCampaigns { get; set; }
+        public DbSet<StoreCampaignProduct> StoreCampaignProducts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -116,6 +118,41 @@ namespace TerraVision.Api.Data
             modelBuilder.Entity<Product>()
                 .Property(p => p.Price)
                 .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.CompareAtPrice)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.PromoLabel)
+                .HasMaxLength(80);
+
+            modelBuilder.Entity<StoreCampaign>()
+                .Property(c => c.Title)
+                .HasMaxLength(120);
+
+            modelBuilder.Entity<StoreCampaign>()
+                .Property(c => c.Subtitle)
+                .HasMaxLength(240);
+
+            modelBuilder.Entity<StoreCampaign>()
+                .Property(c => c.BadgeText)
+                .HasMaxLength(40);
+
+            modelBuilder.Entity<StoreCampaignProduct>()
+                .HasKey(cp => new { cp.CampaignId, cp.ProductId });
+
+            modelBuilder.Entity<StoreCampaignProduct>()
+                .HasOne(cp => cp.Campaign)
+                .WithMany(c => c.CampaignProducts)
+                .HasForeignKey(cp => cp.CampaignId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<StoreCampaignProduct>()
+                .HasOne(cp => cp.Product)
+                .WithMany(p => p.CampaignProducts)
+                .HasForeignKey(cp => cp.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.User)

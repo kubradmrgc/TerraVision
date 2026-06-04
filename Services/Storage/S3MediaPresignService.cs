@@ -45,6 +45,7 @@ public class S3MediaPresignService : IMediaPresignService
     public async Task<UploadArModelResponse> ConfirmArModelAsync(ConfirmPresignedUploadDto request, CancellationToken cancellationToken = default)
     {
         var (size, publicUrl) = await VerifyObjectAsync(request, _settings.Prefixes.ArModels, cancellationToken);
+        ArModelUrlRules.EnsureValidPublicHttpsUrl(publicUrl);
         return new UploadArModelResponse
         {
             FileName = request.FileName,

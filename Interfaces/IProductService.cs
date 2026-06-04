@@ -13,5 +13,6 @@ namespace TerraVision.Api.Interfaces
         Task<ProductDto> UpdateProductAsync(UpdateProductRequest request);
         Task DeleteProductAsync(int id);
         Task<ProductDto> SetArModelFileNameAsync(int productId, string arModelFileName, bool overwriteExisting = false);
+        Task InvalidateProductCacheAsync();
     }
 }

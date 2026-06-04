@@ -32,6 +32,20 @@ export type CompleteCareActionRequest = {
   notes?: string | null;
 };
 
+export type AddPlantToGardenRequest = {
+  productId: number;
+};
+
+export type CareCatalogPlantDto = {
+  id: number;
+  name: string;
+  careInstructions: string | null;
+  wateringIntervalDays: number | null;
+  fertilizingIntervalDays: number | null;
+  cleaningIntervalDays: number | null;
+  isInMyGarden: boolean;
+};
+
 export const CARE_ACTION_LABELS: Record<CareActionType, string> = {
   1: 'Sulama',
   2: 'Gübreleme',

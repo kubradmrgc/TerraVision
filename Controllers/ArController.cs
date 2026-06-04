@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
+using TerraVision.Api.Services;
 using TerraVision.Api.Settings;
 
 namespace TerraVision.Api.Controllers
@@ -54,6 +55,13 @@ namespace TerraVision.Api.Controllers
                     null,
                     _mediaSettings.Prefixes.ArModels,
                     $"{product.SKU}.{modelFormat}");
+            }
+
+            if (!ArModelUrlRules.IsValidPublicHttpsUrl(modelUrl))
+            {
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    ArModelUrlRules.InvalidUrlMessage);
             }
 
             var response = new ArPreviewResponse

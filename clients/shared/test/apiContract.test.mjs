@@ -51,9 +51,16 @@ describe('apiContract', () => {
     assert.match(API_ROUTES.mediaUploadCapabilities, /\/api\/media\/upload-capabilities$/);
   });
 
+  it('exposes admin users route', () => {
+    assert.match(API_ROUTES.usersAdmin, /\/api\/users$/);
+  });
+
   it('exposes plant care calendar routes', () => {
     assert.match(API_ROUTES.careMyCalendar, /\/api\/care\/my-calendar$/);
+    assert.match(API_ROUTES.careCatalogPlants, /\/api\/care\/catalog-plants$/);
+    assert.match(API_ROUTES.careAddToGarden, /\/api\/care\/my-garden$/);
     assert.match(API_ROUTES.careCompleteAction(12), /\/api\/care\/12\/complete-action$/);
+    assert.match(API_ROUTES.careAssistantChat, /\/api\/care\/assistant\/chat$/);
   });
 
   it('documents DTO key contracts for smoke tests', () => {

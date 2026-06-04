@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { formatTryCurrency } from '@terravision/shared';
+import { computeLineTotal, formatTryCurrency } from '@terravision/shared';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { OrderDto, OrderStatusHistoryDto } from '../../types/order';
 import { orderService } from '../../services/orderService';
@@ -176,16 +176,20 @@ export function OrderTrackingModal({
                 {(order.items ?? []).length > 0 ? (
                   <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: palette.text }]}>Ürünler</Text>
-                    {order.items.map((item) => (
-                      <View key={`${item.productId}`} style={styles.itemRow}>
-                        <Text style={[styles.itemName, { color: palette.text }]} numberOfLines={2}>
-                          {`${item.productName} ×${item.quantity}`}
-                        </Text>
-                        <Text style={[styles.itemAmount, { color: palette.subText }]}>
-                          {formatTryCurrency(item.lineTotal)}
-                        </Text>
-                      </View>
-                    ))}
+                    {order.items.map((item) => {
+                      const lineTotal =
+                        item.lineTotal ?? computeLineTotal(item.unitPrice ?? 0, item.quantity ?? 0);
+                      return (
+                        <View key={`${item.productId}`} style={styles.itemRow}>
+                          <Text style={[styles.itemName, { color: palette.text }]} numberOfLines={2}>
+                            {`${item.productName} ×${item.quantity}`}
+                          </Text>
+                          <Text style={[styles.itemAmount, { color: palette.subText }]}>
+                            {formatTryCurrency(lineTotal)}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </View>
                 ) : null}
 
@@ -248,7 +252,7 @@ export function OrderTrackingModal({
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    maxHeight: '88%',
+    height: '88%',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderWidth: 1,
@@ -266,7 +270,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '600', lineHeight: 24, letterSpacing: -0.1 },
   subtitle: { fontSize: 12, fontWeight: '500', lineHeight: 16, marginTop: 2 },
   closeRound: { width: 44, height: 44, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  body: { flexGrow: 0 },
+  body: { flex: 1 },
   bodyContent: { paddingHorizontal: 16, paddingVertical: 16 },
   loadingWrap: { paddingVertical: 32, alignItems: 'center', gap: 12 },
   loadingText: { fontSize: 13, fontWeight: '500' },

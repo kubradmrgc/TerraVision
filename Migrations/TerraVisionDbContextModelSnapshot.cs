@@ -713,6 +713,10 @@ namespace TerraVision.Api.Migrations
                     b.Property<int?>("CleaningIntervalDays")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("CompareAtPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
@@ -736,6 +740,9 @@ namespace TerraVision.Api.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("bit");
+
                     b.Property<int>("MinStockLevel")
                         .HasColumnType("int");
 
@@ -746,6 +753,19 @@ namespace TerraVision.Api.Migrations
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("PromoEndsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PromoLabel")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("PromoSortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PromoStartsAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SKU")
                         .IsRequired()
@@ -773,6 +793,7 @@ namespace TerraVision.Api.Migrations
                             CareInstructions = "Toprak yüzeyi kuruyunca sulayın; doğrudan güneşten kaçının.",
                             CategoryId = 1,
                             CleaningIntervalDays = 14,
+                            CompareAtPrice = 1599.00m,
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "İç mekan için popüler, geniş yapraklı dekoratif bitki.",
                             FertilizingIntervalDays = 30,
@@ -780,9 +801,12 @@ namespace TerraVision.Api.Migrations
                             IsActive = true,
                             IsArCompatible = true,
                             IsDeleted = false,
+                            IsFeatured = true,
                             MinStockLevel = 3,
                             Name = "Monstera Deliciosa",
                             Price = 1299.00m,
+                            PromoLabel = "Fırsat",
+                            PromoSortOrder = 1,
                             SKU = "PLT-MON-001",
                             StockQuantity = 12,
                             WateringIntervalDays = 7
@@ -800,9 +824,11 @@ namespace TerraVision.Api.Migrations
                             IsActive = true,
                             IsArCompatible = false,
                             IsDeleted = false,
+                            IsFeatured = false,
                             MinStockLevel = 2,
                             Name = "Fiddle Leaf Fig",
                             Price = 1899.50m,
+                            PromoSortOrder = 0,
                             SKU = "PLT-FIC-002",
                             StockQuantity = 8,
                             WateringIntervalDays = 10
@@ -819,12 +845,136 @@ namespace TerraVision.Api.Migrations
                             IsActive = true,
                             IsArCompatible = false,
                             IsDeleted = false,
+                            IsFeatured = false,
                             MinStockLevel = 5,
                             Name = "Lavanta Saksısı",
                             Price = 349.90m,
+                            PromoSortOrder = 0,
                             SKU = "PLT-LAV-003",
                             StockQuantity = 25,
                             WateringIntervalDays = 5
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CareInstructions = "Toprağı nemli tutun; direkt güneşten kaçının; çiçekler solunca solmuş kısımları temizleyin.",
+                            CategoryId = 1,
+                            CleaningIntervalDays = 14,
+                            CompareAtPrice = 999.00m,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Dekoratif çiçekli saksı bitkisi; iç mekan ve balkon için uygundur.",
+                            FertilizingIntervalDays = 30,
+                            ImageUrl = "/assets/product-images/lavender-pot.jpg",
+                            IsActive = true,
+                            IsArCompatible = false,
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            MinStockLevel = 3,
+                            Name = "Atatürk Çiçeği",
+                            Price = 800.00m,
+                            PromoLabel = "%20",
+                            PromoSortOrder = 0,
+                            SKU = "PLT-ATK-004",
+                            StockQuantity = 15,
+                            WateringIntervalDays = 7
+                        });
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.StoreCampaign", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BadgeText")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EndsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("StartsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Subtitle")
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StoreCampaigns");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            BadgeText = "KAMPANYA",
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsDeleted = false,
+                            SortOrder = 0,
+                            Subtitle = "Seçili bitkilerde indirim — sınırlı süre",
+                            Title = "Bahar Kampanyası"
+                        });
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.StoreCampaignProduct", b =>
+                {
+                    b.Property<int>("CampaignId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("CampaignId", "ProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("StoreCampaignProducts");
+
+                    b.HasData(
+                        new
+                        {
+                            CampaignId = 1,
+                            ProductId = 4,
+                            SortOrder = 0
+                        },
+                        new
+                        {
+                            CampaignId = 1,
+                            ProductId = 1,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            CampaignId = 1,
+                            ProductId = 3,
+                            SortOrder = 2
                         });
                 });
 
@@ -1130,6 +1280,25 @@ namespace TerraVision.Api.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("TerraVision.Api.Entities.StoreCampaignProduct", b =>
+                {
+                    b.HasOne("TerraVision.Api.Entities.StoreCampaign", "Campaign")
+                        .WithMany("CampaignProducts")
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TerraVision.Api.Entities.Product", "Product")
+                        .WithMany("CampaignProducts")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("TerraVision.Api.Entities.Cart", b =>
                 {
                     b.Navigation("Items");
@@ -1163,7 +1332,14 @@ namespace TerraVision.Api.Migrations
                 {
                     b.Navigation("ArSessions");
 
+                    b.Navigation("CampaignProducts");
+
                     b.Navigation("PlantCareCalendars");
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.StoreCampaign", b =>
+                {
+                    b.Navigation("CampaignProducts");
                 });
 
             modelBuilder.Entity("TerraVision.Api.Entities.User", b =>

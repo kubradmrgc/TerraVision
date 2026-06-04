@@ -33,4 +33,20 @@ namespace TerraVision.Api.Models.DTOs
         public CareActionType ActionType { get; set; }
         public string? Notes { get; set; }
     }
+
+    public class AddPlantToGardenRequest
+    {
+        public int ProductId { get; set; }
+    }
+
+    public class CareCatalogPlantDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? CareInstructions { get; set; }
+        public int? WateringIntervalDays { get; set; }
+        public int? FertilizingIntervalDays { get; set; }
+        public int? CleaningIntervalDays { get; set; }
+        public bool IsInMyGarden { get; set; }
+    }
 }

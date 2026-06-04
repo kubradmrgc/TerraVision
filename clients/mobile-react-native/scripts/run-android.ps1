@@ -1,7 +1,8 @@
 # Run React Native Android build using Android Studio's JDK 17 (JBR) when present.
 # Fixes: "Gradle requires JVM 17 or later" when JAVA_HOME points to JDK 8.
 $ErrorActionPreference = 'Stop'
-Set-Location (Resolve-Path (Join-Path $PSScriptRoot '..'))
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+Set-Location $root
 
 # Ensure sdk.dir in local.properties (without UTF-8 BOM) before Gradle runs
 & (Join-Path $PSScriptRoot 'write-android-sdk-path.ps1')
@@ -19,33 +20,16 @@ if ($jbr) {
   Write-Warning "Android Studio JBR not found under Program Files. Ensure JAVA_HOME is JDK 17+."
 }
 
-# Put adb / emulator on PATH (React Native CLI shells out to adb). Prefer android/local.properties sdk.dir.
-$sdk = $null
-$lp = Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..')).Path 'android\local.properties'
-if (Test-Path -LiteralPath $lp) {
-  foreach ($line in Get-Content -LiteralPath $lp) {
-    if ($line -match '^\s*sdk\.dir\s*=\s*(.+)\s*$') {
-      $sdk = $matches[1].Trim() -replace '/', '\'
-      break
-    }
-  }
-}
-if (-not $sdk) { $sdk = $env:ANDROID_HOME }
-if ($sdk -and (Test-Path -LiteralPath $sdk)) {
-  foreach ($sub in @('platform-tools', 'emulator')) {
-    $p = Join-Path $sdk $sub
-    if (Test-Path -LiteralPath $p) {
-      $env:PATH = "$p;$env:PATH"
-    }
-  }
-  Write-Host "Prepended SDK PATH entries under $sdk"
+. (Join-Path $PSScriptRoot 'android-sdk-env.ps1')
+$sdk = Enable-AndroidSdkOnPath -MobileRoot $root
+if ($sdk) {
+  Write-Host "Android SDK: $sdk"
 } else {
   Write-Warning "Android SDK not found (android/local.properties sdk.dir or ANDROID_HOME). adb will fail."
 }
 
 # Use local CLI (node_modules\.bin\react-native.cmd). Avoid `npx` here: on some Windows/PowerShell
 # setups npm turns `npx` into `px` and tries to run the wrong package ("could not determine executable").
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $rn = Join-Path $root 'node_modules\.bin\react-native.cmd'
 if (-not (Test-Path -LiteralPath $rn)) {
   Write-Error "react-native CLI not found at $rn - run npm install in $root"
@@ -56,25 +40,26 @@ $env:RCT_METRO_PORT = $metroPort
 
 Write-Host "Metro port: $metroPort (npm start uses the same port in package.json)"
 
-$adb = Get-Command adb -ErrorAction SilentlyContinue
-if ($adb) {
-  $online = @(adb devices 2>$null | Select-String -Pattern '\tdevice$')
+$adbExe = Get-AdbExecutable -MobileRoot $root
+if ($adbExe) {
+  Write-Host "adb: $adbExe"
+  $online = @(& $adbExe devices 2>$null | Select-String -Pattern '\tdevice$')
   foreach ($line in $online) {
     $serial = ($line -split '\s+', 2)[0]
     if ($serial) {
-      adb -s $serial reverse "tcp:$metroPort" "tcp:$metroPort" 2>$null | Out-Null
-      # Default RN dev menu still mentions 8081; reverse both when Metro uses 8082.
+      & $adbExe -s $serial reverse "tcp:$metroPort" "tcp:$metroPort" 2>$null | Out-Null
+      & $adbExe -s $serial reverse tcp:5090 tcp:5090 2>$null | Out-Null
       if ($metroPort -ne '8081') {
-        adb -s $serial reverse tcp:8081 tcp:8081 2>$null | Out-Null
+        & $adbExe -s $serial reverse tcp:8081 tcp:8081 2>$null | Out-Null
       }
-      Write-Host "adb reverse tcp:$metroPort -> host (device $serial)"
+      Write-Host "adb reverse tcp:$metroPort + tcp:5090 -> host (device $serial)"
     }
   }
   if (-not $online.Count) {
-    Write-Warning "No adb device/emulator online. Start an AVD, then rerun."
+    Write-Warning "No adb device/emulator online. USB debugging on? Cable connected?"
   }
 } else {
-  Write-Warning "adb not on PATH; emulator may not reach Metro on the host."
+  Write-Warning "adb not found under Android SDK platform-tools."
 }
 
 $listening = Get-NetTCPConnection -LocalPort $metroPort -State Listen -ErrorAction SilentlyContinue
@@ -90,5 +75,5 @@ Then press R twice in the emulator or tap RELOAD.
   Write-Host "Metro is listening on port $metroPort."
 }
 
-Write-Host "Installing app (Metro must stay running; --no-packager)."
-& $rn run-android --port $metroPort --no-packager
+Write-Host "Installing app (Metro must stay running; --no-packager; --active-arch-only for physical phone)."
+& $rn run-android --port $metroPort --no-packager --active-arch-only

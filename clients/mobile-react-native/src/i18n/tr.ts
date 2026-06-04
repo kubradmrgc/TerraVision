@@ -6,7 +6,7 @@ export const sectionLabels: Record<MobileSection, string> = {
   cart: 'Sepet',
   orders: 'Siparişler',
   appointments: 'Randevular',
-  care: 'Takvimim',
+  care: 'Bahçem',
   exchange: 'TerraTakas',
   events: 'Olaylar',
   profile: 'Profil'
@@ -38,6 +38,13 @@ export function formatRelativeTimeTr(iso?: string): string {
   const d = Math.floor(hr / 24);
   return `${d} gün önce`;
 }
+
+export const careStrings = {
+  hubTitle: 'Bahçem',
+  hubSubtitle: 'Bakım asistanı ve sulama takviminiz',
+  tabAssistant: 'Asistan',
+  tabCalendar: 'Takvim'
+} as const;
 
 export function formatRelativeSinceTr(iso: string): string {
   const t = new Date(iso).getTime();

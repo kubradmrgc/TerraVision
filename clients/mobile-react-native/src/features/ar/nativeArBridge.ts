@@ -29,7 +29,7 @@ const nativeArModule = NativeModules.TerraVisionAr as NativeArModule | undefined
 
 export async function launchNativeAr(preview: ArPreviewResponse): Promise<void> {
   if (!isHttpsUrl(preview.modelUrl)) {
-    throw new Error('AR model URL must be https and publicly reachable.');
+    throw new Error('AR model URL\'si HTTPS olmalı ve internetten erişilebilir olmalı.');
   }
 
   if (Platform.OS === 'android') {

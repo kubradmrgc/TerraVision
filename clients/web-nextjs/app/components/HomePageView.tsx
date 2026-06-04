@@ -41,15 +41,15 @@ const FEATURES = [
 ] as const;
 
 const STEPS_GUEST = [
-  { step: '01', title: 'Giriş yapın', desc: 'Müşteri hesabınızla platforma erişin.' },
-  { step: '02', title: 'Ürün seçin', desc: 'Kataloğu inceleyin, sepete ekleyin.' },
-  { step: '03', title: 'Sipariş verin', desc: 'Ödemenizi tamamlayın ve siparişinizi izleyin.' }
+  { step: '1', title: 'Giriş yapın', desc: 'Müşteri hesabınızla platforma erişin.' },
+  { step: '2', title: 'Ürün seçin', desc: 'Kataloğu inceleyin, sepete ekleyin.' },
+  { step: '3', title: 'Sipariş verin', desc: 'Ödemenizi tamamlayın ve siparişinizi izleyin.' }
 ] as const;
 
 const STEPS_CUSTOMER = [
-  { step: '01', title: 'Ürün seçin', desc: 'Kataloğu inceleyin, sepete ekleyin.' },
-  { step: '02', title: 'Sipariş verin', desc: 'Ödemenizi tamamlayın ve siparişinizi izleyin.' },
-  { step: '03', title: 'Profilinizi yönetin', desc: 'AR odaları, bahçe ve TerraTakas alanlarını kullanın.' }
+  { step: '1', title: 'Ürün seçin', desc: 'Kataloğu inceleyin, sepete ekleyin.' },
+  { step: '2', title: 'Sipariş verin', desc: 'Ödemenizi tamamlayın ve siparişinizi izleyin.' },
+  { step: '3', title: 'Profilinizi yönetin', desc: 'AR odaları, bahçe ve TerraTakas alanlarını kullanın.' }
 ] as const;
 
 export function HomePageView() {
@@ -238,28 +238,6 @@ export function HomePageView() {
             <BrandLogo size={56} className="tv-brand--header" />
             <p className="tv-landing-footer-tagline">Bitki ve bahçe alışveriş platformu</p>
           </div>
-          <nav className="tv-landing-footer-nav" aria-label="Site bağlantıları">
-            {loggedInCustomer ? (
-              <>
-                <Link href="/products">Ürünler</Link>
-                <Link href="/cart">Sepet</Link>
-                <Link href="/profile">Profilim</Link>
-                <Link href="/profile/ar-rooms">AR Odalarım</Link>
-                <Link href="/profile/my-garden">Bahçem</Link>
-                <Link href="/profile/exchange">TerraTakas</Link>
-              </>
-            ) : (
-              <>
-                <Link href="/login">Müşteri girişi</Link>
-                <Link href="/register">Kayıt ol</Link>
-                <Link href="/products">Ürünler</Link>
-                <Link href="/cart">Sepet</Link>
-                <Link href="/profile/ar-rooms">AR Odalarım</Link>
-                <Link href="/login/consultant">Danışman</Link>
-                <Link href="/login/admin">Yönetici</Link>
-              </>
-            )}
-          </nav>
           <p className="tv-landing-footer-copy">
             © {new Date().getFullYear()} TerraVision. Tüm hakları saklıdır.
           </p>

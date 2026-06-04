@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   EXCHANGE_CONDITION,
   EXCHANGE_CONDITION_LABELS,
+  type ExchangeCondition,
   EXCHANGE_OFFER_STATUS,
   EXCHANGE_OFFER_STATUS_LABELS,
   EXCHANGE_OFFER_TYPE_LABELS,
@@ -15,6 +16,7 @@ import {
   formatTryCurrency
 } from '@terravision/shared';
 import { OptimizedMediaImage } from '@/components/OptimizedMediaImage';
+import { ExchangeConditionTags } from '@/components/exchange/ExchangeConditionTags';
 import { ProfileSubnav } from '@/components/profile/ProfileSubnav';
 import { exchangeService } from '@/services/exchangeService';
 import { realtimeService } from '@/services/realtimeService';
@@ -88,6 +90,7 @@ export default function ProfileExchangePage() {
   const [newDescription, setNewDescription] = useState('');
   const [newPrice, setNewPrice] = useState('0');
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [newCondition, setNewCondition] = useState<ExchangeCondition>(EXCHANGE_CONDITION.Healthy);
   const [uploading, setUploading] = useState(false);
 
   const pendingReceived = useMemo(
@@ -187,13 +190,14 @@ export default function ProfileExchangePage() {
         title: newTitle.trim(),
         description: newDescription.trim(),
         price: Number(newPrice) || 0,
-        condition: EXCHANGE_CONDITION.Healthy,
+        condition: newCondition,
         photoUrls: [newPhotoUrl.trim()]
       });
       setNewTitle('');
       setNewDescription('');
       setNewPrice('0');
       setNewPhotoUrl('');
+      setNewCondition(EXCHANGE_CONDITION.Healthy);
       setSuccess('İlanınız yayınlandı ve pazarda görünür.');
       await load();
     } catch (err) {
@@ -300,6 +304,12 @@ export default function ProfileExchangePage() {
                   onChange={(e) => setNewDescription(e.target.value)}
                 />
               </div>
+              <ExchangeConditionTags
+                value={newCondition}
+                onChange={setNewCondition}
+                disabled={isMutating || uploading}
+                idPrefix="listing-tag"
+              />
               <div className="tv-takas-form-row">
                 <div className="tv-field">
                   <label htmlFor="listing-price">Fiyat (₺)</label>
@@ -378,6 +388,11 @@ export default function ProfileExchangePage() {
                     )}
                   </div>
                   <div className="tv-takas-card__body">
+                    <div className="tv-takas-card__badges" style={{ position: 'static', marginBottom: 8 }}>
+                      <span className="tv-takas-pill tv-takas-pill--condition">
+                        {EXCHANGE_CONDITION_LABELS[p.condition]}
+                      </span>
+                    </div>
                     <h2 className="tv-takas-card__title">{p.title}</h2>
                     <p className="tv-takas-card__price">
                       {p.isSwapOnly ? 'Takaslık' : formatTryCurrency(p.price)}

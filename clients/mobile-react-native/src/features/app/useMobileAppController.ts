@@ -10,23 +10,23 @@ import { mediaService } from '../../services/mediaService';
 import { productService } from '../../services/productService';
 import { onUnauthorized } from '../../services/apiClient';
 import { MobileSection, MobileAppState, ThemeMode, UserProfile } from './types';
-import type { LoginPortal } from '@terravision/shared';
+import {
+  USER_ROLE,
+  roleMatchesPortal,
+  portalRoleMismatchMessage,
+  syncQueriesOnReconnect,
+  toCustomerRegisterRequest,
+  validateRegisterForm,
+  filterAndSortProducts,
+  type LoginPortal,
+  type ProductSortKey
+} from '@terravision/shared';
 import { getPalette } from '../../theme/mobileTheme';
 import { useCommerceQueries } from './useCommerceQueries';
 import { validateArUploadFile } from '../ar/arUploadValidation';
 import { AUTH_UI_MESSAGES, buildPostLogoutState, getSessionRestoreStatus } from '../auth/session';
 import { pushUniqueEvent } from '../realtime/eventDedup';
 import { toStatusMessage } from '../../ui/httpError';
-import {
-  roleMatchesPortal,
-  portalRoleMismatchMessage,
-  syncQueriesOnReconnect,
-  toCustomerRegisterRequest,
-  USER_ROLE,
-  validateRegisterForm,
-  filterAndSortProducts,
-  type ProductSortKey
-} from '@terravision/shared';
 import type { AuthResponse } from '../../types/auth';
 import { arSessionService } from '../../services/arSessionService';
 import { mapArSessionSaveError } from '../ar/arSessionErrors';
@@ -108,6 +108,7 @@ export function useMobileAppController() {
   const queryClient = useQueryClient();
   const {
     productsQuery,
+    storefrontQuery,
     categoriesQuery,
     cartQuery,
     ordersQuery,
@@ -120,8 +121,10 @@ export function useMobileAppController() {
     clearCartMutation,
     placeOrderMutation,
     careCalendarQuery,
+    careCatalogQuery,
     arSessionsQuery,
-    completeCareActionMutation
+    completeCareActionMutation,
+    addPlantToGardenMutation
   } = useCommerceQueries(state.loggedIn, state.role);
 
   const isLoginDisabled = useMemo(() => !state.email || !state.password, [state.email, state.password]);
@@ -189,7 +192,20 @@ export function useMobileAppController() {
 
   const setEmail = (email: string) => setState((prev) => ({ ...prev, email }));
   const setPassword = (password: string) => setState((prev) => ({ ...prev, password }));
+  const openCustomerLogin = () => selectLoginPortal('customer', 'login');
+
+  const promptLoginForAction = (message: string) => {
+    Alert.alert('Giriş gerekli', message, [
+      { text: 'İptal', style: 'cancel' },
+      { text: 'Giriş yap', onPress: openCustomerLogin }
+    ]);
+  };
+
   const setActiveSection = (activeSection: MobileSection) => {
+    if (!state.loggedIn && activeSection !== 'products') {
+      promptLoginForAction('Bu bölüm için hesabınıza giriş yapmanız gerekir.');
+      return;
+    }
     setOrderSuccessMessage(null);
     setAppointmentSuccessMessage(null);
     setAppointmentErrorMessage(null);
@@ -439,6 +455,10 @@ export function useMobileAppController() {
   };
 
   const handleAddToCart = async (productId: number) => {
+    if (!state.loggedIn) {
+      promptLoginForAction('Sepete ürün eklemek için giriş yapın.');
+      return;
+    }
     setCartErrorMessage(null);
     try {
       await addItemMutation.mutateAsync(productId);
@@ -523,7 +543,10 @@ export function useMobileAppController() {
         queryClient.invalidateQueries({ queryKey: ['cart'] })
       ]);
       setOrderSuccessMessage(`Sipariş #${order.id} oluşturuldu.`);
-      setState((prev) => ({ ...prev, activeSection: 'orders' }));
+      setState((prev) => ({
+        ...prev,
+        activeSection: prev.role === USER_ROLE.Customer ? 'profile' : 'orders'
+      }));
       Alert.alert('Sipariş oluşturuldu', `Sipariş #${order.id} başarıyla oluşturuldu.`);
     } catch (error) {
       setOrderErrorMessage(
@@ -595,6 +618,26 @@ export function useMobileAppController() {
           401: AUTH_UI_MESSAGES.sessionExpired,
           403: 'Bu işlem için danışman veya yönetici yetkisi gerekiyor.',
           404: 'Randevu bulunamadı.'
+        })
+      );
+    }
+  };
+
+  const handleAddPlantToGarden = async (productId: number) => {
+    setCareErrorMessage(null);
+    setCareSuccessMessage(null);
+    if (state.role !== USER_ROLE.Customer) {
+      setCareErrorMessage('Bahçe yalnızca müşteri hesapları içindir.');
+      return;
+    }
+    try {
+      await addPlantToGardenMutation.mutateAsync(productId);
+      setCareSuccessMessage('Bitki bahçenize eklendi; bakım takvimi oluşturuldu.');
+    } catch (error) {
+      setCareErrorMessage(
+        toStatusMessage(error, 'Bitki eklenemedi.', {
+          400: 'Bu ürün takvime eklenemez.',
+          404: 'Ürün bulunamadı.'
         })
       );
     }
@@ -673,6 +716,10 @@ export function useMobileAppController() {
   };
 
   const handlePreviewAr = async (productId: number) => {
+    if (!state.loggedIn) {
+      promptLoginForAction('AR önizleme için giriş yapın.');
+      return;
+    }
     try {
       const preview = await arService.getProductPreview(productId);
       setState((prev) => ({ ...prev, arPreview: preview, isArPreviewVisible: true }));
@@ -682,6 +729,7 @@ export function useMobileAppController() {
         toStatusMessage(error, 'AR önizleme bilgisi alınamadı.', {
           401: AUTH_UI_MESSAGES.sessionExpired,
           404: 'Bu ürün için AR modeli bulunamadı.',
+          503: 'AR modeli HTTPS ve internetten erişilebilir bir adreste olmalı. Sunucuda MediaStorage:PublicBaseUrl ayarlayın.',
           500: 'Sunucu hatası nedeniyle AR önizleme açılamadı.'
         })
       );
@@ -859,10 +907,13 @@ export function useMobileAppController() {
     setProductInStockOnly,
     setProductSort,
     clearProductFilters,
+    storefront: storefrontQuery.data ?? null,
+    isStorefrontLoading: storefrontQuery.isLoading,
     openProductDetail,
     closeProductDetail,
     canUploadArModel,
     carePlants: careCalendarQuery.data?.plants ?? [],
+    careCatalogPlants: careCatalogQuery.data ?? [],
     arSessions: arSessionsQuery.data ?? [],
     isArSessionsLoading: state.role === USER_ROLE.Customer && arSessionsQuery.isLoading,
     isArSessionsRefreshing: arSessionsQuery.isFetching && !arSessionsQuery.isLoading,
@@ -871,19 +922,21 @@ export function useMobileAppController() {
     refreshArSessions: () => {
       void arSessionsQuery.refetch();
     },
-    isCommerceLoading:
-      productsQuery.isLoading ||
-      cartQuery.isLoading ||
-      ordersQuery.isLoading ||
-      (state.role !== null && appointmentsQuery.isLoading) ||
-      (state.role === USER_ROLE.Customer && careCalendarQuery.isLoading),
-    commerceError:
-      productsQuery.error ??
-      cartQuery.error ??
-      ordersQuery.error ??
-      appointmentsQuery.error ??
-      (state.role === USER_ROLE.Customer ? careCalendarQuery.error : null) ??
-      null,
+    isCommerceLoading: state.loggedIn
+      ? productsQuery.isLoading ||
+        cartQuery.isLoading ||
+        ordersQuery.isLoading ||
+        (state.role !== null && appointmentsQuery.isLoading) ||
+        (state.role === USER_ROLE.Customer && careCalendarQuery.isLoading)
+      : productsQuery.isLoading,
+    commerceError: state.loggedIn
+      ? productsQuery.error ??
+        cartQuery.error ??
+        ordersQuery.error ??
+        appointmentsQuery.error ??
+        (state.role === USER_ROLE.Customer ? careCalendarQuery.error : null) ??
+        null
+      : productsQuery.error ?? null,
     isCartMutating:
       addItemMutation.isPending ||
       updateItemMutation.isPending ||
@@ -891,7 +944,9 @@ export function useMobileAppController() {
       clearCartMutation.isPending,
     isOrderMutating: placeOrderMutation.isPending,
     isAppointmentMutating: createAppointmentMutation.isPending || updateAppointmentStatusMutation.isPending,
-    isCareMutating: completeCareActionMutation.isPending,
+    isCareCalendarLoading:
+      state.role === USER_ROLE.Customer && careCalendarQuery.isLoading,
+    isCareMutating: completeCareActionMutation.isPending || addPlantToGardenMutation.isPending,
     careMutatingKey,
     careErrorMessage,
     careSuccessMessage,
@@ -929,6 +984,8 @@ export function useMobileAppController() {
     openCustomerRegister,
     selectLoginPortal,
     clearLoginPortal,
+    openCustomerLogin,
+    promptLoginForAction,
     setActiveSection,
     toggleTheme,
     setIsArPreviewVisible,
@@ -949,6 +1006,7 @@ export function useMobileAppController() {
     setAppointmentFilterStatus,
     handleCreateAppointment,
     handleUpdateAppointmentStatus,
+    handleAddPlantToGarden,
     handleCompleteCareAction,
     handlePreviewAr,
     handleUploadArModel,

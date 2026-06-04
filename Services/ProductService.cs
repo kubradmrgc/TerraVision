@@ -18,7 +18,7 @@ namespace TerraVision.Api.Services
         private readonly IDistributedCache _distributedCache;
         private readonly IMediaService _mediaService;
         private readonly IRealtimeSyncService _realtimeSyncService;
-        private const string ProductListCacheKey = "products:all:v2";
+        private const string ProductListCacheKey = "products:all:v3";
 
         public ProductService(
             IRepository<Product> productRepository,
@@ -204,7 +204,7 @@ namespace TerraVision.Api.Services
             return product.Adapt<ProductDto>();
         }
 
-        private Task InvalidateProductCacheAsync()
+        public Task InvalidateProductCacheAsync()
         {
             return _distributedCache.RemoveAsync(ProductListCacheKey);
         }

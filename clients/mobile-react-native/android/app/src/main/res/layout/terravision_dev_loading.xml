@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/splash_background"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="40dp">
+
+        <ImageView
+            android:id="@+id/loading_logo"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:contentDescription="@string/loading_logo_desc"
+            android:scaleType="fitCenter"
+            android:src="@drawable/terravision_logo" />
+
+        <ProgressBar
+            android:id="@+id/loading_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="28dp"
+            android:indeterminate="true"
+            android:max="100"
+            android:progress="0"
+            android:progressBackgroundTint="@color/progress_track"
+            android:progressTint="@color/brand_primary" />
+
+        <TextView
+            android:id="@+id/loading_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/loading_status_default"
+            android:textColor="@color/loading_status_text"
+            android:textSize="13sp" />
+    </LinearLayout>
+</FrameLayout>

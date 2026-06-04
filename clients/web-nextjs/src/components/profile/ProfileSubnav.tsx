@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const PROFILE_LINKS = [
-  { href: '/profile', label: 'Profil', exact: true },
+  { href: '/profile', label: 'Hesabım', exact: true },
+  { href: '/profile/account', label: 'Bilgilerim' },
+  { href: '/profile/orders', label: 'Siparişlerim' },
   { href: '/profile/ar-rooms', label: 'AR Odalarım' },
-  { href: '/profile/my-garden', label: 'Bahçem' },
   { href: '/profile/exchange', label: 'TerraTakas' }
 ] as const;
 

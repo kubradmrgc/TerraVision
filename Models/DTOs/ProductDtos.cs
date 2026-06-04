@@ -17,6 +17,12 @@ namespace TerraVision.Api.Models.DTOs
         public int? FertilizingIntervalDays { get; set; }
         public int? CleaningIntervalDays { get; set; }
         public string? CareInstructions { get; set; }
+        public decimal? CompareAtPrice { get; set; }
+        public bool IsFeatured { get; set; }
+        public string? PromoLabel { get; set; }
+        public int PromoSortOrder { get; set; }
+        public DateTime? PromoStartsAtUtc { get; set; }
+        public DateTime? PromoEndsAtUtc { get; set; }
     }
 
     public class CreateProductRequest
@@ -35,6 +41,12 @@ namespace TerraVision.Api.Models.DTOs
         public int? FertilizingIntervalDays { get; set; }
         public int? CleaningIntervalDays { get; set; }
         public string? CareInstructions { get; set; }
+        public decimal? CompareAtPrice { get; set; }
+        public bool IsFeatured { get; set; }
+        public string? PromoLabel { get; set; }
+        public int PromoSortOrder { get; set; }
+        public DateTime? PromoStartsAtUtc { get; set; }
+        public DateTime? PromoEndsAtUtc { get; set; }
     }
 
     public class CreateProductWithImageRequest
@@ -51,6 +63,12 @@ namespace TerraVision.Api.Models.DTOs
         public int? FertilizingIntervalDays { get; set; }
         public int? CleaningIntervalDays { get; set; }
         public string? CareInstructions { get; set; }
+        public decimal? CompareAtPrice { get; set; }
+        public bool IsFeatured { get; set; }
+        public string? PromoLabel { get; set; }
+        public int PromoSortOrder { get; set; }
+        public DateTime? PromoStartsAtUtc { get; set; }
+        public DateTime? PromoEndsAtUtc { get; set; }
     }
 
     public class CreateProductWithImageForm
@@ -110,5 +128,11 @@ namespace TerraVision.Api.Models.DTOs
         public int? FertilizingIntervalDays { get; set; }
         public int? CleaningIntervalDays { get; set; }
         public string? CareInstructions { get; set; }
+        public decimal? CompareAtPrice { get; set; }
+        public bool IsFeatured { get; set; }
+        public string? PromoLabel { get; set; }
+        public int PromoSortOrder { get; set; }
+        public DateTime? PromoStartsAtUtc { get; set; }
+        public DateTime? PromoEndsAtUtc { get; set; }
     }
 }

@@ -10,6 +10,7 @@ public static class RateLimitPolicies
     public const string AuthSensitive = "auth-sensitive";
     public const string AppointmentsWrite = "appointments-write";
     public const string CatalogRead = "catalog-read";
+    public const string CareAssistantChat = "care-assistant-chat";
 }
 
 public static class RateLimitingServiceExtensions
@@ -58,6 +59,11 @@ public static class RateLimitingServiceExtensions
                 CreateFixedWindowPartition(
                     $"catalog:{GetClientIp(httpContext)}",
                     settings.CatalogRead));
+
+            options.AddPolicy(RateLimitPolicies.CareAssistantChat, httpContext =>
+                CreateFixedWindowPartition(
+                    $"care-ai:{GetUserOrClientPartitionKey(httpContext)}",
+                    settings.CareAssistantChat));
         });
 
         return services;

@@ -7,9 +7,12 @@ Admin urun secimi icin `@react-native-picker/picker` kullanilir.
 ## Kurulum
 
 1. `npm install`
-2. `src/config/env.ts` icindeki API adresini kendi backend URL'inize gore guncelleyin.
-3. Android emulator veya gercek cihazdan API'ye ulasilabildigini dogrulayin.
-4. `npx react-native run-android` veya `npx react-native run-ios`
+2. **Fiziksel telefon:** `npm run setup:device` (PC IP + `api.config.local.ts` + adb reverse)
+3. API: proje kokunde `dotnet run --launch-profile http` → `http://0.0.0.0:5090`
+4. Metro: `npm start` (port 8082)
+5. Android: `npm run android:win` (Windows) veya `npm run android`
+
+Ayrintili rehber: [docs/mobil-fiziksel-cihaz.md](../../docs/mobil-fiziksel-cihaz.md)
 
 ## Android Studio + emülatör (Windows)
 
@@ -52,6 +55,10 @@ Admin urun secimi icin `@react-native-picker/picker` kullanilir.
 - Cart degisiklik event'i backend tarafinda cart servisinden otomatik SignalR broadcast edilir.
 - Siparis eventleri (`order.created`, `order.status.changed`) mobilde real-time dinlenir.
 - AR uyumlu urunler icin `GET /api/ar/products/{productId}/preview?platform=android|ios` endpoint'i kullanilir.
+- **AR model URL** native Scene Viewer / Quick Look icin **HTTPS** ve **internetten erisilebilir** olmalidir (`http://10.x.x.x:5090` veya `/assets/...` yeterli degil). Yerel gelistirmede API'yi HTTP ile calistirabilirsiniz; modeller icin ayrica bir HTTPS tunel gerekir:
+  1. Ornek: `cloudflared tunnel --url http://localhost:5090` (veya ngrok) ile public HTTPS URL alin.
+  2. Repo kokunde `appsettings.Development.local.json.example` dosyasini `appsettings.Development.local.json` olarak kopyalayin ve `MediaStorage:PublicBaseUrl` degerine tunel kok URL'sini yazin (ornek: `https://abc.trycloudflare.com` — `/assets` eklemeyin).
+  3. API'yi yeniden baslatin; AR model yukleyip onizlemeyi deneyin.
 - Native AR baslatma icin Android ve iOS tarafinda `TerraVisionAr.launchArSession(...)` native module'u implement edilmelidir.
 - Admin kullanicilar App icindeki "Admin AR Model Upload" panelinde dosya secip `POST /api/media/ar-models?productId=...` akisini test edebilir.
 - Varsayilan olarak mevcut AR modeli olan urun overwrite edilmez. Gerekirse backend endpoint'inde `overwrite=true` parametresi kullanilabilir.

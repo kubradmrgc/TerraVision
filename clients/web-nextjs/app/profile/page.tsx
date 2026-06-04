@@ -8,14 +8,19 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 
 const PROFILE_SECTIONS = [
   {
+    href: '/profile/account',
+    title: 'Bilgilerim',
+    desc: 'Ad, soyad ve e-posta bilgileriniz.'
+  },
+  {
+    href: '/profile/orders',
+    title: 'Siparişlerim',
+    desc: 'Aktif ve geçmiş siparişler, geçmiş randevular.'
+  },
+  {
     href: '/profile/ar-rooms',
     title: 'AR Odalarım',
     desc: 'Mobilde kaydettiğiniz bitki yerleşimleri ve oda önizlemeleri.'
-  },
-  {
-    href: '/profile/my-garden',
-    title: 'Bahçem',
-    desc: 'Satın aldığınız bitkiler ve bakım hatırlatıcıları.'
   },
   {
     href: '/profile/exchange',
@@ -51,9 +56,9 @@ export default function ProfileHubPage() {
       <header className="tv-ar-page-header">
         <div>
           <span className="tv-login-pill">Hesabım</span>
-          <h1 className="tv-page-title">Profilim</h1>
+          <h1 className="tv-page-title">Hesabım</h1>
           <p className="tv-page-lead">
-            AR odalarınız, bahçe kayıtlarınız ve TerraTakas ilanlarınız tek yerden erişilebilir.
+            Kişisel bilgileriniz, sipariş geçmişiniz, AR odalarınız ve TerraTakas ilanlarınız.
           </p>
         </div>
       </header>
@@ -66,6 +71,10 @@ export default function ProfileHubPage() {
           </Link>
         ))}
       </div>
+      <p className="tv-page-actions tv-muted">
+        Bakım takvimi ve bitki asistanı için üst menüdeki{' '}
+        <Link href="/profile/my-garden">Bahçem</Link> bağlantısını kullanın.
+      </p>
     </div>
   );
 }

@@ -8,8 +8,9 @@ public class MediaStorageSettings
     public string Provider { get; set; } = "Local";
 
     /// <summary>
-    /// Public base URL for object keys (e.g. https://cdn.example.com or MinIO bucket URL).
-    /// When empty, Local uses relative /assets paths; S3 uses virtual-host style URLs.
+    /// Public HTTPS base URL for object keys (e.g. https://cdn.example.com).
+    /// Required for native AR preview when using Local storage (relative /assets paths are not reachable from devices).
+    /// When empty, Local uses relative /assets paths; S3 uses virtual-host style HTTPS URLs.
     /// </summary>
     public string? PublicBaseUrl { get; set; }
 

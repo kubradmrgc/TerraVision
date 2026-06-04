@@ -18,6 +18,7 @@ type Props = {
   onDecrease: (productId: number, qty: number) => void;
   onIncrease: (productId: number, qty: number) => void;
   onRemove: (productId: number) => void;
+  onOpenProduct?: (productId: number) => void;
 };
 
 const DARK_PRIMARY_FIXED_DIM = '#73db9a';
@@ -117,18 +118,32 @@ export function CartSection(props: Props): React.JSX.Element {
               { backgroundColor: itemCardBg, borderColor: palette.outlineVariant, shadowColor: '#000' }
             ]}
           >
-            <View style={[styles.thumbWrap, { backgroundColor: thumbFrameBg }]}>
+            <TouchableOpacity
+              style={[styles.thumbWrap, { backgroundColor: thumbFrameBg }]}
+              disabled={!props.onOpenProduct}
+              onPress={() => props.onOpenProduct?.(item.productId)}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.productName} ürün detayı`}
+            >
               <View style={[styles.thumbPlaceholder, { backgroundColor: thumbInnerBg }]}>
                 <Text style={[styles.thumbLetter, { color: palette.subText }]}>
                   {item.productName.trim().charAt(0).toUpperCase() || '?'}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
             <View style={styles.itemBody}>
               <View style={styles.itemTitleRow}>
-                <Text style={[styles.itemName, isDark && styles.itemNameDark, { color: palette.text }]} numberOfLines={2}>
-                  {item.productName}
-                </Text>
+                <TouchableOpacity
+                  disabled={!props.onOpenProduct}
+                  onPress={() => props.onOpenProduct?.(item.productId)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.productName} ürün detayı`}
+                  style={styles.itemNamePress}
+                >
+                  <Text style={[styles.itemName, isDark && styles.itemNameDark, { color: palette.text }]} numberOfLines={2}>
+                    {item.productName}
+                  </Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => props.onRemove(item.productId)}
                   disabled={props.isMutating}
@@ -296,7 +311,8 @@ const styles = StyleSheet.create({
   thumbLetter: { fontSize: 28, fontWeight: '700' },
   itemBody: { flex: 1, marginLeft: 12, justifyContent: 'space-between', minHeight: 96 },
   itemTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  itemName: { flex: 1, fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  itemNamePress: { flex: 1, marginRight: 8 },
+  itemName: { fontSize: 15, fontWeight: '700', lineHeight: 20 },
   itemNameDark: { fontSize: 17, fontWeight: '600' },
   deleteIcon: { fontSize: 18 },
   itemMeta: { fontSize: 12, fontWeight: '500', marginTop: 4 },

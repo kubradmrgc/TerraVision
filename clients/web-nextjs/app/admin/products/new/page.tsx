@@ -13,7 +13,6 @@ import {
   type FormEvent
 } from 'react';
 import { AdminPageShell } from '@/components/admin/AdminPageShell';
-import { useAdminGuard } from '@/hooks/useAdminGuard';
 import { categoryService, type CategoryDto } from '@/services/categoryService';
 import { productService } from '@/services/productService';
 import { tokenStore } from '@/services/tokenStore';
@@ -107,7 +106,6 @@ function validateImage(file: File | null): string | null {
 
 export default function AdminNewProductPage() {
   const router = useRouter();
-  const { status, deniedMessage } = useAdminGuard();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -147,11 +145,8 @@ export default function AdminNewProductPage() {
   }, [router]);
 
   useEffect(() => {
-    if (status !== 'ready') {
-      return;
-    }
     void loadCategories();
-  }, [status, loadCategories]);
+  }, [loadCategories]);
 
   useEffect(() => {
     if (!imageFile) {
@@ -279,26 +274,6 @@ export default function AdminNewProductPage() {
       setSubmitting(false);
     }
   };
-
-  if (status === 'loading') {
-    return <p className="tv-muted">Oturum doğrulanıyor…</p>;
-  }
-
-  if (status === 'denied') {
-    return (
-      <AdminPageShell
-        title="Ürün yönetimi"
-        lead="Bu alana yalnızca yönetici hesapları erişebilir."
-      >
-        <p className="tv-error" role="alert">
-          {deniedMessage}
-        </p>
-        <p className="tv-page-actions">
-          <Link href="/login/admin">Yönetici girişi</Link>
-        </p>
-      </AdminPageShell>
-    );
-  }
 
   const selectedCategory = categories.find((c) => String(c.id) === form.categoryId);
   const previewName = form.name.trim() || 'Ürün adı';

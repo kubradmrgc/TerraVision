@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -9,6 +10,7 @@ import {
   StyleSheet,
   type ListRenderItem
 } from 'react-native';
+import type { StorefrontDto } from '@terravision/shared';
 import { Picker } from '@react-native-picker/picker';
 import { PRODUCT_SORT_OPTIONS, isProductFilterActive, type ProductSortKey } from '@terravision/shared';
 import type { ProductDto } from '../../types/product';
@@ -19,6 +21,7 @@ import type { MobilePalette } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
 import { SectionHeader } from '../../ui/SectionHeader';
 import { AR_UPLOAD_HELP_TEXT } from '../ar/arUploadValidation';
+import { MarketplaceProductCard } from './MarketplaceProductCard';
 
 type Props = {
   products: ProductDto[];
@@ -52,6 +55,8 @@ type Props = {
   onUploadArModel: () => void;
   onClearSelectedArFile: () => void;
   onSelectUploadProduct: (value: number | null) => void;
+  storefront: StorefrontDto | null;
+  isStorefrontLoading: boolean;
 };
 
 function formatPriceTry(value: number): string {
@@ -223,13 +228,77 @@ function ProductCard({
 
 export function ProductsSection(props: Props): React.JSX.Element {
   const { palette } = props;
+  const dealProducts = useMemo(
+    () => props.storefront?.dealProducts ?? [],
+    [props.storefront?.dealProducts]
+  );
+  const campaigns = props.storefront?.campaigns ?? [];
 
   const renderItem: ListRenderItem<ProductDto> = ({ item }) => (
-    <ProductCard item={item} palette={palette} onAddToCart={props.onAddToCart} onPreviewAr={props.onPreviewAr} />
+    <ProductCard
+      item={item}
+      palette={palette}
+      onAddToCart={props.onAddToCart}
+      onPreviewAr={props.onPreviewAr}
+      onOpenDetail={props.onOpenDetail}
+    />
   );
 
   return (
     <View style={styles.root}>
+      {props.isStorefrontLoading ? (
+        <StateMessage text="Kampanyalar yükleniyor…" color={palette.subText} />
+      ) : null}
+
+      {campaigns.length > 0 ? (
+        <View style={styles.campaignBlock}>
+          <Text style={[styles.blockTitle, { color: palette.text }]}>Kampanyalar</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.campaignScroll}>
+            {campaigns.map((c) => (
+              <View
+                key={c.id}
+                style={[styles.campaignCard, { backgroundColor: palette.primaryContainer, borderColor: palette.outlineVariant }]}
+              >
+                {c.badgeText ? (
+                  <Text style={[styles.campaignBadge, { color: palette.onPrimaryContainer }]}>{c.badgeText}</Text>
+                ) : null}
+                <Text style={[styles.campaignTitle, { color: palette.onPrimaryContainer }]}>{c.title}</Text>
+                {c.subtitle ? (
+                  <Text style={[styles.campaignSub, { color: palette.onPrimaryContainer }]} numberOfLines={2}>
+                    {c.subtitle}
+                  </Text>
+                ) : null}
+                <Text style={[styles.campaignCount, { color: palette.onPrimaryContainer }]}>
+                  {`${c.productIds.length} ürün`}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {dealProducts.length > 0 ? (
+        <View style={styles.dealsBlock}>
+          <SectionHeader
+            title="İndirimli fırsatlar"
+            subtitle="Kampanya ve indirimli ürünler"
+            titleColor={palette.text}
+            subtitleColor={palette.subText}
+          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dealsScroll}>
+            {dealProducts.map((item) => (
+              <MarketplaceProductCard
+                key={item.id}
+                item={item}
+                palette={palette}
+                compact
+                onPress={() => props.onOpenDetail(item.id)}
+                onAddToCart={() => props.onAddToCart(item.id)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
       {props.isAdmin && (
         <View
           style={[
@@ -345,8 +414,8 @@ export function ProductsSection(props: Props): React.JSX.Element {
       )}
 
       <SectionHeader
-        title="Ürün kataloğu"
-        subtitle={`Katalogda ${props.products.length} ürün`}
+        title="Tüm ürünler"
+        subtitle={`${props.products.length} ürün`}
         titleColor={palette.text}
         subtitleColor={palette.subText}
       />
@@ -354,13 +423,18 @@ export function ProductsSection(props: Props): React.JSX.Element {
       {props.products.length === 0 ? (
         <StateMessage variant="banner" text="Ürün bulunamadı." color={palette.subText} backgroundColor={palette.mutedCard} borderColor={palette.outlineVariant} />
       ) : (
-        <FlatList
-          data={props.products}
-          scrollEnabled={false}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderItem}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        />
+        <View style={styles.marketGrid}>
+          {props.products.map((item) => (
+            <View key={item.id} style={styles.marketGridCell}>
+              <MarketplaceProductCard
+                item={item}
+                palette={palette}
+                onPress={() => props.onOpenDetail(item.id)}
+                onAddToCart={() => props.onAddToCart(item.id)}
+              />
+            </View>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -368,6 +442,25 @@ export function ProductsSection(props: Props): React.JSX.Element {
 
 const styles = StyleSheet.create({
   root: { marginBottom: 8 },
+  blockTitle: { fontSize: 18, fontWeight: '700', marginBottom: 10, letterSpacing: -0.2 },
+  campaignBlock: { marginBottom: 20 },
+  campaignScroll: { paddingRight: 8, gap: 12 },
+  campaignCard: {
+    width: 280,
+    minHeight: 120,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    marginRight: 12
+  },
+  campaignBadge: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, marginBottom: 6 },
+  campaignTitle: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
+  campaignSub: { fontSize: 13, lineHeight: 18, opacity: 0.9 },
+  campaignCount: { fontSize: 12, fontWeight: '600', marginTop: 10 },
+  dealsBlock: { marginBottom: 16 },
+  dealsScroll: { paddingBottom: 4, paddingRight: 8 },
+  marketGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  marketGridCell: { width: '48%' },
   sectionTitle: { fontSize: 18, fontWeight: '600', letterSpacing: -0.2 },
   adminCard: {
     borderRadius: 12,
@@ -442,6 +535,8 @@ const styles = StyleSheet.create({
   badgeStock: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   badgeStockText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
   cardBody: { padding: 16 },
+  cardBodyTop: { paddingHorizontal: 16, paddingTop: 14 },
+  cardBodyActions: { paddingHorizontal: 16, paddingBottom: 14 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
   productName: { flex: 1, fontSize: 18, fontWeight: '600', letterSpacing: -0.2 },
   productPrice: { fontSize: 18, fontWeight: '600' },

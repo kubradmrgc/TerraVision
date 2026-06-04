@@ -3,7 +3,6 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sectionLabels } from '../../theme/mobileTheme';
 import { mobileTypography } from '../../theme/mobileTypography';
-import type { MobileSection } from './types';
 import { useMobileAppController } from './useMobileAppController';
 import { MobileLoginFlow } from '../auth/MobileLoginFlow';
 import { RealtimeStatusBadge } from '../realtime/RealtimeStatusBadge';
@@ -12,13 +11,15 @@ import { BrandMark } from '../../ui/BrandMark';
 import { ThemeToggleButton } from '../../ui/ThemeToggleButton';
 import { NavTabIcon } from '../../ui/NavTabIcon';
 import { ProductsSection } from '../products/ProductsSection';
+import { ProductDetailModal } from '../products/ProductDetailModal';
 import { CartSection } from '../cart/CartSection';
 import { OrdersSection } from '../orders/OrdersSection';
 import { AppointmentsSection } from '../appointments/AppointmentsSection';
 import { EventsSection } from '../realtime/EventsSection';
-import { CareCalendarSection } from '../care/CareCalendarSection';
+import { CareHubSection } from '../care/CareHubSection';
 import { ExchangeSection } from '../exchange/ExchangeSection';
 import { ProfileSection } from '../profile/ProfileSection';
+import { bottomNavSections, guestBottomNavSections } from '../profile/profileNav';
 import { ArRoomsSection } from '../ar/ArRoomsSection';
 import { USER_ROLE } from '@terravision/shared';
 
@@ -51,9 +52,12 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
 
   const bottomPad = Math.max(insets.bottom, 10) + 56;
 
-  if (!state.loggedIn) {
+  if (!state.loggedIn && state.loginPortal) {
     return <MobileLoginFlow controller={controller} />;
   }
+
+  const isGuest = !state.loggedIn;
+  const navSections = isGuest ? guestBottomNavSections() : bottomNavSections(state.role);
 
   return (
     <SafeAreaView style={[styles.loggedShell, { backgroundColor: palette.bg }]} edges={['top']}>
@@ -88,9 +92,19 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
               style={styles.headerGhostTight}
               size="sm"
             />
-            <TouchableOpacity onPress={controller.handleLogout} accessibilityRole="button" accessibilityLabel="Çıkış yap">
-              <Text style={[styles.logoutText, { color: palette.subText }]}>Çıkış</Text>
-            </TouchableOpacity>
+            {isGuest ? (
+              <TouchableOpacity
+                onPress={controller.openCustomerLogin}
+                accessibilityRole="button"
+                accessibilityLabel="Giriş yap"
+              >
+                <Text style={[styles.loginCtaText, { color: palette.brandTitle }]}>Giriş yap</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={controller.handleLogout} accessibilityRole="button" accessibilityLabel="Çıkış yap">
+                <Text style={[styles.logoutText, { color: palette.subText }]}>Çıkış</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -100,7 +114,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
         keyboardShouldPersistTaps="handled"
       >
-        {state.activeSection === 'events' && (
+        {state.activeSection === 'events' && !isGuest && (
           <RealtimeStatusBadge
             status={realtimeStatus}
             borderColor={palette.border}
@@ -109,6 +123,16 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             detailColor={palette.subText}
           />
         )}
+
+        {isGuest ? (
+          <StateMessage
+            variant="banner"
+            text="Ürünleri giriş yapmadan inceleyebilirsiniz. Sepete eklemek için Giriş yap."
+            color={palette.subText}
+            backgroundColor={palette.mutedCard}
+            borderColor={palette.outlineVariant}
+          />
+        ) : null}
 
         {isCommerceLoading && (
           <StateMessage
@@ -122,11 +146,12 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
         {commerceError && (
           <StateMessage variant="banner" tone="error" text="Veriler yüklenemedi. Lütfen tekrar deneyin." />
         )}
-        {orderSuccessMessage && <StateMessage text={orderSuccessMessage} color={palette.text} />}
+        {!isGuest && orderSuccessMessage ? <StateMessage text={orderSuccessMessage} color={palette.text} /> : null}
 
         {state.activeSection === 'products' && (
           <ProductsSection
-            products={state.products}
+            products={controller.filteredProducts}
+            totalProductCount={(state.products ?? []).length}
             isAdmin={state.isAdmin}
             arPendingProducts={arPendingProducts}
             selectedUploadProductId={state.selectedUploadProductId}
@@ -137,15 +162,30 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             arUploadErrorMessage={arUploadErrorMessage}
             arUploadSuccessMessage={arUploadSuccessMessage}
             palette={palette}
+            categories={controller.categories}
+            productSearch={controller.productSearch}
+            productCategoryId={controller.productCategoryId}
+            productArOnly={controller.productArOnly}
+            productInStockOnly={controller.productInStockOnly}
+            productSort={controller.productSort}
+            onChangeSearch={controller.setProductSearch}
+            onChangeCategory={controller.setProductCategoryId}
+            onToggleArOnly={() => controller.setProductArOnly(!controller.productArOnly)}
+            onToggleInStockOnly={() => controller.setProductInStockOnly(!controller.productInStockOnly)}
+            onChangeSort={controller.setProductSort}
+            onClearFilters={controller.clearProductFilters}
+            onOpenDetail={controller.openProductDetail}
             onAddToCart={controller.handleAddToCart}
             onPreviewAr={controller.handlePreviewAr}
             onPickArFile={controller.handlePickArFile}
             onUploadArModel={controller.handleUploadArModel}
             onClearSelectedArFile={controller.handleClearSelectedArFile}
             onSelectUploadProduct={controller.setSelectedUploadProductId}
+            storefront={controller.storefront}
+            isStorefrontLoading={controller.isStorefrontLoading}
           />
         )}
-        {state.activeSection === 'cart' && (
+        {state.activeSection === 'cart' && !isGuest && (
           <CartSection
             cart={state.cart}
             palette={palette}
@@ -158,9 +198,10 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             onDecrease={controller.handleDecreaseQuantity}
             onIncrease={controller.handleIncreaseQuantity}
             onRemove={controller.handleRemoveItem}
+            onOpenProduct={controller.openProductDetail}
           />
         )}
-        {state.activeSection === 'orders' && (
+        {state.activeSection === 'orders' && !isGuest && (
           <OrdersSection
             orders={state.orders}
             palette={palette}
@@ -169,7 +210,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             errorMessage={orderErrorMessage ?? (commerceError ? 'Siparişler yüklenemedi.' : null)}
           />
         )}
-        {state.activeSection === 'appointments' && (
+        {state.activeSection === 'appointments' && !isGuest && (
           <AppointmentsSection
             appointments={state.appointments}
             role={state.role}
@@ -196,25 +237,32 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             averageAppointmentDurationMins={controller.averageAppointmentDurationMins}
           />
         )}
-        {state.activeSection === 'care' && (
-          <CareCalendarSection
+        {state.activeSection === 'care' && !isGuest && (
+          <CareHubSection
             plants={controller.carePlants}
+            catalogPlants={controller.careCatalogPlants}
             palette={palette}
-            isLoading={controller.isCommerceLoading}
+            isCalendarLoading={controller.isCareCalendarLoading}
             errorMessage={controller.careErrorMessage ?? (commerceError ? 'Bakım takvimi yüklenemedi.' : null)}
             successMessage={controller.careSuccessMessage}
             isMutating={controller.isCareMutating}
             mutatingKey={controller.careMutatingKey}
+            onAddPlant={controller.handleAddPlantToGarden}
             onCompleteAction={controller.handleCompleteCareAction}
           />
         )}
-        {state.activeSection === 'exchange' && <ExchangeSection palette={palette} />}
-        {state.activeSection === 'profile' && (
+        {state.activeSection === 'exchange' && !isGuest && <ExchangeSection palette={palette} />}
+        {state.activeSection === 'profile' && !isGuest && (
           <>
             <ProfileSection
               profile={state.profile}
               palette={palette}
               themeMode={state.themeMode}
+              role={state.role}
+              orders={state.orders}
+              appointments={state.appointments}
+              isCommerceLoading={isCommerceLoading}
+              orderErrorMessage={orderErrorMessage ?? (commerceError ? 'Siparişler yüklenemedi.' : null)}
               onToggleTheme={controller.toggleTheme}
               onLogout={controller.handleLogout}
             />
@@ -230,7 +278,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             ) : null}
           </>
         )}
-        {state.activeSection === 'events' && (
+        {state.activeSection === 'events' && !isGuest && (
           <EventsSection
             events={state.events}
             orderCreatedEvents={state.orderCreatedEvents}
@@ -241,6 +289,15 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
           />
         )}
       </ScrollView>
+
+      <ProductDetailModal
+        product={controller.detailProduct}
+        visible={controller.detailProduct != null}
+        palette={palette}
+        onClose={controller.closeProductDetail}
+        onAddToCart={controller.handleAddToCart}
+        onPreviewAr={controller.handlePreviewAr}
+      />
 
       <View
         style={[
@@ -253,9 +310,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
           }
         ]}
       >
-        {(Object.keys(sectionLabels) as MobileSection[])
-          .filter((section) => section !== 'care' || state.role === USER_ROLE.Customer)
-          .map((section) => {
+        {navSections.map((section) => {
           const active = state.activeSection === section;
           return (
             <TouchableOpacity
@@ -707,6 +762,7 @@ const styles = StyleSheet.create({
   },
   ghostBtnText: { fontSize: 13, fontWeight: '600' },
   logoutText: { fontSize: 14, fontWeight: '600' },
+  loginCtaText: { fontSize: 14, fontWeight: '700' },
   buttonDisabled: { opacity: 0.55 },
   bottomNav: {
     flexDirection: 'row',

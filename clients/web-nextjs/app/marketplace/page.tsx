@@ -11,6 +11,7 @@ import {
   formatTryCurrency
 } from '@terravision/shared';
 import { OptimizedMediaImage } from '@/components/OptimizedMediaImage';
+import { useAuthSession } from '@/hooks/useAuthSession';
 import { exchangeService } from '@/services/exchangeService';
 import { realtimeService } from '@/services/realtimeService';
 import { tokenStore } from '@/services/tokenStore';
@@ -19,7 +20,8 @@ import { getApiErrorMessage } from '@/utils/apiError';
 type FilterMode = 'all' | 'swap' | 'sale';
 
 function TakasHero() {
-  const loggedIn = Boolean(tokenStore.getToken());
+  const { ready, isAuthenticated } = useAuthSession();
+  const showLoggedInCta = ready && isAuthenticated;
   return (
     <header className="tv-takas-hero">
       <span className="tv-login-pill">TerraTakas</span>
@@ -29,7 +31,7 @@ function TakasHero() {
         ilanlar anında listeye düşer.
       </p>
       <div className="tv-takas-hero-actions">
-        {loggedIn ? (
+        {showLoggedInCta ? (
           <Link href="/profile/exchange" className="tv-btn tv-btn--primary">
             İlan ver / Tekliflerim
           </Link>
@@ -56,7 +58,7 @@ function ProductCard({
   return (
     <li className="tv-card tv-takas-card">
       <div className="tv-takas-card__media">
-        {product.photoUrls[0] ? (
+        {product.photoUrls?.[0] ? (
           <OptimizedMediaImage
             src={product.photoUrls[0]}
             alt={product.title}
@@ -104,6 +106,7 @@ function ProductCard({
 
 export default function MarketplacePage() {
   const router = useRouter();
+  const { ready, isAuthenticated } = useAuthSession();
   const [products, setProducts] = useState<ExchangeProductDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -219,7 +222,7 @@ export default function MarketplacePage() {
           </div>
           <p className="tv-section-title">Henüz ilan yok</p>
           <p className="tv-muted">İlk ilanı siz verin veya filtreleri gevşetin.</p>
-          {tokenStore.getToken() ? (
+          {ready && isAuthenticated ? (
             <Link href="/profile/exchange" className="tv-btn tv-btn--primary" style={{ marginTop: 16 }}>
               İlan oluştur
             </Link>

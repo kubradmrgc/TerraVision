@@ -79,6 +79,77 @@ namespace TerraVision.Api.Services
             }
         }
 
+        public async Task<PlantCareCalendarDto> AddPlantToGardenAsync(int userId, int productId)
+        {
+            var product = await _dbContext.Products
+                .SingleOrDefaultAsync(p => p.Id == productId && !p.IsDeleted && p.IsActive);
+            if (product == null)
+            {
+                throw new KeyNotFoundException("Ürün bulunamadı.");
+            }
+
+            if (!PlantCareRules.QualifiesForCareCalendar(product))
+            {
+                throw new ArgumentException("Bu ürün bakım takvimine eklenemez.");
+            }
+
+            var anchor = DateTime.UtcNow;
+            var calendar = await _dbContext.PlantCareCalendars
+                .SingleOrDefaultAsync(c => c.UserId == userId && c.ProductId == productId && !c.IsDeleted);
+
+            if (calendar == null)
+            {
+                calendar = new PlantCareCalendar
+                {
+                    UserId = userId,
+                    ProductId = productId,
+                    CreatedDate = anchor,
+                    IsActive = true
+                };
+                ApplyInitialSchedule(calendar, product, anchor);
+                await _dbContext.PlantCareCalendars.AddAsync(calendar);
+            }
+            else
+            {
+                calendar.IsActive = true;
+                ApplyInitialSchedule(calendar, product, anchor);
+                calendar.UpdatedDate = anchor;
+                _dbContext.PlantCareCalendars.Update(calendar);
+            }
+
+            await _unitOfWork.CommitAsync();
+            return MapToDto(calendar, product);
+        }
+
+        public async Task<IReadOnlyList<CareCatalogPlantDto>> GetCatalogPlantsAsync(int userId)
+        {
+            var gardenProductIds = await _dbContext.PlantCareCalendars
+                .AsNoTracking()
+                .Where(c => c.UserId == userId && !c.IsDeleted && c.IsActive)
+                .Select(c => c.ProductId)
+                .ToListAsync();
+
+            var products = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted && p.IsActive)
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+
+            return products
+                .Where(PlantCareRules.QualifiesForCareCalendar)
+                .Select(p => new CareCatalogPlantDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    CareInstructions = p.CareInstructions,
+                    WateringIntervalDays = p.WateringIntervalDays,
+                    FertilizingIntervalDays = p.FertilizingIntervalDays,
+                    CleaningIntervalDays = p.CleaningIntervalDays,
+                    IsInMyGarden = gardenProductIds.Contains(p.Id)
+                })
+                .ToList();
+        }
+
         public async Task<MyPlantCareCalendarResponse> GetMyCalendarAsync(int userId)
         {
             var rows = await _dbContext.PlantCareCalendars

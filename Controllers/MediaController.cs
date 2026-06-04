@@ -68,6 +68,10 @@ public class MediaController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+        catch (InvalidOperationException ex) when (ex.Message == ArModelUrlRules.InvalidUrlMessage)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, ex.Message);
+        }
         catch (InvalidOperationException ex)
         {
             return BadRequest(ex.Message);
@@ -126,6 +130,10 @@ public class MediaController : ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == ArModelUrlRules.InvalidUrlMessage)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, ex.Message);
         }
     }
 

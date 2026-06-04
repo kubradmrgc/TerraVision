@@ -4,28 +4,23 @@ import { USER_ROLE } from '@terravision/shared';
 import { mobileTypography } from '../../theme/mobileTypography';
 import { StateMessage } from '../../ui/StateMessage';
 import { themeToggleAccessibilityLabel, themeToggleGlyph } from '../../ui/ThemeToggleButton';
+import type { AppointmentDto } from '../../types/appointment';
+import type { OrderDto } from '../../types/order';
 import type { MobilePalette, ThemeMode, UserProfile } from '../app/types';
+import { ProfileOrdersHistorySection } from './ProfileOrdersHistorySection';
 
 type Props = {
   profile: UserProfile | null;
   palette: MobilePalette;
   themeMode: ThemeMode;
+  role: number | null;
+  orders: OrderDto[];
+  appointments: AppointmentDto[];
+  isCommerceLoading: boolean;
+  orderErrorMessage: string | null;
   onToggleTheme: () => void;
   onLogout: () => void;
 };
-
-function roleLabel(role: number): string {
-  switch (role) {
-    case USER_ROLE.Admin:
-      return 'Yönetici';
-    case USER_ROLE.Consultant:
-      return 'Saha danışmanı';
-    case USER_ROLE.Customer:
-      return 'Müşteri';
-    default:
-      return 'Kullanıcı';
-  }
-}
 
 function initials(firstName: string, lastName: string): string {
   const first = firstName.trim().charAt(0);
@@ -38,6 +33,11 @@ export function ProfileSection({
   profile,
   palette,
   themeMode,
+  role,
+  orders,
+  appointments,
+  isCommerceLoading,
+  orderErrorMessage,
   onToggleTheme,
   onLogout
 }: Props): React.JSX.Element {
@@ -53,30 +53,38 @@ export function ProfileSection({
     );
   }
 
-  const fullName = `${profile.firstName} ${profile.lastName}`.trim() || profile.email;
+  const showOrdersBlock = role === USER_ROLE.Customer;
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.identityCard, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}>
-        <View style={[styles.avatar, { backgroundColor: palette.secondaryContainer }]}>
-          <Text style={[styles.avatarText, { color: palette.onSecondaryContainer }]}>
-            {initials(profile.firstName, profile.lastName)}
-          </Text>
-        </View>
-        <Text style={[styles.name, mobileTypography.cardTitle, { color: palette.text }]}>{fullName}</Text>
-        <Text style={[styles.email, mobileTypography.bodySm, { color: palette.subText }]}>{profile.email}</Text>
-        <View style={[styles.rolePill, { backgroundColor: palette.primaryContainer }]}>
-          <Text style={[styles.rolePillText, { color: palette.onPrimaryContainer }]}>{roleLabel(profile.role)}</Text>
-        </View>
-      </View>
+      <Text style={[styles.hubTitle, mobileTypography.screenTitle, { color: palette.text }]}>Hesabım</Text>
+      <Text style={[styles.hubLead, { color: palette.subText }]}>
+        Kişisel bilgileriniz, sipariş ve randevu geçmişiniz.
+      </Text>
 
       <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}>
-        <Text style={[styles.cardLabel, { color: palette.subText }]}>HESAP BİLGİLERİ</Text>
-        <InfoRow label="Ad Soyad" value={fullName} palette={palette} />
-        <InfoRow label="E-posta" value={profile.email} palette={palette} />
-        <InfoRow label="Rol" value={roleLabel(profile.role)} palette={palette} />
-        <InfoRow label="Kullanıcı No" value={`#${profile.userId}`} palette={palette} last />
+        <View style={styles.cardHeaderRow}>
+          <View style={[styles.avatar, { backgroundColor: palette.secondaryContainer }]}>
+            <Text style={[styles.avatarText, { color: palette.onSecondaryContainer }]}>
+              {initials(profile.firstName, profile.lastName)}
+            </Text>
+          </View>
+          <Text style={[styles.cardHeading, { color: palette.text }]}>Bilgilerim</Text>
+        </View>
+        <InfoRow label="Ad" value={profile.firstName.trim() || '—'} palette={palette} />
+        <InfoRow label="Soyad" value={profile.lastName.trim() || '—'} palette={palette} />
+        <InfoRow label="E-posta" value={profile.email} palette={palette} last />
       </View>
+
+      {showOrdersBlock ? (
+        <ProfileOrdersHistorySection
+          orders={orders}
+          appointments={appointments}
+          palette={palette}
+          isLoading={isCommerceLoading}
+          errorMessage={orderErrorMessage}
+        />
+      ) : null}
 
       <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}>
         <Text style={[styles.cardLabel, { color: palette.subText }]}>AYARLAR</Text>
@@ -117,9 +125,14 @@ function InfoRow({
   last?: boolean;
 }): React.JSX.Element {
   return (
-    <View style={[styles.infoRow, !last && { borderBottomColor: palette.outlineVariant, borderBottomWidth: StyleSheet.hairlineWidth }]}>
+    <View
+      style={[
+        styles.infoRow,
+        !last && { borderBottomColor: palette.outlineVariant, borderBottomWidth: StyleSheet.hairlineWidth }
+      ]}
+    >
       <Text style={[styles.infoLabel, { color: palette.subText }]}>{label}</Text>
-      <Text style={[styles.infoValue, { color: palette.text }]} numberOfLines={1}>
+      <Text style={[styles.infoValue, { color: palette.text }]} numberOfLines={2}>
         {value}
       </Text>
     </View>
@@ -128,32 +141,29 @@ function InfoRow({
 
 const styles = StyleSheet.create({
   wrap: { gap: 16 },
-  identityCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    alignItems: 'center'
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12
-  },
-  avatarText: { fontSize: 26, fontWeight: '700', letterSpacing: 0.5 },
-  name: { marginBottom: 4, textAlign: 'center' },
-  email: { marginBottom: 12, textAlign: 'center' },
-  rolePill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
-  rolePillText: { fontSize: 12, fontWeight: '700' },
+  hubTitle: { marginBottom: 4 },
+  hubLead: { fontSize: 14, lineHeight: 20, marginBottom: 4 },
   card: {
     borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8
+  },
+  cardHeading: { fontSize: 17, fontWeight: '700' },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  avatarText: { fontSize: 16, fontWeight: '700' },
   cardLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -163,12 +173,12 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 12,
     gap: 12
   },
-  infoLabel: { fontSize: 13, fontWeight: '500' },
-  infoValue: { fontSize: 14, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
+  infoLabel: { fontSize: 13, fontWeight: '500', minWidth: 72 },
+  infoValue: { fontSize: 14, fontWeight: '600', flex: 1, textAlign: 'right' },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

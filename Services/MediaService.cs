@@ -33,6 +33,7 @@ public class MediaService : IMediaService
             cancellationToken);
 
         var uploaded = await _blobStorage.UploadAsync(stream, objectKey, MediaUploadRules.GetContentType(extension), cancellationToken);
+        ArModelUrlRules.EnsureValidPublicHttpsUrl(uploaded.PublicUrl);
 
         return new UploadArModelResponse
         {

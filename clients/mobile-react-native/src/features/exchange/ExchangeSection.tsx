@@ -1,20 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
   Image,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  type ListRenderItem
+  View
 } from 'react-native';
-import { errorCodes, isErrorWithCode, pick, types } from '@react-native-documents/picker';
 import {
   EXCHANGE_CONDITION,
   EXCHANGE_CONDITION_LABELS,
+  EXCHANGE_CONDITION_TAG_OPTIONS,
+  type ExchangeCondition,
   EXCHANGE_OFFER_STATUS,
   EXCHANGE_OFFER_STATUS_LABELS,
   EXCHANGE_OFFER_TYPE,
@@ -27,6 +27,9 @@ import {
 import { isAxiosError } from 'axios';
 import type { MobilePalette } from '../app/types';
 import { exchangeService } from '../../services/exchangeService';
+import { MultipartUploadError } from '../../services/uploadFileHelpers';
+import { pickGalleryPhotoForUpload } from '../../services/pickGalleryPhoto';
+import { resolveMediaPublicUrl } from '../../services/mediaPublicUrl';
 import { realtimeService } from '../../services/realtimeService';
 import { EXCHANGE_UI_MESSAGES, exchangeErrorForStatus } from './exchangeErrors';
 import { StateMessage } from '../../ui/StateMessage';
@@ -44,6 +47,29 @@ const TABS: { key: ViewMode; label: string }[] = [
   { key: 'mine', label: 'İlanlarım' },
   { key: 'offers', label: 'Teklifler' }
 ];
+
+const SHARP_IMAGE_PROPS = Platform.OS === 'android' ? { resizeMethod: 'resize' as const } : {};
+
+function ListingPhoto({
+  uri,
+  frameStyle,
+  placeholderBg
+}: {
+  uri: string;
+  frameStyle: object;
+  placeholderBg: string;
+}): React.JSX.Element {
+  return (
+    <View style={[frameStyle, { backgroundColor: placeholderBg }]}>
+      <Image
+        source={{ uri }}
+        style={styles.photoImage}
+        resizeMode="contain"
+        {...SHARP_IMAGE_PROPS}
+      />
+    </View>
+  );
+}
 
 export function ExchangeSection({ palette }: Props): React.JSX.Element {
   const [view, setView] = useState<ViewMode>('market');
@@ -63,6 +89,8 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
   const [newDescription, setNewDescription] = useState('');
   const [newPrice, setNewPrice] = useState('0');
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [newCondition, setNewCondition] = useState<ExchangeCondition>(EXCHANGE_CONDITION.Healthy);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const pendingCount = useMemo(
     () => received.filter((o) => o.status === EXCHANGE_OFFER_STATUS.Pending).length,
@@ -113,22 +141,29 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
 
   const pickListingPhoto = async () => {
     try {
-      const [file] = await pick({ type: [types.images], allowMultiSelection: false });
-      if (!file?.uri) return;
-      setIsMutating(true);
-      const url = await exchangeService.uploadExchangeImage({
-        uri: file.uri,
-        name: file.name ?? `exchange-${Date.now()}.jpg`,
-        type: file.type ?? 'image/jpeg'
-      });
+      const picked = await pickGalleryPhotoForUpload();
+      if ('cancelled' in picked) return;
+      if ('error' in picked) {
+        setError(picked.error);
+        return;
+      }
+
+      setIsUploadingPhoto(true);
+      setError(null);
+      setSuccess(null);
+      const url = await exchangeService.uploadExchangeImage(picked.file);
       setNewPhotoUrl(url);
       setSuccess('Fotoğraf yüklendi.');
     } catch (err) {
-      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) return;
-      const status = isAxiosError(err) ? err.response?.status : undefined;
+      const status =
+        err instanceof MultipartUploadError
+          ? err.status
+          : isAxiosError(err)
+            ? err.response?.status
+            : undefined;
       setError(exchangeErrorForStatus(status, EXCHANGE_UI_MESSAGES.uploadFailed, err));
     } finally {
-      setIsMutating(false);
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -141,13 +176,14 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
         title: newTitle.trim(),
         description: newDescription.trim(),
         price: Number(newPrice) || 0,
-        condition: EXCHANGE_CONDITION.Healthy,
+        condition: newCondition,
         photoUrls: newPhotoUrl ? [newPhotoUrl] : []
       });
       setNewTitle('');
       setNewDescription('');
       setNewPrice('0');
       setNewPhotoUrl('');
+      setNewCondition(EXCHANGE_CONDITION.Healthy);
       setSuccess('İlan yayınlandı.');
       await load();
       setView('mine');
@@ -197,10 +233,17 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
     }
   };
 
-  const renderMarketCard: ListRenderItem<ExchangeProductDto> = ({ item }) => (
-    <View style={[styles.productCard, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}>
+  const renderProductCard = (item: ExchangeProductDto) => (
+    <View
+      key={item.id}
+      style={[styles.productCard, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}
+    >
       {item.photoUrls[0] ? (
-        <Image source={{ uri: item.photoUrls[0] }} style={styles.thumb} resizeMode="cover" />
+        <ListingPhoto
+          uri={resolveMediaPublicUrl(item.photoUrls[0])}
+          frameStyle={styles.thumbFrame}
+          placeholderBg={palette.imagePlaceholder}
+        />
       ) : (
         <View style={[styles.thumbPlaceholder, { backgroundColor: palette.imagePlaceholder }]}>
           <Text style={styles.placeholderEmoji}>🪴</Text>
@@ -356,6 +399,30 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
             editable={!isMutating}
             onChangeText={setNewDescription}
           />
+          <Text style={[styles.tagLegend, { color: palette.subText }]}>Durum etiketi</Text>
+          <View style={styles.tagRow}>
+            {EXCHANGE_CONDITION_TAG_OPTIONS.map((opt) => {
+              const active = newCondition === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  style={[
+                    styles.tagChip,
+                    {
+                      borderColor: active ? palette.button : palette.outlineVariant,
+                      backgroundColor: active ? palette.button : palette.card
+                    }
+                  ]}
+                  disabled={isMutating}
+                  onPress={() => setNewCondition(opt.value)}
+                >
+                  <Text style={{ color: active ? palette.buttonText : palette.text, fontWeight: '700' }}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
           <TextInput
             style={[styles.input, { color: palette.text, borderColor: palette.outlineVariant, backgroundColor: palette.card }]}
             placeholder="Fiyat (0 = takas)"
@@ -367,13 +434,19 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
           />
           <TouchableOpacity
             style={[styles.uploadBtn, { borderColor: palette.outlineVariant, backgroundColor: palette.surfaceDim }]}
-            disabled={isMutating}
+            disabled={isMutating || isUploadingPhoto}
             onPress={() => void pickListingPhoto()}
           >
-            {newPhotoUrl ? (
-              <Image source={{ uri: newPhotoUrl }} style={styles.uploadPreview} resizeMode="cover" />
+            {isUploadingPhoto ? (
+              <Text style={{ color: palette.subText }}>Fotoğraf yükleniyor…</Text>
+            ) : newPhotoUrl ? (
+              <ListingPhoto
+                uri={newPhotoUrl}
+                frameStyle={styles.uploadPreviewFrame}
+                placeholderBg={palette.card}
+              />
             ) : (
-              <Text style={{ color: palette.subText }}>📷 Galeriden fotoğraf seç</Text>
+              <Text style={{ color: palette.subText }}>📷 Fotoğraf seç (izin gerekmez)</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity
@@ -394,7 +467,8 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
   );
 
   const marketData = view === 'market' ? products : view === 'mine' ? myProducts : [];
-  const offersFooter =
+
+  const offersBody =
     view === 'offers' ? (
       <View>
         {received.length === 0 ? (
@@ -421,35 +495,16 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, styles.listContent]}>
+      {listHeader}
       {view === 'offers' ? (
-        <FlatList
-          data={[]}
-          renderItem={() => null}
-          ListHeaderComponent={
-            <>
-              {listHeader}
-              {offersFooter}
-            </>
-          }
-          keyExtractor={() => 'offers'}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+        offersBody
+      ) : marketData.length === 0 ? (
+        <Text style={[styles.emptyText, { color: palette.subText }]}>
+          {view === 'market' ? 'Henüz ilan yok.' : 'Henüz ilanınız yok.'}
+        </Text>
       ) : (
-        <FlatList
-          data={marketData}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={view === 'market' ? renderMarketCard : renderMarketCard}
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={
-            <Text style={[styles.emptyText, { color: palette.subText }]}>
-              {view === 'market' ? 'Henüz ilan yok.' : 'Henüz ilanınız yok.'}
-            </Text>
-          }
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+        marketData.map((item) => renderProductCard(item))
       )}
 
       <Modal visible={offerModalVisible} transparent animationType="slide">
@@ -525,7 +580,7 @@ export function ExchangeSection({ palette }: Props): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: {},
   listContent: { paddingBottom: 24 },
   tabBar: {
     flexDirection: 'row',
@@ -550,8 +605,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     overflow: 'hidden'
   },
-  thumb: { width: '100%', height: 160 },
-  thumbPlaceholder: { width: '100%', height: 160, alignItems: 'center', justifyContent: 'center' },
+  thumbFrame: {
+    width: '100%',
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%'
+  },
+  thumbPlaceholder: { width: '100%', height: 200, alignItems: 'center', justifyContent: 'center' },
   placeholderEmoji: { fontSize: 40, opacity: 0.5 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, paddingTop: 10 },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
@@ -575,6 +639,14 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   formTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10 },
+  tagLegend: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  tagChip: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8
+  },
   input: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 10,
@@ -588,12 +660,21 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 12,
     borderStyle: 'dashed',
-    padding: 16,
+    padding: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 10,
+    overflow: 'hidden',
+    minHeight: 200
+  },
+  uploadPreviewFrame: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden'
   },
-  uploadPreview: { width: '100%', height: 140, borderRadius: 8 },
   offerCard: {
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,

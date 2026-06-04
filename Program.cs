@@ -14,6 +14,10 @@ using TerraVision.Api.Extensions;
 using TerraVision.Api.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile(
+    $"appsettings.{builder.Environment.EnvironmentName}.local.json",
+    optional: true,
+    reloadOnChange: true);
 
 // Reject oversized uploads at the host before buffering entire bodies into memory.
 builder.WebHost.ConfigureKestrel(options =>
@@ -67,6 +71,7 @@ builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IAppointmentInstrumentation, AppointmentInstrumentation>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
@@ -77,7 +82,9 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddTerraVisionMediaStorage(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<IArSessionService, ArSessionService>();
 builder.Services.AddScoped<ICareService, CareService>();
+builder.Services.AddTerraVisionCareAssistant(builder.Configuration);
 builder.Services.AddScoped<IExchangeService, ExchangeService>();
+builder.Services.AddScoped<IUserAdminService, UserAdminService>();
 builder.Services.AddTerraVisionEmail(builder.Configuration);
 builder.Services.AddTerraVisionCartAbandonment(builder.Configuration, builder.Environment);
 
@@ -140,6 +147,17 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    var media = app.Configuration.GetSection(MediaStorageSettings.SectionName).Get<MediaStorageSettings>();
+    if (media is { Provider: "Local" } && string.IsNullOrWhiteSpace(media.PublicBaseUrl))
+    {
+        app.Logger.LogWarning(
+            "AR preview requires MediaStorage:PublicBaseUrl (public HTTPS, e.g. a Cloudflare/ngrok tunnel to this API). " +
+            "Copy appsettings.Development.local.json.example to appsettings.Development.local.json and set your tunnel URL.");
+    }
+}
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();

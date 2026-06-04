@@ -12,7 +12,10 @@ import {
   PlantCareCalendarDto
 } from '@terravision/shared';
 import { ProfileSubnav } from '@/components/profile/ProfileSubnav';
+import { AddPlantToGardenCard } from '@/components/care/AddPlantToGardenCard';
+import { CareAssistantChat } from '@/components/care/CareAssistantChat';
 import { careService } from '@/services/careService';
+import type { CareCatalogPlantDto } from '@terravision/shared';
 import { authService } from '@/services/authService';
 import { tokenStore } from '@/services/tokenStore';
 
@@ -41,6 +44,8 @@ export default function MyGardenPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [mutatingKey, setMutatingKey] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<CareCatalogPlantDto[]>([]);
+  const [catalogSource, setCatalogSource] = useState<'care-api' | 'products-fallback'>('care-api');
 
   const load = useCallback(async () => {
     if (!tokenStore.getToken()) {
@@ -48,23 +53,42 @@ export default function MyGardenPage() {
       return;
     }
     if (!authService.isCustomer()) {
-      setError('Bahçem sayfası yalnızca müşteri hesapları içindir.');
+      setError(
+        'Bahçem yalnızca müşteri hesapları içindir. Demo: customer@terravision.com / customer123'
+      );
       setLoading(false);
       return;
     }
 
     setLoading(true);
     setError(null);
+    let loadedPlants: PlantCareCalendarDto[] = [];
     try {
-      const response = await careService.getMyCalendar();
-      setPlants(response.plants);
+      const calendar = await careService.getMyCalendar();
+      loadedPlants = calendar.plants;
+      setPlants(loadedPlants);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         tokenStore.clearTokens();
         router.replace('/login');
         return;
       }
-      setError('Bakım takvimi yüklenemedi. Lütfen tekrar deneyin.');
+      const apiMessage =
+        axios.isAxiosError(err) && typeof err.response?.data === 'object' && err.response.data !== null
+          ? String((err.response.data as { message?: string }).message ?? '')
+          : '';
+      setError(apiMessage || 'Bakım takvimi yüklenemedi. Lütfen tekrar deneyin.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { plants, source } = await careService.getCatalogPlantsWithMeta(loadedPlants);
+      setCatalog(plants);
+      setCatalogSource(source);
+    } catch {
+      setCatalog([]);
+      setCatalogSource('care-api');
     } finally {
       setLoading(false);
     }
@@ -104,11 +128,12 @@ export default function MyGardenPage() {
   }
 
   return (
-    <div>
+    <div className="tv-page-garden">
       <ProfileSubnav />
       <h1 className="tv-page-title">Bahçem</h1>
       <p className="tv-page-lead">
-        Satın aldığınız bitkilerin sulama, gübreleme ve temizlik takvimi. Teslim edilen siparişler otomatik eklenir.
+        Bitkilerinizi satın almadan bahçenize ekleyebilir, bakım takibi yapabilir ve asistandan öneri alabilirsiniz.
+        Teslim edilen siparişler otomatik eklenir.
       </p>
       <p className="tv-page-actions">
         <Link href="/products">Ürünlere dön</Link>
@@ -127,10 +152,31 @@ export default function MyGardenPage() {
         </p>
       ) : null}
 
+      {!error ? (
+        <>
+          <AddPlantToGardenCard
+            catalog={catalog}
+            catalogSource={catalogSource}
+            onAdd={async (productId) => {
+              const added = await careService.addPlantToGarden(productId);
+              setPlants((prev) => {
+                const without = prev.filter((p) => p.productId !== added.productId);
+                return [...without, added].sort((a, b) => a.productName.localeCompare(b.productName, 'tr'));
+              });
+              setCatalog((prev) =>
+                prev.map((p) => (p.id === productId ? { ...p, isInMyGarden: true } : p))
+              );
+              setSuccess(`${added.productName} bahçenize eklendi.`);
+            }}
+          />
+          <CareAssistantChat catalog={catalog} />
+        </>
+      ) : null}
+
       {!error && plants.length === 0 ? (
         <div className="tv-card tv-card--empty">
-          <p>Henüz bakım takviminizde bitki yok.</p>
-          <p className="tv-muted">Bitki siparişiniz teslim edildiğinde hatırlatmalar burada görünür.</p>
+          <p>Henüz takvimde bitki yok.</p>
+          <p className="tv-muted">Yukarıdan ekleyin veya asistana bitki adıyla soru sorun.</p>
         </div>
       ) : null}
 

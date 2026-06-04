@@ -8,6 +8,7 @@ import {
 } from '@terravision/shared';
 import { apiClient } from './apiClient';
 import type { UploadFileInput } from './mediaService';
+import { postMultipartFile } from './uploadFileHelpers';
 
 export const exchangeService = {
   async listProducts(params?: { condition?: number; swapOnly?: boolean }): Promise<ExchangeProductDto[]> {
@@ -57,15 +58,6 @@ export const exchangeService = {
   },
 
   async uploadExchangeImage(file: UploadFileInput): Promise<string> {
-    const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      name: file.name,
-      type: file.type
-    } as unknown as Blob);
-    const { data } = await apiClient.post<{ url: string }>(API_ROUTES.mediaExchangeImages, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return data.url;
+    return postMultipartFile(API_ROUTES.mediaExchangeImages, file);
   }
 };

@@ -202,7 +202,7 @@ export function MobileLoginFlow({ controller }: Props): React.JSX.Element {
         <View style={[styles.loginCard, { backgroundColor: cardBg, borderColor, shadowColor: '#000' }]}>
           <TouchableOpacity onPress={controller.clearLoginPortal} style={styles.backLink}>
             <Text style={[styles.backLinkText, mobileTypography.label, { color: subColor }]}>
-              ← Giriş türünü değiştir
+              {state.loggedIn ? '← Giriş türünü değiştir' : '← Ürünlere dön'}
             </Text>
           </TouchableOpacity>
 

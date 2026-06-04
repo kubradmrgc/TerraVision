@@ -80,6 +80,10 @@ namespace TerraVision.Api.Data
                     FertilizingIntervalDays = 30,
                     CleaningIntervalDays = 14,
                     CareInstructions = "Toprak yüzeyi kuruyunca sulayın; doğrudan güneşten kaçının.",
+                    CompareAtPrice = 1599.00m,
+                    IsFeatured = true,
+                    PromoLabel = "Fırsat",
+                    PromoSortOrder = 1,
                     IsActive = true,
                     IsDeleted = false,
                     CreatedDate = seedDate
@@ -123,7 +127,51 @@ namespace TerraVision.Api.Data
                     IsActive = true,
                     IsDeleted = false,
                     CreatedDate = seedDate
+                },
+                new Product
+                {
+                    Id = 4,
+                    Name = "Atatürk Çiçeği",
+                    Description = "Dekoratif çiçekli saksı bitkisi; iç mekan ve balkon için uygundur.",
+                    Price = 800.00m,
+                    StockQuantity = 15,
+                    MinStockLevel = 3,
+                    SKU = "PLT-ATK-004",
+                    ImageUrl = "/assets/product-images/lavender-pot.jpg",
+                    IsArCompatible = false,
+                    CategoryId = 1,
+                    WateringIntervalDays = 7,
+                    FertilizingIntervalDays = 30,
+                    CleaningIntervalDays = 14,
+                    CareInstructions = "Toprağı nemli tutun; direkt güneşten kaçının; çiçekler solunca solmuş kısımları temizleyin.",
+                    CompareAtPrice = 999.00m,
+                    IsFeatured = true,
+                    PromoLabel = "%20",
+                    PromoSortOrder = 0,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
                 }
+            );
+
+            modelBuilder.Entity<StoreCampaign>().HasData(
+                new StoreCampaign
+                {
+                    Id = 1,
+                    Title = "Bahar Kampanyası",
+                    Subtitle = "Seçili bitkilerde indirim — sınırlı süre",
+                    BadgeText = "KAMPANYA",
+                    SortOrder = 0,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                }
+            );
+
+            modelBuilder.Entity<StoreCampaignProduct>().HasData(
+                new StoreCampaignProduct { CampaignId = 1, ProductId = 4, SortOrder = 0 },
+                new StoreCampaignProduct { CampaignId = 1, ProductId = 1, SortOrder = 1 },
+                new StoreCampaignProduct { CampaignId = 1, ProductId = 3, SortOrder = 2 }
             );
         }
     }

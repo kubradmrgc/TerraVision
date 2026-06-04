@@ -1,6 +1,27 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 
+function addApiAssetPatterns(
+  patterns: NonNullable<NextConfig['images']>['remotePatterns'],
+  protocol: 'http' | 'https',
+  hostname: string,
+  port: string
+): void {
+  const hosts =
+    hostname === 'localhost' || hostname === '127.0.0.1'
+      ? (['localhost', '127.0.0.1'] as const)
+      : ([hostname] as const);
+
+  for (const host of hosts) {
+    patterns.push({
+      protocol,
+      hostname: host,
+      port: port || undefined,
+      pathname: '/assets/**'
+    });
+  }
+}
+
 function buildRemotePatterns(): NonNullable<NextConfig['images']>['remotePatterns'] {
   const patterns: NonNullable<NextConfig['images']>['remotePatterns'] = [];
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5090';
@@ -8,19 +29,14 @@ function buildRemotePatterns(): NonNullable<NextConfig['images']>['remotePattern
 
   try {
     const apiUrl = new URL(apiBase);
-    patterns.push({
-      protocol: apiUrl.protocol.replace(':', '') as 'http' | 'https',
-      hostname: apiUrl.hostname,
-      port: apiUrl.port || undefined,
-      pathname: '/assets/**'
-    });
+    addApiAssetPatterns(
+      patterns,
+      apiUrl.protocol.replace(':', '') as 'http' | 'https',
+      apiUrl.hostname,
+      apiUrl.port
+    );
   } catch {
-    patterns.push({
-      protocol: 'http',
-      hostname: 'localhost',
-      port: '5090',
-      pathname: '/assets/**'
-    });
+    addApiAssetPatterns(patterns, 'http', 'localhost', '5090');
   }
 
   if (cdnBase) {

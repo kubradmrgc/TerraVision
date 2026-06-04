@@ -40,13 +40,15 @@ const CUSTOMER_MAIN_LINKS: NavLink[] = [
   { href: '/products', label: 'Ürünler' },
   { href: '/marketplace', label: 'TerraTakas' },
   { href: '/cart', label: 'Sepet' },
-  { href: '/profile', label: 'Profil' }
+  { href: '/profile/my-garden', label: 'Bahçem' }
 ];
 
 const PROFILE_MENU_LINKS: RoleLink[] = [
-  { href: '/profile', label: 'Profil özeti', exact: true },
-  { href: '/profile/ar-rooms', label: 'AR Odalarım' },
+  { href: '/profile', label: 'Hesabım', exact: true },
+  { href: '/profile/account', label: 'Bilgilerim' },
+  { href: '/profile/orders', label: 'Siparişlerim' },
   { href: '/profile/my-garden', label: 'Bahçem' },
+  { href: '/profile/ar-rooms', label: 'AR Odalarım' },
   { href: '/profile/exchange', label: 'TerraTakas' }
 ];
 

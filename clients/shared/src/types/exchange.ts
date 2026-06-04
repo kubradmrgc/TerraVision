@@ -109,9 +109,20 @@ export type ExchangeProductListedEvent = {
 
 export const EXCHANGE_CONDITION_LABELS: Record<ExchangeCondition, string> = {
   1: 'Yeni',
-  2: 'Kullanılmış',
+  2: 'Yaşlı',
   3: 'Sağlıklı'
 };
+
+/** İlan oluştururken seçilebilir durum etiketleri (tek seçim). */
+export const EXCHANGE_CONDITION_TAG_OPTIONS: ReadonlyArray<{
+  value: ExchangeCondition;
+  label: string;
+  hint: string;
+}> = [
+  { value: EXCHANGE_CONDITION.New, label: 'Yeni', hint: 'Az kullanılmış veya yeni alınmış' },
+  { value: EXCHANGE_CONDITION.Healthy, label: 'Sağlıklı', hint: 'Bakımlı, canlı görünüm' },
+  { value: EXCHANGE_CONDITION.Used, label: 'Yaşlı', hint: 'Olgun bitki, deneyimli bakım geçmişi' }
+];
 
 export const EXCHANGE_OFFER_TYPE_LABELS: Record<ExchangeOfferType, string> = {
   1: 'Takas',

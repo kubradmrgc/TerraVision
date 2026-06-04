@@ -16,4 +16,11 @@ export interface ProductDto {
   fertilizingIntervalDays?: number | null;
   cleaningIntervalDays?: number | null;
   careInstructions?: string | null;
+  /** Liste fiyatı; price'dan yüksekse indirim rozeti gösterilir. */
+  compareAtPrice?: number | null;
+  isFeatured?: boolean;
+  promoLabel?: string | null;
+  promoSortOrder?: number;
+  promoStartsAtUtc?: string | null;
+  promoEndsAtUtc?: string | null;
 }

@@ -7,50 +7,67 @@ import { orderService } from '../../services/orderService';
 import { productService } from '../../services/productService';
 import { categoryService } from '../../services/categoryService';
 import { careService } from '../../services/careService';
+import { campaignService } from '../../services/campaignService';
 
-export function useCommerceQueries(enabled: boolean, role: number | null) {
+export function useCommerceQueries(loggedIn: boolean, role: number | null) {
   const queryClient = useQueryClient();
 
   const productsQuery = useQuery({
     queryKey: ['products'],
     queryFn: productService.getProducts,
-    enabled
+    enabled: true
+  });
+
+  const storefrontQuery = useQuery({
+    queryKey: ['storefront'],
+    queryFn: campaignService.getStorefront,
+    enabled: true
   });
 
   const categoriesQuery = useQuery({
     queryKey: ['categories'],
     queryFn: categoryService.getCategories,
-    enabled
+    enabled: loggedIn
   });
 
   const cartQuery = useQuery({
     queryKey: ['cart'],
     queryFn: cartService.getMyCart,
-    enabled
+    enabled: loggedIn
   });
 
   const ordersQuery = useQuery({
     queryKey: ['orders'],
     queryFn: orderService.getMyOrders,
-    enabled
+    enabled: loggedIn
   });
 
   const appointmentsQuery = useQuery({
     queryKey: ['appointments', role],
     queryFn: () => appointmentService.getMyAppointments(role ?? 1),
-    enabled: enabled && role !== null
+    enabled: loggedIn && role !== null
   });
 
   const careCalendarQuery = useQuery({
     queryKey: ['care', 'calendar'],
     queryFn: careService.getMyCalendar,
-    enabled: enabled && role === USER_ROLE.Customer
+    enabled: loggedIn && role === USER_ROLE.Customer
+  });
+
+  const careCatalogQuery = useQuery({
+    queryKey: ['care', 'catalog'],
+    queryFn: async () => {
+      const garden = await careService.getMyCalendar();
+      return careService.getCatalogPlants(garden.plants);
+    },
+    enabled: loggedIn && role === USER_ROLE.Customer,
+    retry: false
   });
 
   const arSessionsQuery = useQuery({
     queryKey: ['ar', 'sessions', 'me'],
     queryFn: arSessionService.getMySessions,
-    enabled: enabled && role === USER_ROLE.Customer
+    enabled: loggedIn && role === USER_ROLE.Customer
   });
 
   const createAppointmentMutation = useMutation({
@@ -102,13 +119,22 @@ export function useCommerceQueries(enabled: boolean, role: number | null) {
     }
   });
 
+  const addPlantToGardenMutation = useMutation({
+    mutationFn: (productId: number) => careService.addPlantToGarden(productId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['care'] });
+    }
+  });
+
   return {
     productsQuery,
+    storefrontQuery,
     categoriesQuery,
     cartQuery,
     ordersQuery,
     appointmentsQuery,
     careCalendarQuery,
+    careCatalogQuery,
     arSessionsQuery,
     createAppointmentMutation,
     updateAppointmentStatusMutation,
@@ -117,6 +143,7 @@ export function useCommerceQueries(enabled: boolean, role: number | null) {
     removeItemMutation,
     clearCartMutation,
     placeOrderMutation,
-    completeCareActionMutation
+    completeCareActionMutation,
+    addPlantToGardenMutation
   };
 }
