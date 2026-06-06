@@ -15,11 +15,13 @@ export const getOrderStatusLabel = getOrderStatusLabelTr;
 
 export const sectionIcons: Record<MobileSection, string> = {
   products: '🧩',
+  ar: '📱',
   cart: '🛒',
   orders: '📦',
   appointments: '🗓️',
   care: '🌿',
   exchange: '🌱',
+  chat: '💬',
   events: '⚡',
   profile: '👤'
 };

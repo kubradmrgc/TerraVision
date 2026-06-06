@@ -200,11 +200,12 @@ export function ArExperienceModal({
 
           {!hasLaunchedAr ? (
             <Text style={[styles.hint, { color: palette.subText }]}>
-              Kaydetmeden once AR deneyimini baslatin; ardindan ekran goruntunuzu secin.
+              AR açılınca kamera izni istenebilir. Zemin görmek için telefonu yatay bir yüzeye tutun; gerekirse
+              alttaki "Ortamınızda görüntüleyin" düğmesine dokunun.
             </Text>
           ) : (
             <Text style={[styles.hint, { color: palette.subText }]}>
-              Cihaz: {Platform.OS} {String(Platform.Version)}
+              AR kaydını tamamlamak için ekran görüntüsü seçin. Cihaz: {Platform.OS} {String(Platform.Version)}
             </Text>
           )}
         </View>

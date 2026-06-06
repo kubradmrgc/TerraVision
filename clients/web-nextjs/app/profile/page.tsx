@@ -26,6 +26,11 @@ const PROFILE_SECTIONS = [
     href: '/profile/exchange',
     title: 'TerraTakas',
     desc: 'Takas ilanlarınız ve gelen teklifler.'
+  },
+  {
+    href: '/profile/chat',
+    title: 'Peyzaj Sohbet',
+    desc: 'Danışmanınızla peyzaj planı ve ürün teklifleri.'
   }
 ] as const;
 

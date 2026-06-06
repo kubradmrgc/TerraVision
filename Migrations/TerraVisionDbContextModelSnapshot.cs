@@ -346,6 +346,222 @@ namespace TerraVision.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TerraVision.Api.Entities.ChatMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProposalNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ProposalTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SessionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("SessionId", "IsDeleted", "CreatedDate");
+
+                    b.ToTable("ChatMessages");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Content = "Merhaba! Ben danışmanAli. Bahçe ve peyzaj planınız için buradayım — sorularınızı bekliyorum.",
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsDeleted = false,
+                            Kind = 1,
+                            SenderId = 4,
+                            SessionId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Content = "Merhaba! Ben danışmanAyşe. İç ve dış mekân bitki seçimi için size yardımcı olabilirim.",
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsDeleted = false,
+                            Kind = 1,
+                            SenderId = 5,
+                            SessionId = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Content = "Merhaba! Ben danışmanSelin. Balkon ve bahçe düzenleme teklifleri için yazabilirsiniz.",
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsDeleted = false,
+                            Kind = 1,
+                            SenderId = 6,
+                            SessionId = 3
+                        });
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.ChatProposalLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChatMessageId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatMessageId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ChatProposalLines");
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.ConsultationSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AppointmentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ConsultantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("ConsultantId");
+
+                    b.HasIndex("CustomerId", "ConsultantId", "IsDeleted");
+
+                    b.ToTable("ConsultationSessions");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            ConsultantId = 4,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            IsActive = true,
+                            IsDeleted = false,
+                            Status = 1,
+                            Title = "Peyzaj planı — danışmanAli"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            ConsultantId = 5,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            IsActive = true,
+                            IsDeleted = false,
+                            Status = 1,
+                            Title = "Peyzaj planı — danışmanAyşe"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            ConsultantId = 6,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            IsActive = true,
+                            IsDeleted = false,
+                            Status = 1,
+                            Title = "Peyzaj planı — danışmanSelin"
+                        });
+                });
+
             modelBuilder.Entity("TerraVision.Api.Entities.ExchangeOffer", b =>
                 {
                     b.Property<int>("Id")
@@ -790,6 +1006,7 @@ namespace TerraVision.Api.Migrations
                         new
                         {
                             Id = 1,
+                            ArModelFileName = "demo-tree.glb",
                             CareInstructions = "Toprak yüzeyi kuruyunca sulayın; doğrudan güneşten kaçının.",
                             CategoryId = 1,
                             CleaningIntervalDays = 14,
@@ -814,6 +1031,7 @@ namespace TerraVision.Api.Migrations
                         new
                         {
                             Id = 2,
+                            ArModelFileName = "demo-tree.glb",
                             CareInstructions = "Yaprakları nemli bezle silin; kışın sulamayı seyreltin.",
                             CategoryId = 1,
                             CleaningIntervalDays = 21,
@@ -822,7 +1040,7 @@ namespace TerraVision.Api.Migrations
                             FertilizingIntervalDays = 45,
                             ImageUrl = "/assets/product-images/fiddle-leaf-fig.jpg",
                             IsActive = true,
-                            IsArCompatible = false,
+                            IsArCompatible = true,
                             IsDeleted = false,
                             IsFeatured = false,
                             MinStockLevel = 2,
@@ -836,6 +1054,7 @@ namespace TerraVision.Api.Migrations
                         new
                         {
                             Id = 3,
+                            ArModelFileName = "demo-tree.glb",
                             CareInstructions = "Tam güneşte yetiştirin; çiçeklenme sonrası hafif budama yapın.",
                             CategoryId = 2,
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -843,7 +1062,7 @@ namespace TerraVision.Api.Migrations
                             FertilizingIntervalDays = 21,
                             ImageUrl = "/assets/product-images/lavender-pot.jpg",
                             IsActive = true,
-                            IsArCompatible = false,
+                            IsArCompatible = true,
                             IsDeleted = false,
                             IsFeatured = false,
                             MinStockLevel = 5,
@@ -878,6 +1097,140 @@ namespace TerraVision.Api.Migrations
                             StockQuantity = 15,
                             WateringIntervalDays = 7
                         });
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.SiteContactChannel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChannelKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelKey")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("SiteContactChannels");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            ChannelKey = "support",
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "destek@terravision.com",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Label = "Teknik destek",
+                            SortOrder = 0
+                        },
+                        new
+                        {
+                            Id = 2,
+                            ChannelKey = "contact",
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "iletisim@terravision.com",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Label = "Genel iletişim",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            ChannelKey = "info",
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "bilgi@terravision.com",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Label = "Kurumsal",
+                            SortOrder = 2
+                        });
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.SiteFeedbackSubmission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserStory")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Status", "IsDeleted", "CreatedDate");
+
+                    b.ToTable("SiteFeedbackSubmissions");
                 });
 
             modelBuilder.Entity("TerraVision.Api.Entities.StoreCampaign", b =>
@@ -1070,6 +1423,45 @@ namespace TerraVision.Api.Migrations
                             PasswordHash = new byte[] { 36, 50, 97, 36, 49, 49, 36, 121, 86, 111, 115, 67, 117, 112, 75, 121, 110, 78, 80, 90, 112, 103, 50, 69, 113, 50, 88, 66, 117, 119, 80, 116, 103, 88, 48, 120, 100, 116, 74, 56, 118, 69, 77, 68, 121, 113, 113, 57, 99, 67, 73, 57, 90, 69, 122, 121, 113, 119, 112, 46 },
                             PasswordSalt = new byte[0],
                             Role = 2
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "danisman.ali@terravision.com",
+                            FirstName = "danışmanAli",
+                            IsActive = true,
+                            IsDeleted = false,
+                            LastName = "",
+                            PasswordHash = new byte[] { 36, 50, 97, 36, 49, 49, 36, 121, 86, 111, 115, 67, 117, 112, 75, 121, 110, 78, 80, 90, 112, 103, 50, 69, 113, 50, 88, 66, 117, 119, 80, 116, 103, 88, 48, 120, 100, 116, 74, 56, 118, 69, 77, 68, 121, 113, 113, 57, 99, 67, 73, 57, 90, 69, 122, 121, 113, 119, 112, 46 },
+                            PasswordSalt = new byte[0],
+                            Role = 2
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "danisman.ayse@terravision.com",
+                            FirstName = "danışmanAyşe",
+                            IsActive = true,
+                            IsDeleted = false,
+                            LastName = "",
+                            PasswordHash = new byte[] { 36, 50, 97, 36, 49, 49, 36, 121, 86, 111, 115, 67, 117, 112, 75, 121, 110, 78, 80, 90, 112, 103, 50, 69, 113, 50, 88, 66, 117, 119, 80, 116, 103, 88, 48, 120, 100, 116, 74, 56, 118, 69, 77, 68, 121, 113, 113, 57, 99, 67, 73, 57, 90, 69, 122, 121, 113, 119, 112, 46 },
+                            PasswordSalt = new byte[0],
+                            Role = 2
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "danisman.selin@terravision.com",
+                            FirstName = "danışmanSelin",
+                            IsActive = true,
+                            IsDeleted = false,
+                            LastName = "",
+                            PasswordHash = new byte[] { 36, 50, 97, 36, 49, 49, 36, 121, 86, 111, 115, 67, 117, 112, 75, 121, 110, 78, 80, 90, 112, 103, 50, 69, 113, 50, 88, 66, 117, 119, 80, 116, 103, 88, 48, 120, 100, 116, 74, 56, 118, 69, 77, 68, 121, 113, 113, 57, 99, 67, 73, 57, 90, 69, 122, 121, 113, 119, 112, 46 },
+                            PasswordSalt = new byte[0],
+                            Role = 2
                         });
                 });
 
@@ -1166,6 +1558,70 @@ namespace TerraVision.Api.Migrations
                         .HasForeignKey("ParentCategoryId");
 
                     b.Navigation("ParentCategory");
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.ChatMessage", b =>
+                {
+                    b.HasOne("TerraVision.Api.Entities.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TerraVision.Api.Entities.ConsultationSession", "Session")
+                        .WithMany("Messages")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.ChatProposalLine", b =>
+                {
+                    b.HasOne("TerraVision.Api.Entities.ChatMessage", "ChatMessage")
+                        .WithMany("ProposalLines")
+                        .HasForeignKey("ChatMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TerraVision.Api.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChatMessage");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.ConsultationSession", b =>
+                {
+                    b.HasOne("TerraVision.Api.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("TerraVision.Api.Entities.User", "Consultant")
+                        .WithMany()
+                        .HasForeignKey("ConsultantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TerraVision.Api.Entities.User", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("Consultant");
+
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("TerraVision.Api.Entities.ExchangeOffer", b =>
@@ -1280,6 +1736,16 @@ namespace TerraVision.Api.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("TerraVision.Api.Entities.SiteFeedbackSubmission", b =>
+                {
+                    b.HasOne("TerraVision.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TerraVision.Api.Entities.StoreCampaignProduct", b =>
                 {
                     b.HasOne("TerraVision.Api.Entities.StoreCampaign", "Campaign")
@@ -1309,6 +1775,16 @@ namespace TerraVision.Api.Migrations
                     b.Navigation("Products");
 
                     b.Navigation("SubCategories");
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.ChatMessage", b =>
+                {
+                    b.Navigation("ProposalLines");
+                });
+
+            modelBuilder.Entity("TerraVision.Api.Entities.ConsultationSession", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("TerraVision.Api.Entities.ExchangeProduct", b =>

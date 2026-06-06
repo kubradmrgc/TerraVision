@@ -59,6 +59,46 @@ namespace TerraVision.Api.Data
                     IsActive = true,
                     IsDeleted = false,
                     CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                // Peyzaj danışmanları — şifre: consultant123
+                new User
+                {
+                    Id = 4,
+                    FirstName = "danışmanAli",
+                    LastName = "",
+                    Email = "danisman.ali@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$yVosCupKynNPZpg2Eq2XBuwPtgX0xdtJ8vEMDyqq9cCI9ZEzyqwp."),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Consultant,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new User
+                {
+                    Id = 5,
+                    FirstName = "danışmanAyşe",
+                    LastName = "",
+                    Email = "danisman.ayse@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$yVosCupKynNPZpg2Eq2XBuwPtgX0xdtJ8vEMDyqq9cCI9ZEzyqwp."),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Consultant,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new User
+                {
+                    Id = 6,
+                    FirstName = "danışmanSelin",
+                    LastName = "",
+                    Email = "danisman.selin@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$yVosCupKynNPZpg2Eq2XBuwPtgX0xdtJ8vEMDyqq9cCI9ZEzyqwp."),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Consultant,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 }
             );
 
@@ -75,6 +115,7 @@ namespace TerraVision.Api.Data
                     SKU = "PLT-MON-001",
                     ImageUrl = "/assets/product-images/monstera-deliciosa.jpg",
                     IsArCompatible = true,
+                    ArModelFileName = "demo-tree.glb",
                     CategoryId = 1,
                     WateringIntervalDays = 7,
                     FertilizingIntervalDays = 30,
@@ -98,7 +139,8 @@ namespace TerraVision.Api.Data
                     MinStockLevel = 2,
                     SKU = "PLT-FIC-002",
                     ImageUrl = "/assets/product-images/fiddle-leaf-fig.jpg",
-                    IsArCompatible = false,
+                    IsArCompatible = true,
+                    ArModelFileName = "demo-tree.glb",
                     CategoryId = 1,
                     WateringIntervalDays = 10,
                     FertilizingIntervalDays = 45,
@@ -118,7 +160,8 @@ namespace TerraVision.Api.Data
                     MinStockLevel = 5,
                     SKU = "PLT-LAV-003",
                     ImageUrl = "/assets/product-images/lavender-pot.jpg",
-                    IsArCompatible = false,
+                    IsArCompatible = true,
+                    ArModelFileName = "demo-tree.glb",
                     CategoryId = 2,
                     WateringIntervalDays = 5,
                     FertilizingIntervalDays = 21,
@@ -172,6 +215,114 @@ namespace TerraVision.Api.Data
                 new StoreCampaignProduct { CampaignId = 1, ProductId = 4, SortOrder = 0 },
                 new StoreCampaignProduct { CampaignId = 1, ProductId = 1, SortOrder = 1 },
                 new StoreCampaignProduct { CampaignId = 1, ProductId = 3, SortOrder = 2 }
+            );
+
+            modelBuilder.Entity<ConsultationSession>().HasData(
+                new ConsultationSession
+                {
+                    Id = 1,
+                    CustomerId = 2,
+                    ConsultantId = 4,
+                    Title = "Peyzaj planı — danışmanAli",
+                    Status = ConsultationSessionStatus.Open,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new ConsultationSession
+                {
+                    Id = 2,
+                    CustomerId = 2,
+                    ConsultantId = 5,
+                    Title = "Peyzaj planı — danışmanAyşe",
+                    Status = ConsultationSessionStatus.Open,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new ConsultationSession
+                {
+                    Id = 3,
+                    CustomerId = 2,
+                    ConsultantId = 6,
+                    Title = "Peyzaj planı — danışmanSelin",
+                    Status = ConsultationSessionStatus.Open,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                }
+            );
+
+            modelBuilder.Entity<ChatMessage>().HasData(
+                new ChatMessage
+                {
+                    Id = 1,
+                    SessionId = 1,
+                    SenderId = 4,
+                    Content = "Merhaba! Ben danışmanAli. Bahçe ve peyzaj planınız için buradayım — sorularınızı bekliyorum.",
+                    Kind = ChatMessageKind.Text,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new ChatMessage
+                {
+                    Id = 2,
+                    SessionId = 2,
+                    SenderId = 5,
+                    Content = "Merhaba! Ben danışmanAyşe. İç ve dış mekân bitki seçimi için size yardımcı olabilirim.",
+                    Kind = ChatMessageKind.Text,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new ChatMessage
+                {
+                    Id = 3,
+                    SessionId = 3,
+                    SenderId = 6,
+                    Content = "Merhaba! Ben danışmanSelin. Balkon ve bahçe düzenleme teklifleri için yazabilirsiniz.",
+                    Kind = ChatMessageKind.Text,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                }
+            );
+
+            modelBuilder.Entity<SiteContactChannel>().HasData(
+                new SiteContactChannel
+                {
+                    Id = 1,
+                    ChannelKey = "support",
+                    Label = "Teknik destek",
+                    Email = "destek@terravision.com",
+                    SortOrder = 0,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new SiteContactChannel
+                {
+                    Id = 2,
+                    ChannelKey = "contact",
+                    Label = "Genel iletişim",
+                    Email = "iletisim@terravision.com",
+                    SortOrder = 1,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new SiteContactChannel
+                {
+                    Id = 3,
+                    ChannelKey = "info",
+                    Label = "Kurumsal",
+                    Email = "bilgi@terravision.com",
+                    SortOrder = 2,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                }
             );
         }
     }

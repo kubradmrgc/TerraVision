@@ -3,11 +3,13 @@ import type { MobileSection } from '../features/app/types';
 /** Mobil arayüz metinleri (web ile uyumlu Türkçe). */
 export const sectionLabels: Record<MobileSection, string> = {
   products: 'Ürünler',
+  ar: 'AR',
   cart: 'Sepet',
   orders: 'Siparişler',
   appointments: 'Randevular',
   care: 'Bahçem',
   exchange: 'TerraTakas',
+  chat: 'Peyzaj Sohbet',
   events: 'Olaylar',
   profile: 'Profil'
 };

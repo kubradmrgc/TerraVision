@@ -7,7 +7,8 @@ const QUICK_STATS = [
   { label: 'Sipariş onayı', desc: 'Bekleyen siparişleri onaylayın', href: '/admin/orders' },
   { label: 'Kampanya vitrini', desc: 'İndirim ve banner yönetimi', href: '/admin/campaigns' },
   { label: 'Katalog', desc: 'Yeni ürün ve stok', href: '/admin/products/new' },
-  { label: 'Kullanıcılar', desc: 'Rol ve hesap listesi', href: '/admin/users' }
+  { label: 'Kullanıcılar', desc: 'Rol ve hesap listesi', href: '/admin/users' },
+  { label: 'Destek & geri bildirim', desc: 'E-postalar ve site sorunları', href: '/admin/site-feedback' }
 ] as const;
 
 export default function DashboardPage() {

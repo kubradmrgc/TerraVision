@@ -10,7 +10,7 @@ import {
   StyleSheet,
   type ListRenderItem
 } from 'react-native';
-import type { StorefrontDto } from '@terravision/shared';
+import type { StoreCampaignDto, StorefrontDto } from '@terravision/shared';
 import { Picker } from '@react-native-picker/picker';
 import { PRODUCT_SORT_OPTIONS, isProductFilterActive, type ProductSortKey } from '@terravision/shared';
 import type { ProductDto } from '../../types/product';
@@ -49,6 +49,7 @@ type Props = {
   onChangeSort: (value: ProductSortKey) => void;
   onClearFilters: () => void;
   onOpenDetail: (productId: number) => void;
+  onOpenCampaign: (campaignId: number) => void;
   onAddToCart: (productId: number) => void;
   onPreviewAr: (productId: number) => void;
   onPickArFile: () => void;
@@ -226,6 +227,56 @@ function ProductCard({
   );
 }
 
+function CampaignCard({
+  campaign,
+  palette,
+  onOpenCampaign
+}: {
+  campaign: StoreCampaignDto;
+  palette: MobilePalette;
+  onOpenCampaign: (campaignId: number) => void;
+}): React.JSX.Element {
+  const hasProducts = campaign.productIds.length > 0;
+  const card = (
+    <>
+      {campaign.badgeText ? (
+        <Text style={[styles.campaignBadge, { color: palette.onPrimaryContainer }]}>{campaign.badgeText}</Text>
+      ) : null}
+      <Text style={[styles.campaignTitle, { color: palette.onPrimaryContainer }]}>{campaign.title}</Text>
+      {campaign.subtitle ? (
+        <Text style={[styles.campaignSub, { color: palette.onPrimaryContainer }]} numberOfLines={2}>
+          {campaign.subtitle}
+        </Text>
+      ) : null}
+      <Text style={[styles.campaignCount, { color: palette.onPrimaryContainer }]}>
+        {hasProducts ? `${campaign.productIds.length} ürün · Kampanyayı gör →` : 'Ürün bağlanmadı'}
+      </Text>
+    </>
+  );
+
+  if (!hasProducts) {
+    return (
+      <View
+        style={[styles.campaignCard, { backgroundColor: palette.primaryContainer, borderColor: palette.outlineVariant }]}
+      >
+        {card}
+      </View>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={`${campaign.title} kampanyası, ürün listesi`}
+      activeOpacity={0.85}
+      onPress={() => onOpenCampaign(campaign.id)}
+      style={[styles.campaignCard, { backgroundColor: palette.primaryContainer, borderColor: palette.outlineVariant }]}
+    >
+      {card}
+    </TouchableOpacity>
+  );
+}
+
 export function ProductsSection(props: Props): React.JSX.Element {
   const { palette } = props;
   const dealProducts = useMemo(
@@ -255,23 +306,12 @@ export function ProductsSection(props: Props): React.JSX.Element {
           <Text style={[styles.blockTitle, { color: palette.text }]}>Kampanyalar</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.campaignScroll}>
             {campaigns.map((c) => (
-              <View
+              <CampaignCard
                 key={c.id}
-                style={[styles.campaignCard, { backgroundColor: palette.primaryContainer, borderColor: palette.outlineVariant }]}
-              >
-                {c.badgeText ? (
-                  <Text style={[styles.campaignBadge, { color: palette.onPrimaryContainer }]}>{c.badgeText}</Text>
-                ) : null}
-                <Text style={[styles.campaignTitle, { color: palette.onPrimaryContainer }]}>{c.title}</Text>
-                {c.subtitle ? (
-                  <Text style={[styles.campaignSub, { color: palette.onPrimaryContainer }]} numberOfLines={2}>
-                    {c.subtitle}
-                  </Text>
-                ) : null}
-                <Text style={[styles.campaignCount, { color: palette.onPrimaryContainer }]}>
-                  {`${c.productIds.length} ürün`}
-                </Text>
-              </View>
+                campaign={c}
+                palette={palette}
+                onOpenCampaign={props.onOpenCampaign}
+              />
             ))}
           </ScrollView>
         </View>

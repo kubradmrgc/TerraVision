@@ -82,5 +82,12 @@ namespace TerraVision.Api.Services
             await _hubContext.Clients.Group(userGroup)
                 .SendAsync(TerraVisionHub.NotificationCreatedEventName, notificationEvent);
         }
+
+        public async Task BroadcastChatMessageReceivedAsync(int sessionId, ChatMessageReceivedEvent chatEvent)
+        {
+            var chatGroup = TerraVisionHub.BuildChatGroup(sessionId);
+            await _hubContext.Clients.Group(chatGroup)
+                .SendAsync(TerraVisionHub.ChatMessageReceivedEventName, chatEvent);
+        }
     }
 }

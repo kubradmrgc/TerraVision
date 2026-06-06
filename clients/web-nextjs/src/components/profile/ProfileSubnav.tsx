@@ -8,7 +8,8 @@ const PROFILE_LINKS = [
   { href: '/profile/account', label: 'Bilgilerim' },
   { href: '/profile/orders', label: 'Siparişlerim' },
   { href: '/profile/ar-rooms', label: 'AR Odalarım' },
-  { href: '/profile/exchange', label: 'TerraTakas' }
+  { href: '/profile/exchange', label: 'TerraTakas' },
+  { href: '/profile/chat', label: 'Peyzaj Sohbet' }
 ] as const;
 
 export function ProfileSubnav() {

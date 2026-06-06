@@ -6,7 +6,9 @@ export const REALTIME_RECONNECT_QUERY_KEYS = [
   ['orders'],
   ['products'],
   ['appointments'],
-  ['care']
+  ['care'],
+  ['chat', 'sessions'],
+  ['chat', 'consultants']
 ] as const;
 
 export type RealtimeReconnectInvalidate = (filters: {

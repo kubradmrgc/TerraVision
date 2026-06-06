@@ -5,6 +5,7 @@ namespace TerraVision.Api.Interfaces
     public interface ICampaignService
     {
         Task<StorefrontDto> GetStorefrontAsync();
+        Task<CampaignDetailDto> GetStorefrontCampaignByIdAsync(int id);
         Task<IReadOnlyList<StoreCampaignDto>> GetAllCampaignsAsync();
         Task<StoreCampaignDto> GetCampaignByIdAsync(int id);
         Task<StoreCampaignDto> CreateCampaignAsync(UpsertStoreCampaignRequest request);

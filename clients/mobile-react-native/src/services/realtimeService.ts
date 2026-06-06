@@ -13,6 +13,7 @@ import {
 import { SIGNALR_HUB_URL } from '../config/env';
 import { tokenStore } from './tokenStore';
 import type {
+  ChatMessageReceivedEvent,
   ExchangeOfferReceivedEvent,
   ExchangeOfferStatusChangedEvent,
   ExchangeProductListedEvent
@@ -31,6 +32,7 @@ class RealtimeService {
   private readonly exchangeOfferReceivedHandlers = createHandlerRegistry<ExchangeOfferReceivedEvent>();
   private readonly exchangeOfferStatusHandlers = createHandlerRegistry<ExchangeOfferStatusChangedEvent>();
   private readonly exchangeProductListedHandlers = createHandlerRegistry<ExchangeProductListedEvent>();
+  private readonly chatMessageReceivedHandlers = createHandlerRegistry<ChatMessageReceivedEvent>();
   private readonly statusHandlers = createHandlerRegistry<RealtimeConnectionStatus>();
   private readonly reconnectedHandlers = createHandlerRegistry<void>();
 
@@ -55,7 +57,8 @@ class RealtimeService {
           onOrderStatusChanged: (event) => this.orderStatusChangedHandlers.emit(event),
           onExchangeOfferReceived: (event) => this.exchangeOfferReceivedHandlers.emit(event),
           onExchangeOfferStatusChanged: (event) => this.exchangeOfferStatusHandlers.emit(event),
-          onExchangeProductListed: (event) => this.exchangeProductListedHandlers.emit(event)
+          onExchangeProductListed: (event) => this.exchangeProductListedHandlers.emit(event),
+          onChatMessageReceived: (event) => this.chatMessageReceivedHandlers.emit(event)
         });
       }
     });
@@ -156,6 +159,25 @@ class RealtimeService {
 
   onExchangeProductListed(handler: (event: ExchangeProductListedEvent) => void): () => void {
     return this.exchangeProductListedHandlers.add(handler);
+  }
+
+  onChatMessageReceived(handler: (event: ChatMessageReceivedEvent) => void): () => void {
+    return this.chatMessageReceivedHandlers.add(handler);
+  }
+
+  async joinChatSession(sessionId: number): Promise<void> {
+    await this.connect();
+    if (!this.connection) {
+      throw new Error('SignalR bağlantısı yok.');
+    }
+    await this.connection.invoke('JoinChatSession', sessionId);
+  }
+
+  async leaveChatSession(sessionId: number): Promise<void> {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      return;
+    }
+    await this.connection.invoke('LeaveChatSession', sessionId).catch(() => undefined);
   }
 
   onStatusChanged(handler: StatusChangedHandler): () => void {

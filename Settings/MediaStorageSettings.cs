@@ -14,6 +14,12 @@ public class MediaStorageSettings
     /// </summary>
     public string? PublicBaseUrl { get; set; }
 
+    /// <summary>
+    /// Fallback API base for mobile AR in Development (e.g. http://10.0.2.2:5090 for Android emulator).
+    /// Overridden when the client sends clientBaseUrl on AR preview requests.
+    /// </summary>
+    public string? MobileDevBaseUrl { get; set; }
+
     public bool EnablePresignedUploads { get; set; } = true;
 
     public int PresignExpiryMinutes { get; set; } = 15;

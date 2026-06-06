@@ -20,6 +20,12 @@ namespace TerraVision.Api.Models.DTOs
         public IReadOnlyList<ProductDto> FeaturedProducts { get; set; } = Array.Empty<ProductDto>();
     }
 
+    public class CampaignDetailDto
+    {
+        public StoreCampaignDto Campaign { get; set; } = new();
+        public IReadOnlyList<ProductDto> Products { get; set; } = Array.Empty<ProductDto>();
+    }
+
     public class UpsertStoreCampaignRequest
     {
         public string Title { get; set; } = string.Empty;

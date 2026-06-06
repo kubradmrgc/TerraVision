@@ -27,4 +27,19 @@ public class ArModelUrlRulesTests
     {
         Assert.False(ArModelUrlRules.IsValidPublicHttpsUrl(url));
     }
+
+    [Theory]
+    [InlineData("http://10.0.2.2:5090/assets/ar-models/tree.glb")]
+    [InlineData("http://192.168.1.42:5090/assets/ar-models/tree.glb")]
+    public void IsValidDevelopmentArModelUrl_AcceptsLanHttp(string url)
+    {
+        Assert.True(ArModelUrlRules.IsValidDevelopmentArModelUrl(url));
+    }
+
+    [Fact]
+    public void IsValidArModelUrl_AllowsLanHttpInDevelopmentMode()
+    {
+        const string url = "http://10.0.2.2:5090/assets/ar-models/tree.glb";
+        Assert.True(ArModelUrlRules.IsValidArModelUrl(url, allowDevelopmentLan: true));
+    }
 }

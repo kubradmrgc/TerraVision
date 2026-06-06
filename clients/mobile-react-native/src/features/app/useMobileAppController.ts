@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
+import axios from 'axios';
 import { errorCodes, isErrorWithCode, pick } from '@react-native-documents/picker';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
@@ -87,6 +88,7 @@ export function useMobileAppController() {
   const [productInStockOnly, setProductInStockOnly] = useState(false);
   const [productSort, setProductSort] = useState<ProductSortKey>('relevance');
   const [detailProductId, setDetailProductId] = useState<number | null>(null);
+  const [detailCampaignId, setDetailCampaignId] = useState<number | null>(null);
   const [careErrorMessage, setCareErrorMessage] = useState<string | null>(null);
   const [careSuccessMessage, setCareSuccessMessage] = useState<string | null>(null);
   const [careMutatingKey, setCareMutatingKey] = useState<string | null>(null);
@@ -298,11 +300,9 @@ export function useMobileAppController() {
           unsubscribe = syncRealtimeSubscriptions();
         }
       } catch {
-        setRealtimeStatus('offline');
-        Alert.alert(
-          'Canlı bağlantı',
-          'Birkaç yeniden denemeden sonra canlı kanal açılamadı. Veriler REST ile gelmeye devam eder; ağ düzelince çıkış yapıp tekrar giriş deneyebilirsiniz.'
-        );
+        if (!disposed) {
+          setRealtimeStatus('offline');
+        }
       }
     })();
 
@@ -724,14 +724,18 @@ export function useMobileAppController() {
       const preview = await arService.getProductPreview(productId);
       setState((prev) => ({ ...prev, arPreview: preview, isArPreviewVisible: true }));
     } catch (error) {
+      const networkUnreachable = axios.isAxiosError(error) && !error.response;
       Alert.alert(
         'AR önizleme',
-        toStatusMessage(error, 'AR önizleme bilgisi alınamadı.', {
-          401: AUTH_UI_MESSAGES.sessionExpired,
-          404: 'Bu ürün için AR modeli bulunamadı.',
-          503: 'AR modeli HTTPS ve internetten erişilebilir bir adreste olmalı. Sunucuda MediaStorage:PublicBaseUrl ayarlayın.',
-          500: 'Sunucu hatası nedeniyle AR önizleme açılamadı.'
-        })
+        networkUnreachable
+          ? 'API\'ye ulaşılamıyor. Proje kökünde "dotnet run --launch-profile http" çalıştırın. Telefon USB ile bağlıysa mobile-react-native klasöründe "npm run setup:device" komutunu tekrar çalıştırın.'
+          : toStatusMessage(error, 'AR önizleme bilgisi alınamadı.', {
+              401: AUTH_UI_MESSAGES.sessionExpired,
+              404: 'Bu ürün için AR modeli bulunamadı.',
+              503:
+                'AR modeli yüklenemedi. Üründe AR modeli var mı kontrol edin. Fiziksel cihazda api.config.local içinde PC IP adresinizi (wifi modu) kullanın; emülatörde 10.0.2.2:5090 yeterlidir.',
+              500: 'Sunucu hatası nedeniyle AR önizleme açılamadı.'
+            })
       );
     }
   };
@@ -834,6 +838,8 @@ export function useMobileAppController() {
 
   const openProductDetail = (productId: number) => setDetailProductId(productId);
   const closeProductDetail = () => setDetailProductId(null);
+  const openCampaignDetail = (campaignId: number) => setDetailCampaignId(campaignId);
+  const closeCampaignDetail = () => setDetailCampaignId(null);
   const clearProductFilters = () => {
     setProductSearch('');
     setProductCategoryId(null);
@@ -911,6 +917,9 @@ export function useMobileAppController() {
     isStorefrontLoading: storefrontQuery.isLoading,
     openProductDetail,
     closeProductDetail,
+    detailCampaignId,
+    openCampaignDetail,
+    closeCampaignDetail,
     canUploadArModel,
     carePlants: careCalendarQuery.data?.plants ?? [],
     careCatalogPlants: careCatalogQuery.data ?? [],

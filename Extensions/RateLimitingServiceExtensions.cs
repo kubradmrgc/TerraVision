@@ -11,6 +11,7 @@ public static class RateLimitPolicies
     public const string AppointmentsWrite = "appointments-write";
     public const string CatalogRead = "catalog-read";
     public const string CareAssistantChat = "care-assistant-chat";
+    public const string SupportFeedback = "support-feedback";
 }
 
 public static class RateLimitingServiceExtensions
@@ -64,6 +65,11 @@ public static class RateLimitingServiceExtensions
                 CreateFixedWindowPartition(
                     $"care-ai:{GetUserOrClientPartitionKey(httpContext)}",
                     settings.CareAssistantChat));
+
+            options.AddPolicy(RateLimitPolicies.SupportFeedback, httpContext =>
+                CreateFixedWindowPartition(
+                    $"support-fb:{GetClientIp(httpContext)}",
+                    settings.SupportFeedback));
         });
 
         return services;

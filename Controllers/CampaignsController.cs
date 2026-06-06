@@ -24,6 +24,21 @@ namespace TerraVision.Api.Controllers
             return Ok(storefront);
         }
 
+        [HttpGet("storefront/{id:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetStorefrontCampaign(int id)
+        {
+            try
+            {
+                var detail = await _campaignService.GetStorefrontCampaignByIdAsync(id);
+                return Ok(detail);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { message = "Kampanya bulunamadı veya şu an aktif değil." });
+            }
+        }
+
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAll()

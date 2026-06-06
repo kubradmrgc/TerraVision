@@ -15,7 +15,8 @@ export const SIGNALR_EVENTS = {
   productLowStock: 'product.low.stock',
   exchangeOfferReceived: 'exchange.offer.received',
   exchangeOfferStatusChanged: 'exchange.offer.status.changed',
-  exchangeProductListed: 'exchange.product.listed'
+  exchangeProductListed: 'exchange.product.listed',
+  chatMessageReceived: 'chat.message.received'
 } as const;
 
 export const EXCHANGE_ROUTES = {
@@ -27,6 +28,14 @@ export const EXCHANGE_ROUTES = {
   offersSent: `${API_PATH_PREFIX}/exchange/offers/sent`,
   offerStatus: (id: number) => `${API_PATH_PREFIX}/exchange/offers/${id}/status`,
   mediaExchangeImages: `${API_PATH_PREFIX}/media/exchange-images`
+} as const;
+
+export const API_ROUTES_CHAT = {
+  consultants: `${API_PATH_PREFIX}/chat/consultants`,
+  sessions: `${API_PATH_PREFIX}/chat/sessions`,
+  sessionById: (sessionId: number) => `${API_PATH_PREFIX}/chat/sessions/${sessionId}`,
+  sessionMessages: (sessionId: number) => `${API_PATH_PREFIX}/chat/sessions/${sessionId}/messages`,
+  sessionProposals: (sessionId: number) => `${API_PATH_PREFIX}/chat/sessions/${sessionId}/proposals`
 } as const;
 
 export const API_ROUTES_AR = {
@@ -44,6 +53,7 @@ export const API_ROUTES = {
   products: `${API_PATH_PREFIX}/products`,
   productById: (id: number) => `${API_PATH_PREFIX}/products/${id}`,
   campaignsStorefront: `${API_PATH_PREFIX}/campaigns/storefront`,
+  campaignsStorefrontById: (id: number) => `${API_PATH_PREFIX}/campaigns/storefront/${id}`,
   campaigns: `${API_PATH_PREFIX}/campaigns`,
   campaignById: (id: number) => `${API_PATH_PREFIX}/campaigns/${id}`,
   productPromotion: (productId: number) => `${API_PATH_PREFIX}/campaigns/products/${productId}/promotion`,
@@ -81,6 +91,11 @@ export const API_ROUTES = {
   mediaUploadCapabilities: `${API_PATH_PREFIX}/media/upload-capabilities`,
   mediaExchangeImages: `${API_PATH_PREFIX}/media/exchange-images`,
   health: '/health',
+  siteSupportFooter: `${API_PATH_PREFIX}/site-support/footer`,
+  siteSupportFeedback: `${API_PATH_PREFIX}/site-support/feedback`,
+  siteSupportAdmin: `${API_PATH_PREFIX}/site-support/admin`,
+  siteSupportFeedbackStatus: (id: number) => `${API_PATH_PREFIX}/site-support/feedback/${id}/status`,
+  CHAT: API_ROUTES_CHAT,
   AR: API_ROUTES_AR,
   EXCHANGE: EXCHANGE_ROUTES
 } as const;

@@ -38,17 +38,17 @@ const STATUS_COPY: Record<
     showSpinner: true
   },
   degraded: {
-    title: 'Yeniden bağlanıyor veya yedek kanal',
-    subtitle: 'Mobil ağ kesintisi: WebSocket sonrası uzun yoklama kullanılabilir.',
-    shortTitle: 'Zayıf',
+    title: 'Canlı güncelleme yeniden deneniyor',
+    subtitle: 'Kısa kesinti olabilir; veriler normal şekilde yüklenmeye devam eder.',
+    shortTitle: 'Yeniden',
     accent: '#ea580c',
     accessibility:
       'Canlı bağlantı durumu: zayıf veya yeniden bağlanıyor. Veriler yine de REST ile güncellenebilir.',
     showSpinner: true
   },
   offline: {
-    title: 'Canlı bağlantı kapalı',
-    subtitle: 'Giriş yok veya bağlantı kapandı. Liste önbellek veya elle yenileme ile çalışır.',
+    title: 'Canlı güncelleme kapalı',
+    subtitle: 'Sepet ve siparişler yine de normal yüklenir; anlık bildirim için API çalışıyor olmalı.',
     shortTitle: 'Kapalı',
     accent: '#dc2626',
     accessibility: 'Canlı bağlantı durumu: çevrimdışı.',

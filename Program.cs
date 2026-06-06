@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -85,6 +86,8 @@ builder.Services.AddScoped<ICareService, CareService>();
 builder.Services.AddTerraVisionCareAssistant(builder.Configuration);
 builder.Services.AddScoped<IExchangeService, ExchangeService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+builder.Services.AddScoped<ISiteSupportService, SiteSupportService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddTerraVisionEmail(builder.Configuration);
 builder.Services.AddTerraVisionCartAbandonment(builder.Configuration, builder.Environment);
 
@@ -183,7 +186,13 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles();
+
+var staticContentTypes = new FileExtensionContentTypeProvider();
+staticContentTypes.Mappings[".gltf"] = MediaUploadRules.GetContentType(".gltf");
+staticContentTypes.Mappings[".glb"] = MediaUploadRules.GetContentType(".glb");
+staticContentTypes.Mappings[".usdz"] = MediaUploadRules.GetContentType(".usdz");
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticContentTypes });
+
 app.UseCors("TerraVisionClients");
 app.UseAuthentication();
 app.UseAuthorization();

@@ -5,6 +5,7 @@ import type {
   ExchangeOfferStatusChangedEvent,
   ExchangeProductListedEvent
 } from '../types/exchange';
+import type { ChatMessageReceivedEvent } from '../types/chat';
 import type {
   ArSessionCreatedEvent,
   CartAbandonedEvent,
@@ -24,6 +25,7 @@ export interface StandardHubHandlerCallbacks {
   onExchangeOfferReceived?: (event: ExchangeOfferReceivedEvent) => void;
   onExchangeOfferStatusChanged?: (event: ExchangeOfferStatusChangedEvent) => void;
   onExchangeProductListed?: (event: ExchangeProductListedEvent) => void;
+  onChatMessageReceived?: (event: ChatMessageReceivedEvent) => void;
 }
 
 export function registerStandardHubHandlers(
@@ -56,5 +58,8 @@ export function registerStandardHubHandlers(
   }
   if (callbacks.onExchangeProductListed) {
     connection.on(SIGNALR_EVENTS.exchangeProductListed, callbacks.onExchangeProductListed);
+  }
+  if (callbacks.onChatMessageReceived) {
+    connection.on(SIGNALR_EVENTS.chatMessageReceived, callbacks.onChatMessageReceived);
   }
 }

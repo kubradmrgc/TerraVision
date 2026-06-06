@@ -5,3 +5,9 @@ const configured = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:509
 
 export const API_BASE_URL = buildApiBaseUrl(configured);
 export const SIGNALR_HUB_URL = buildSignalRHubUrl(API_BASE_URL);
+
+/** Canonical public site URL for SEO (Open Graph, sitemap, JSON-LD). */
+export const SITE_PUBLIC_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(
+  /\/$/,
+  ''
+);

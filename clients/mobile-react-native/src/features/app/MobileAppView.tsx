@@ -8,19 +8,22 @@ import { MobileLoginFlow } from '../auth/MobileLoginFlow';
 import { RealtimeStatusBadge } from '../realtime/RealtimeStatusBadge';
 import { StateMessage } from '../../ui/StateMessage';
 import { BrandMark } from '../../ui/BrandMark';
-import { ThemeToggleButton } from '../../ui/ThemeToggleButton';
+import { CartHeaderButton } from '../../ui/CartHeaderButton';
+import { SectionHeaderButton } from '../../ui/SectionHeaderButton';
 import { NavTabIcon } from '../../ui/NavTabIcon';
 import { ProductsSection } from '../products/ProductsSection';
 import { ProductDetailModal } from '../products/ProductDetailModal';
+import { CampaignDetailModal } from '../products/CampaignDetailModal';
 import { CartSection } from '../cart/CartSection';
 import { OrdersSection } from '../orders/OrdersSection';
 import { AppointmentsSection } from '../appointments/AppointmentsSection';
 import { EventsSection } from '../realtime/EventsSection';
 import { CareHubSection } from '../care/CareHubSection';
 import { ExchangeSection } from '../exchange/ExchangeSection';
+import { ChatSection } from '../chat/ChatSection';
 import { ProfileSection } from '../profile/ProfileSection';
 import { bottomNavSections, guestBottomNavSections } from '../profile/profileNav';
-import { ArRoomsSection } from '../ar/ArRoomsSection';
+import { ArSection } from '../ar/ArSection';
 import { USER_ROLE } from '@terravision/shared';
 
 type Props = {
@@ -58,6 +61,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
 
   const isGuest = !state.loggedIn;
   const navSections = isGuest ? guestBottomNavSections() : bottomNavSections(state.role);
+  const cartItemCount = (state.cart?.items ?? []).reduce((sum, line) => sum + line.quantity, 0);
 
   return (
     <SafeAreaView style={[styles.loggedShell, { backgroundColor: palette.bg }]} edges={['top']}>
@@ -70,39 +74,54 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             size="sm"
           />
           <View style={styles.headerRight}>
-            <View style={styles.headerRightPillWrap}>
-              <RealtimeStatusBadge
-                variant="compact"
-                status={realtimeStatus}
-                borderColor={palette.border}
-                backgroundColor={palette.card}
-                titleColor={palette.text}
-                detailColor={palette.subText}
-                compactBackground={palette.realtimeCapsuleBg}
-                compactText={palette.realtimeCapsuleLabelColor}
-                compactBorderColor={palette.realtimeCapsuleBorder}
-                compactDotColor={palette.realtimeCapsuleDotColor}
-              />
-            </View>
-            <ThemeToggleButton
-              themeMode={state.themeMode}
-              onPress={controller.toggleTheme}
-              color={palette.subText}
-              borderColor={palette.outlineVariant}
-              style={styles.headerGhostTight}
-              size="sm"
-            />
-            {isGuest ? (
+            {!isGuest && (realtimeStatus === 'degraded' || realtimeStatus === 'offline') ? (
+              <View style={styles.headerRightPillWrap}>
+                <RealtimeStatusBadge
+                  variant="compact"
+                  status={realtimeStatus}
+                  borderColor={palette.border}
+                  backgroundColor={palette.card}
+                  titleColor={palette.text}
+                  detailColor={palette.subText}
+                  compactBackground={palette.realtimeCapsuleBg}
+                  compactText={palette.realtimeCapsuleLabelColor}
+                  compactBorderColor={palette.realtimeCapsuleBorder}
+                  compactDotColor={palette.realtimeCapsuleDotColor}
+                />
+              </View>
+            ) : null}
+            {!isGuest ? (
+              <>
+                <CartHeaderButton
+                  itemCount={cartItemCount}
+                  active={state.activeSection === 'cart'}
+                  onPress={() => controller.setActiveSection('cart')}
+                  color={palette.subText}
+                  borderColor={palette.outlineVariant}
+                  activeBg={palette.brandTitle}
+                  activeFg={palette.buttonText}
+                  badgeBg={palette.button}
+                  badgeText={palette.buttonText}
+                  style={styles.headerGhostTight}
+                />
+                <SectionHeaderButton
+                  section="profile"
+                  active={state.activeSection === 'profile'}
+                  onPress={() => controller.setActiveSection('profile')}
+                  color={palette.subText}
+                  borderColor={palette.outlineVariant}
+                  activeBg={palette.brandTitle}
+                  activeFg={palette.buttonText}
+                  style={styles.headerGhostTight}
+                />
+              </>
+            ) : (
               <TouchableOpacity
                 onPress={controller.openCustomerLogin}
                 accessibilityRole="button"
                 accessibilityLabel="Giriş yap"
               >
                 <Text style={[styles.loginCtaText, { color: palette.brandTitle }]}>Giriş yap</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={controller.handleLogout} accessibilityRole="button" accessibilityLabel="Çıkış yap">
-                <Text style={[styles.logoutText, { color: palette.subText }]}>Çıkış</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -114,7 +133,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
         keyboardShouldPersistTaps="handled"
       >
-        {state.activeSection === 'events' && !isGuest && (
+        {state.activeSection === 'events' && !isGuest && realtimeStatus !== 'connected' && (
           <RealtimeStatusBadge
             status={realtimeStatus}
             borderColor={palette.border}
@@ -175,6 +194,7 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             onChangeSort={controller.setProductSort}
             onClearFilters={controller.clearProductFilters}
             onOpenDetail={controller.openProductDetail}
+            onOpenCampaign={controller.openCampaignDetail}
             onAddToCart={controller.handleAddToCart}
             onPreviewAr={controller.handlePreviewAr}
             onPickArFile={controller.handlePickArFile}
@@ -183,6 +203,20 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
             onSelectUploadProduct={controller.setSelectedUploadProductId}
             storefront={controller.storefront}
             isStorefrontLoading={controller.isStorefrontLoading}
+          />
+        )}
+        {state.activeSection === 'ar' && !isGuest && state.role === USER_ROLE.Customer && (
+          <ArSection
+            products={state.products ?? []}
+            palette={palette}
+            isLoading={isCommerceLoading}
+            onPreviewAr={controller.handlePreviewAr}
+            onOpenDetail={controller.openProductDetail}
+            sessions={controller.arSessions}
+            isArSessionsLoading={controller.isArSessionsLoading}
+            isArSessionsRefreshing={controller.isArSessionsRefreshing}
+            arSessionsErrorMessage={controller.arSessionsErrorMessage}
+            onRefreshArSessions={controller.refreshArSessions}
           />
         )}
         {state.activeSection === 'cart' && !isGuest && (
@@ -252,6 +286,9 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
           />
         )}
         {state.activeSection === 'exchange' && !isGuest && <ExchangeSection palette={palette} />}
+        {state.activeSection === 'chat' && !isGuest && (
+          <ChatSection palette={palette} role={state.role} />
+        )}
         {state.activeSection === 'profile' && !isGuest && (
           <>
             <ProfileSection
@@ -266,16 +303,6 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
               onToggleTheme={controller.toggleTheme}
               onLogout={controller.handleLogout}
             />
-            {state.role === USER_ROLE.Customer ? (
-              <ArRoomsSection
-                sessions={controller.arSessions}
-                palette={palette}
-                isLoading={controller.isArSessionsLoading}
-                isRefreshing={controller.isArSessionsRefreshing}
-                errorMessage={controller.arSessionsErrorMessage}
-                onRefresh={controller.refreshArSessions}
-              />
-            ) : null}
           </>
         )}
         {state.activeSection === 'events' && !isGuest && (
@@ -297,6 +324,15 @@ export function MobileAppView({ controller }: Props): React.JSX.Element {
         onClose={controller.closeProductDetail}
         onAddToCart={controller.handleAddToCart}
         onPreviewAr={controller.handlePreviewAr}
+      />
+
+      <CampaignDetailModal
+        campaignId={controller.detailCampaignId}
+        visible={controller.detailCampaignId != null}
+        palette={palette}
+        onClose={controller.closeCampaignDetail}
+        onOpenDetail={controller.openProductDetail}
+        onAddToCart={controller.handleAddToCart}
       />
 
       <View

@@ -77,7 +77,7 @@ export function ArRoomsSection({
         <View style={[styles.emptyCard, { backgroundColor: palette.mutedCard, borderColor: palette.outlineVariant }]}>
           <Text style={[styles.emptyTitle, { color: palette.text }]}>Henüz kayıtlı yerleşim yok</Text>
           <Text style={[styles.emptyBody, { color: palette.subText }]}>
-            Ürünler sekmesinde AR deneyimini açın ve &quot;Tasarımı Odama Kaydet&quot; ile ilk odanızı oluşturun.
+            AR sekmesinde bir ürünle deneyimi açın ve &quot;Tasarımı Odama Kaydet&quot; ile ilk odanızı oluşturun.
           </Text>
         </View>
       ) : null}

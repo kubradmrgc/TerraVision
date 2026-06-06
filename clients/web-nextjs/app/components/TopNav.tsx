@@ -286,10 +286,10 @@ export function TopNav() {
 
             {showStaffShortcuts ? (
               <Link
-                href={isAdmin ? '/admin/orders' : '/products'}
-                className={`tv-nav-link tv-nav-link--staff${isLinkActive(pathname, isAdmin ? '/admin' : '/products') ? ' tv-nav-link--active' : ''}`}
+                href={isAdmin ? '/admin/orders' : '/consultant/chat'}
+                className={`tv-nav-link tv-nav-link--staff${isLinkActive(pathname, isAdmin ? '/admin' : '/consultant/chat') ? ' tv-nav-link--active' : ''}`}
               >
-                {isAdmin ? 'Yönetici paneli' : 'Danışman alanı'}
+                {isAdmin ? 'Yönetici paneli' : 'Danışan sohbetleri'}
               </Link>
             ) : null}
 

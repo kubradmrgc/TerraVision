@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
 import { PlantScenery } from './components/PlantScenery';
+import { SiteFooterBar } from './components/SiteFooterBar';
 import { TopNav } from './components/TopNav';
+import { buildRootMetadata } from '@/config/siteSeo';
 
 export const metadata: Metadata = {
-  title: 'TerraVision',
-  description: 'Bitki ve bahçe platformu — müşteri alışverişi ve yönetici operasyonları',
+  ...buildRootMetadata(),
   icons: {
     icon: '/brand/terravision-logo.png',
     apple: '/brand/terravision-logo.png'
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="tv-app-shell">
           <TopNav />
           <main className="tv-main tv-main--site">{children}</main>
+          <SiteFooterBar />
         </div>
       </body>
     </html>

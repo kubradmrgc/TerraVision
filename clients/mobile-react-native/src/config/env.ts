@@ -53,3 +53,13 @@ export const SIGNALR_HUB_URL = buildSignalRHubUrl(API_BASE_URL);
 export function getApiConnectMode(): ApiConnectMode {
   return loadLocalConfig().API_CONNECT_MODE ?? 'emulator';
 }
+
+/** AR model indirme adresi: USB'de adb reverse ile API_BASE_URL; Wi-Fi'de LAN override. */
+export function getArModelBaseUrl(): string {
+  const local = loadLocalConfig();
+  const override = local.API_URL_OVERRIDE?.trim();
+  if (override && local.API_CONNECT_MODE === 'wifi') {
+    return buildApiBaseUrl(override);
+  }
+  return API_BASE_URL;
+}

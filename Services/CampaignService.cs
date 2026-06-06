@@ -60,6 +60,38 @@ namespace TerraVision.Api.Services
             };
         }
 
+        public async Task<CampaignDetailDto> GetStorefrontCampaignByIdAsync(int id)
+        {
+            var now = DateTime.UtcNow;
+            var row = await _db.StoreCampaigns
+                .AsNoTracking()
+                .Include(c => c.CampaignProducts)
+                .SingleOrDefaultAsync(c =>
+                    c.Id == id
+                    && !c.IsDeleted
+                    && c.IsActive
+                    && (!c.StartsAtUtc.HasValue || now >= c.StartsAtUtc.Value)
+                    && (!c.EndsAtUtc.HasValue || now <= c.EndsAtUtc.Value));
+
+            if (row == null)
+            {
+                throw new KeyNotFoundException("Campaign not found.");
+            }
+
+            var campaign = MapCampaign(row);
+            var allProducts = (await _productService.GetAllProductsAsync()).ToDictionary(p => p.Id);
+            var products = campaign.ProductIds
+                .Where(pid => allProducts.ContainsKey(pid))
+                .Select(pid => allProducts[pid])
+                .ToList();
+
+            return new CampaignDetailDto
+            {
+                Campaign = campaign,
+                Products = products
+            };
+        }
+
         public async Task<IReadOnlyList<StoreCampaignDto>> GetAllCampaignsAsync()
         {
             var rows = await _db.StoreCampaigns

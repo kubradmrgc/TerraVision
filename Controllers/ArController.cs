@@ -4,6 +4,7 @@ using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
 using TerraVision.Api.Services;
 using TerraVision.Api.Settings;
+using IWebHostEnvironment = Microsoft.AspNetCore.Hosting.IWebHostEnvironment;
 
 namespace TerraVision.Api.Controllers
 {
@@ -16,21 +17,27 @@ namespace TerraVision.Api.Controllers
         private readonly IArSessionService _arSessionService;
         private readonly IMediaBlobStorage _mediaBlobStorage;
         private readonly MediaStorageSettings _mediaSettings;
+        private readonly IWebHostEnvironment _environment;
 
         public ArController(
             IProductService productService,
             IArSessionService arSessionService,
             IMediaBlobStorage mediaBlobStorage,
-            Microsoft.Extensions.Options.IOptions<MediaStorageSettings> mediaSettings)
+            Microsoft.Extensions.Options.IOptions<MediaStorageSettings> mediaSettings,
+            IWebHostEnvironment environment)
         {
             _productService = productService;
             _arSessionService = arSessionService;
             _mediaBlobStorage = mediaBlobStorage;
             _mediaSettings = mediaSettings.Value;
+            _environment = environment;
         }
 
         [HttpGet("products/{productId:int}/preview")]
-        public async Task<IActionResult> GetProductPreview(int productId, [FromQuery] string platform = "android")
+        public async Task<IActionResult> GetProductPreview(
+            int productId,
+            [FromQuery] string platform = "android",
+            [FromQuery] string? clientBaseUrl = null)
         {
             var product = await _productService.GetProductByIdAsync(productId);
             if (product == null || !product.IsArCompatible)
@@ -57,11 +64,23 @@ namespace TerraVision.Api.Controllers
                     $"{product.SKU}.{modelFormat}");
             }
 
-            if (!ArModelUrlRules.IsValidPublicHttpsUrl(modelUrl))
+            var allowDevLan = _environment.IsDevelopment();
+            if (!ArModelUrlRules.IsValidArModelUrl(modelUrl, allowDevLan))
+            {
+                if (allowDevLan)
+                {
+                    modelUrl = ArPreviewUrlResolver.ResolveForClient(modelUrl, Request, _mediaSettings, clientBaseUrl);
+                }
+            }
+
+            if (!ArModelUrlRules.IsValidArModelUrl(modelUrl, allowDevLan))
             {
                 return StatusCode(
                     StatusCodes.Status503ServiceUnavailable,
-                    ArModelUrlRules.InvalidUrlMessage);
+                    allowDevLan
+                        ? ArModelUrlRules.InvalidUrlMessage +
+                          " Geliştirme: mobil uygulama clientBaseUrl göndermeli veya MediaStorage:MobileDevBaseUrl (ör. http://10.0.2.2:5090) ayarlayın."
+                        : ArModelUrlRules.InvalidUrlMessage);
             }
 
             var response = new ArPreviewResponse

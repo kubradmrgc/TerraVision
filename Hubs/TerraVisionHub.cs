@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using TerraVision.Api.Interfaces;
 
 namespace TerraVision.Api.Hubs
 {
@@ -16,8 +17,16 @@ namespace TerraVision.Api.Hubs
         public const string ExchangeOfferStatusChangedEventName = "exchange.offer.status.changed";
         public const string ExchangeProductListedEventName = "exchange.product.listed";
         public const string NotificationCreatedEventName = "notification.created";
+        public const string ChatMessageReceivedEventName = "chat.message.received";
 
         public static string AdminDashboardGroup => "admins";
+
+        private readonly IChatService _chatService;
+
+        public TerraVisionHub(IChatService chatService)
+        {
+            _chatService = chatService;
+        }
 
         public override async Task OnConnectedAsync()
         {
@@ -53,6 +62,39 @@ namespace TerraVision.Api.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
+        public async Task JoinChatSession(int sessionId)
+        {
+            var userId = GetCurrentUserId();
+            await _chatService.EnsureParticipantAsync(sessionId, userId);
+            await Groups.AddToGroupAsync(Context.ConnectionId, BuildChatGroup(sessionId));
+        }
+
+        public async Task LeaveChatSession(int sessionId)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, BuildChatGroup(sessionId));
+        }
+
+        public async Task SendMessage(int sessionId, string content)
+        {
+            var senderId = GetCurrentUserId();
+            await _chatService.EnsureParticipantAsync(sessionId, senderId);
+            await Groups.AddToGroupAsync(Context.ConnectionId, BuildChatGroup(sessionId));
+            await _chatService.SendMessageAsync(sessionId, senderId, content);
+        }
+
         public static string BuildUserGroup(string userId) => $"user:{userId}";
+
+        public static string BuildChatGroup(int sessionId) => $"chat:{sessionId}";
+
+        private int GetCurrentUserId()
+        {
+            var sub = Context.User?.FindFirst("sub")?.Value;
+            if (string.IsNullOrWhiteSpace(sub) || !int.TryParse(sub, out var userId))
+            {
+                throw new HubException("Kimlik doğrulaması gerekli.");
+            }
+
+            return userId;
+        }
     }
 }

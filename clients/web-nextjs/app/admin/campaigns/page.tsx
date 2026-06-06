@@ -35,6 +35,7 @@ export default function AdminCampaignsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [productSearch, setProductSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +59,17 @@ export default function AdminCampaignsPage() {
     () => products.filter((p) => form.productIds.includes(p.id)),
     [products, form.productIds]
   );
+
+  const filteredProducts = useMemo(() => {
+    const q = productSearch.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.sku?.toLowerCase().includes(q) ?? false) ||
+        (p.description?.toLowerCase().includes(q) ?? false)
+    );
+  }, [products, productSearch]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -96,9 +108,25 @@ export default function AdminCampaignsPage() {
     productIds: form.productIds
   });
 
+  const selectAllFiltered = () => {
+    setForm((prev) => {
+      const next = new Set(prev.productIds);
+      filteredProducts.forEach((p) => next.add(p.id));
+      return { ...prev, productIds: [...next] };
+    });
+  };
+
+  const clearLinkedProducts = () => {
+    setForm((prev) => ({ ...prev, productIds: [] }));
+  };
+
   const handleSave = async () => {
     if (!form.title.trim()) {
       setError('Kampanya başlığı zorunlu.');
+      return;
+    }
+    if (form.productIds.length === 0) {
+      setError('En az bir ürün bağlayın; müşteri kampanya sayfasında ürün göremez.');
       return;
     }
     setSaving(true);
@@ -207,19 +235,62 @@ export default function AdminCampaignsPage() {
           <h3 className="tv-admin-subtitle">
             Kampanyadaki ürünler <span className="tv-admin-count">{selectedProducts.length}</span>
           </h3>
+
+          {selectedProducts.length > 0 ? (
+            <div className="tv-admin-linked-chips" style={{ marginBottom: 12 }}>
+              {selectedProducts.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="tv-pill tv-pill--ok"
+                  onClick={() => toggleProduct(p.id)}
+                  title="Bağlantıyı kaldır"
+                >
+                  {p.name} ×
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="tv-muted" style={{ marginBottom: 12 }}>
+              Henüz ürün seçilmedi. Aşağıdan işaretleyin.
+            </p>
+          )}
+
+          <div className="tv-admin-product-picker-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+            <input
+              className="tv-input"
+              type="search"
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              placeholder="Ürün ara (ad, SKU)…"
+              aria-label="Kampanya ürün ara"
+              style={{ flex: '1 1 200px' }}
+            />
+            <button type="button" className="tv-btn tv-btn--compact" onClick={selectAllFiltered}>
+              Listeyi bağla
+            </button>
+            <button type="button" className="tv-btn tv-btn--compact" onClick={clearLinkedProducts}>
+              Tümünü kaldır
+            </button>
+          </div>
+
           <div className="tv-marketplace-picker tv-admin-product-picker">
-            {products.map((p) => {
-              const checked = form.productIds.includes(p.id);
-              return (
-                <label key={p.id} className={`tv-marketplace-picker-item${checked ? ' is-selected' : ''}`}>
-                  <input type="checkbox" checked={checked} onChange={() => toggleProduct(p.id)} />
-                  <span>
-                    {p.name} — {p.price} ₺
-                    {p.compareAtPrice && p.compareAtPrice > p.price ? ` (liste ${p.compareAtPrice} ₺)` : ''}
-                  </span>
-                </label>
-              );
-            })}
+            {filteredProducts.length === 0 ? (
+              <p className="tv-muted">Aramaya uyan ürün yok.</p>
+            ) : (
+              filteredProducts.map((p) => {
+                const checked = form.productIds.includes(p.id);
+                return (
+                  <label key={p.id} className={`tv-marketplace-picker-item${checked ? ' is-selected' : ''}`}>
+                    <input type="checkbox" checked={checked} onChange={() => toggleProduct(p.id)} />
+                    <span>
+                      {p.name} — {p.price} ₺
+                      {p.compareAtPrice && p.compareAtPrice > p.price ? ` (liste ${p.compareAtPrice} ₺)` : ''}
+                    </span>
+                  </label>
+                );
+              })
+            )}
           </div>
 
           <p className="tv-muted tv-admin-tip">
@@ -258,6 +329,16 @@ export default function AdminCampaignsPage() {
                   </p>
                 </div>
                 <div className="tv-admin-campaign-item-actions">
+                  {c.productIds.length > 0 ? (
+                    <a
+                      className="tv-btn tv-btn--compact"
+                      href={`/campaigns/${c.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Vitrin
+                    </a>
+                  ) : null}
                   <button type="button" className="tv-btn tv-btn--compact" onClick={() => startEdit(c)}>
                     Düzenle
                   </button>

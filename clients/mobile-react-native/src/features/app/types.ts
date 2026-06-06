@@ -10,11 +10,13 @@ import { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '..
 export type ThemeMode = 'light' | 'dark';
 export type MobileSection =
   | 'products'
+  | 'ar'
   | 'cart'
   | 'orders'
   | 'appointments'
   | 'care'
   | 'exchange'
+  | 'chat'
   | 'events'
   | 'profile';
 

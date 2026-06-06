@@ -8,6 +8,7 @@ import type { AppointmentDto } from '../../types/appointment';
 import type { OrderDto } from '../../types/order';
 import type { MobilePalette, ThemeMode, UserProfile } from '../app/types';
 import { ProfileOrdersHistorySection } from './ProfileOrdersHistorySection';
+import { ProfileSupportSection } from './ProfileSupportSection';
 
 type Props = {
   profile: UserProfile | null;
@@ -85,6 +86,8 @@ export function ProfileSection({
           errorMessage={orderErrorMessage}
         />
       ) : null}
+
+      <ProfileSupportSection palette={palette} profileEmail={profile.email} />
 
       <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.outlineVariant }]}>
         <Text style={[styles.cardLabel, { color: palette.subText }]}>AYARLAR</Text>

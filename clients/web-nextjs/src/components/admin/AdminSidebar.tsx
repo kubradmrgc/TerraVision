@@ -11,7 +11,8 @@ const NAV_ITEMS = [
   { href: '/admin/products/new', label: 'Ürün ekle', icon: '＋' },
   { href: '/admin/users', label: 'Kullanıcılar', icon: '○' },
   { href: '/admin/ar-insights', label: 'AR içgörüleri', icon: '▣' },
-  { href: '/admin/consultant-performance', label: 'Danışman karnesi', icon: '◆' }
+  { href: '/admin/consultant-performance', label: 'Danışman karnesi', icon: '◆' },
+  { href: '/admin/site-feedback', label: 'Destek & geri bildirim', icon: '✉' }
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

@@ -7,14 +7,12 @@ import axios from 'axios';
 import {
   PRODUCT_SORT_OPTIONS,
   ProductSortKey,
-  dealBadgeLabel,
   filterAndSortProducts,
-  formatTryCurrency,
   isProductFilterActive,
+  campaignListPath,
   type StorefrontDto
 } from '@terravision/shared';
-import { OptimizedMediaImage } from '@/components/OptimizedMediaImage';
-import { AddToCartButton } from '@/components/cart/AddToCartButton';
+import { MarketplaceProductCard } from '@/components/storefront/MarketplaceProductCard';
 import { campaignService } from '@/services/campaignService';
 import { productService } from '@/services/productService';
 import { categoryService, type CategoryDto } from '@/services/categoryService';
@@ -23,54 +21,6 @@ import { cartService } from '@/services/cartService';
 import { tokenStore } from '@/services/tokenStore';
 import { getApiErrorMessage, isUnauthorized } from '@/utils/apiError';
 import type { ProductDto } from '@/types/product';
-
-function MarketplaceCard({
-  product,
-  onAdd
-}: {
-  product: ProductDto;
-  onAdd: () => void;
-}): React.JSX.Element {
-  const badge = dealBadgeLabel(product);
-  const inStock = product.stockQuantity > 0;
-
-  return (
-    <li className="tv-card tv-marketplace-card">
-      <Link href={`/products/${product.id}`} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div className="tv-marketplace-image-wrap">
-          {badge ? <span className="tv-marketplace-discount-badge">{badge}</span> : null}
-          {product.imageUrl ? (
-            <OptimizedMediaImage
-              src={product.imageUrl}
-              alt={product.name}
-              width={320}
-              height={320}
-              sizes="(max-width: 600px) 50vw, 200px"
-              className="tv-marketplace-card-image"
-            />
-          ) : (
-            <div className="tv-marketplace-card-image" style={{ display: 'grid', placeItems: 'center' }}>
-              <span className="tv-muted">Görsel yok</span>
-            </div>
-          )}
-        </div>
-        <div className="tv-marketplace-card-body">
-          <p className="tv-marketplace-card-title">{product.name}</p>
-          <div className="tv-marketplace-price-row">
-            <span className="tv-marketplace-price">{formatTryCurrency(product.price)}</span>
-            {product.compareAtPrice != null && product.compareAtPrice > product.price ? (
-              <span className="tv-marketplace-compare">{formatTryCurrency(product.compareAtPrice)}</span>
-            ) : null}
-          </div>
-          {!inStock ? <span className="tv-muted">Tükendi</span> : null}
-        </div>
-      </Link>
-      <div style={{ padding: '0 12px 12px' }}>
-        <AddToCartButton loading={false} disabled={!inStock} onClick={onAdd} />
-      </div>
-    </li>
-  );
-}
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -187,14 +137,35 @@ export default function ProductsPage() {
         <section aria-label="Kampanyalar">
           <h2 className="tv-section-title">Kampanyalar</h2>
           <div className="tv-storefront-campaigns">
-            {storefront!.campaigns.map((c) => (
-              <article key={c.id} className="tv-storefront-campaign-card">
-                {c.badgeText ? <span className="tv-badge-ar" style={{ marginBottom: 8 }}>{c.badgeText}</span> : null}
-                <h3>{c.title}</h3>
-                {c.subtitle ? <p>{c.subtitle}</p> : null}
-                <p style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>{c.productIds.length} ürün</p>
-              </article>
-            ))}
+            {storefront!.campaigns.map((c) => {
+              const href = campaignListPath(c);
+              const body = (
+                <>
+                  {c.badgeText ? <span className="tv-badge-ar" style={{ marginBottom: 8 }}>{c.badgeText}</span> : null}
+                  <h3>{c.title}</h3>
+                  {c.subtitle ? <p>{c.subtitle}</p> : null}
+                  <p style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
+                    {c.productIds.length > 0
+                      ? `${c.productIds.length} ürün · Kampanyayı gör →`
+                      : 'Ürün bağlanmadı'}
+                  </p>
+                </>
+              );
+              return href ? (
+                <Link
+                  key={c.id}
+                  href={href}
+                  className="tv-storefront-campaign-card tv-storefront-campaign-card--link"
+                  aria-label={`${c.title} kampanyası — ürün listesi`}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <article key={c.id} className="tv-storefront-campaign-card">
+                  {body}
+                </article>
+              );
+            })}
           </div>
         </section>
       ) : null}
@@ -205,7 +176,7 @@ export default function ProductsPage() {
           <div className="tv-storefront-deals">
             {dealProducts.map((p) => (
               <div key={p.id} style={{ flex: '0 0 180px' }}>
-                <MarketplaceCard product={p} onAdd={() => void handleAddToCart(p)} />
+                <MarketplaceProductCard product={p} adding={addingId === p.id} onAdd={() => void handleAddToCart(p)} />
               </div>
             ))}
           </div>
@@ -289,11 +260,16 @@ export default function ProductsPage() {
       {visibleProducts.length === 0 ? (
         <p className="tv-muted">Arama kriterlerinize uyan ürün bulunamadı.</p>
       ) : (
-        <ul className="tv-marketplace-grid">
+        <div className="tv-marketplace-grid">
           {visibleProducts.map((p) => (
-            <MarketplaceCard key={p.id} product={p} onAdd={() => void handleAddToCart(p)} />
+            <MarketplaceProductCard
+              key={p.id}
+              product={p}
+              adding={addingId === p.id}
+              onAdd={() => void handleAddToCart(p)}
+            />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

@@ -2,55 +2,62 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { BrandLogo } from './BrandLogo';
 import { HomeLoginBlock } from './HomeLoginBlock';
-import { API_BASE_URL } from '@/config/env';
+import {
+  HOME_CATEGORIES,
+  HOME_FAQ,
+  HOME_FEATURES,
+  HOME_SHOWCASE,
+  HOME_STATS,
+  STEPS_CUSTOMER,
+  STEPS_GUEST
+} from '@/config/homeLanding';
 import { useAuthSession } from '@/hooks/useAuthSession';
 
-const SHOWCASE_IMAGES = [
-  {
-    src: `${API_BASE_URL}/assets/product-images/monstera-deliciosa.jpg`,
-    name: 'Monstera Deliciosa',
-    tag: 'İç mekan'
-  },
-  {
-    src: `${API_BASE_URL}/assets/product-images/fiddle-leaf-fig.jpg`,
-    name: 'Keman Yapraklı İncir',
-    tag: 'Popüler'
-  },
-  {
-    src: `${API_BASE_URL}/assets/product-images/lavender-pot.jpg`,
-    name: 'Lavanta Saksı',
-    tag: 'Bahçe'
+function FeatureIcon({ kind }: { kind: (typeof HOME_FEATURES)[number]['icon'] }) {
+  if (kind === 'leaf') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="tv-landing-feature-icon-svg">
+        <path
+          d="M12 3c-4 4-6 8-6 12a6 6 0 0 0 12 0c0-4-2-8-6-12z"
+          fill="currentColor"
+          opacity="0.18"
+        />
+        <path
+          d="M12 3c-4 4-6 8-6 12a6 6 0 0 0 12 0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
   }
-] as const;
 
-const FEATURES = [
-  {
-    title: 'Zengin ürün kataloğu',
-    desc: 'İç ve dış mekan bitkileri, saksılar ve bahçe ürünlerini tek platformda keşfedin.'
-  },
-  {
-    title: 'Kolay sepet ve sipariş',
-    desc: 'Sepetinizi anında güncelleyin, siparişlerinizi güvenle tamamlayın ve takip edin.'
-  },
-  {
-    title: 'AR ile önizleme',
-    desc: 'Uyumlu ürünlerde artırılmış gerçeklik ile bitkileri alanınızda görüntüleyin.'
+  if (kind === 'cart') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="tv-landing-feature-icon-svg">
+        <path
+          d="M6 6h15l-1.5 7H8L6 6z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+        <circle cx="10" cy="19" r="1.4" fill="currentColor" />
+        <circle cx="17" cy="19" r="1.4" fill="currentColor" />
+      </svg>
+    );
   }
-] as const;
 
-const STEPS_GUEST = [
-  { step: '1', title: 'Giriş yapın', desc: 'Müşteri hesabınızla platforma erişin.' },
-  { step: '2', title: 'Ürün seçin', desc: 'Kataloğu inceleyin, sepete ekleyin.' },
-  { step: '3', title: 'Sipariş verin', desc: 'Ödemenizi tamamlayın ve siparişinizi izleyin.' }
-] as const;
-
-const STEPS_CUSTOMER = [
-  { step: '1', title: 'Ürün seçin', desc: 'Kataloğu inceleyin, sepete ekleyin.' },
-  { step: '2', title: 'Sipariş verin', desc: 'Ödemenizi tamamlayın ve siparişinizi izleyin.' },
-  { step: '3', title: 'Profilinizi yönetin', desc: 'AR odaları, bahçe ve TerraTakas alanlarını kullanın.' }
-] as const;
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="tv-landing-feature-icon-svg">
+      <rect x="5" y="7" width="14" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M9 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" opacity="0.35" />
+    </svg>
+  );
+}
 
 export function HomePageView() {
   const { ready, isAuthenticated, isCustomer } = useAuthSession();
@@ -101,34 +108,27 @@ export function HomePageView() {
                 </>
               )}
             </div>
-            {!loggedInCustomer ? (
-              <p className="tv-landing-hero-scroll">
-                <a href="#giris-alt">Sayfanın altındaki giriş alanına git ↓</a>
-              </p>
-            ) : null}
+            <nav className="tv-landing-quick-links" aria-label="Hızlı erişim">
+              {HOME_CATEGORIES.map((item) => (
+                <Link key={item.href + item.label} href={item.href} className="tv-landing-quick-link">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
           </div>
           <HomeLoginBlock variant="hero" id="giris-ust" />
         </div>
       </section>
 
-      <section className="tv-landing-section tv-landing-stats" aria-label="Öne çıkanlar">
+      <section className="tv-landing-section tv-landing-stats" aria-label="Platform öne çıkanları">
         <div className="tv-landing-container tv-landing-stats-grid">
-          <div className="tv-landing-stat">
-            <strong>3+</strong>
-            <span>Kategori</span>
-          </div>
-          <div className="tv-landing-stat">
-            <strong>AR</strong>
-            <span>Ürün önizleme</span>
-          </div>
-          <div className="tv-landing-stat">
-            <strong>7/24</strong>
-            <span>Online katalog</span>
-          </div>
-          <div className="tv-landing-stat">
-            <strong>Güvenli</strong>
-            <span>Sipariş takibi</span>
-          </div>
+          {HOME_STATS.map((item) => (
+            <div key={item.label} className="tv-landing-stat">
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+              <p className="tv-landing-stat-hint">{item.hint}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -139,13 +139,16 @@ export function HomePageView() {
               Neden TerraVision?
             </h2>
             <p className="tv-landing-section-lead">
-              Müşteri odaklı platformumuz alışverişten sipariş takibine kadar tüm süreci
-              sadeleştirir.
+              Müşteri odaklı platformumuz alışverişten sipariş takibine kadar tüm süreci sadeleştirir.
+              Bitki kataloğu, sepet ve AR deneyimini tek yerden yönetin.
             </p>
           </header>
           <div className="tv-landing-features-grid">
-            {FEATURES.map((item) => (
+            {HOME_FEATURES.map((item) => (
               <article key={item.title} className="tv-landing-feature-card">
+                <span className="tv-landing-feature-icon" aria-hidden="true">
+                  <FeatureIcon kind={item.icon} />
+                </span>
                 <h3>{item.title}</h3>
                 <p>{item.desc}</p>
               </article>
@@ -158,7 +161,7 @@ export function HomePageView() {
         <div className="tv-landing-container">
           <header className="tv-landing-section-head">
             <h2 id="landing-showcase" className="tv-landing-section-title">
-              Öne çıkan ürünler
+              Öne çıkan bitkiler
             </h2>
             <p className="tv-landing-section-lead">
               {loggedInCustomer
@@ -167,19 +170,23 @@ export function HomePageView() {
             </p>
           </header>
           <div className="tv-landing-showcase-grid">
-            {SHOWCASE_IMAGES.map((item) => (
+            {HOME_SHOWCASE.map((item, index) => (
               <article key={item.name} className="tv-landing-showcase-card">
-                <div className="tv-landing-showcase-media">
-                  <Image
-                    src={item.src}
-                    alt={item.name}
-                    fill
-                    sizes="(max-width: 640px) 100vw, 320px"
-                    className="tv-landing-showcase-img"
-                  />
-                  <span className="tv-landing-showcase-tag">{item.tag}</span>
-                </div>
-                <h3>{item.name}</h3>
+                <Link href="/products" className="tv-landing-showcase-link">
+                  <div className="tv-landing-showcase-media">
+                    <Image
+                      src={item.src}
+                      alt={item.alt}
+                      fill
+                      sizes="(max-width: 640px) 100vw, 320px"
+                      className="tv-landing-showcase-img"
+                      priority={index === 0}
+                    />
+                    <span className="tv-landing-showcase-tag">{item.tag}</span>
+                    <span className="tv-landing-showcase-hover">Kataloğu incele →</span>
+                  </div>
+                  <h3>{item.name}</h3>
+                </Link>
               </article>
             ))}
           </div>
@@ -210,39 +217,29 @@ export function HomePageView() {
         </div>
       </section>
 
-      {!loggedInCustomer ? (
-        <section className="tv-landing-section tv-landing-bottom-login" aria-labelledby="landing-bottom-login">
-          <div className="tv-landing-container">
-            <header className="tv-landing-section-head tv-landing-section-head--center">
-              <h2 id="landing-bottom-login" className="tv-landing-section-title">
-                Hazır mısınız? Giriş yapın
-              </h2>
-              <p className="tv-landing-section-lead">
-                Üstteki giriş kartına ulaşamadıysanız aşağıdaki alandan müşteri hesabınızla devam
-                edebilirsiniz. Personel girişleri üst menüdeki <strong>Giriş</strong> menüsündedir.
-              </p>
-            </header>
-            <div className="tv-landing-bottom-login-wrap">
-              <HomeLoginBlock variant="footer" id="giris-alt" />
-            </div>
-            <p className="tv-landing-back-top">
-              <a href="#giris-ust">↑ Üst giriş alanına dön</a>
+      <section
+        className="tv-landing-section tv-landing-section--faq"
+        aria-labelledby="landing-faq"
+      >
+        <div className="tv-landing-container tv-landing-faq-wrap">
+          <header className="tv-landing-section-head tv-landing-section-head--center">
+            <h2 id="landing-faq" className="tv-landing-section-title">
+              Sık sorulan sorular
+            </h2>
+            <p className="tv-landing-section-lead">
+              Bitki alışverişi, AR önizleme ve TerraTakas hakkında kısa yanıtlar.
             </p>
+          </header>
+          <div className="tv-landing-faq-list">
+            {HOME_FAQ.map((item) => (
+              <details key={item.question} className="tv-landing-faq-item">
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
           </div>
-        </section>
-      ) : null}
-
-      <footer className="tv-landing-footer">
-        <div className="tv-landing-container tv-landing-footer-inner">
-          <div className="tv-landing-footer-brand">
-            <BrandLogo size={56} className="tv-brand--header" />
-            <p className="tv-landing-footer-tagline">Bitki ve bahçe alışveriş platformu</p>
-          </div>
-          <p className="tv-landing-footer-copy">
-            © {new Date().getFullYear()} TerraVision. Tüm hakları saklıdır.
-          </p>
         </div>
-      </footer>
+      </section>
     </div>
   );
 }
