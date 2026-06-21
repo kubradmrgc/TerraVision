@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using TerraVision.Api.Data;
 using TerraVision.Api.Entities;
 using TerraVision.Api.Enums;
@@ -26,6 +27,8 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
             if (cart == null)
             {
@@ -37,7 +40,13 @@ namespace TerraVision.Api.Services
                 .Join(_dbContext.Products,
                     ci => ci.ProductId,
                     p => p.Id,
-                    (ci, p) => new { CartItem = ci, Product = p })
+                    (ci, p) => new CheckoutCartItem(
+                        ci.Id,
+                        ci.ProductId,
+                        p.Name,
+                        p.Price,
+                        ci.Quantity,
+                        p.StockQuantity))
                 .ToListAsync();
 
             if (cartItems.Count == 0)
@@ -47,38 +56,62 @@ namespace TerraVision.Api.Services
 
             foreach (var item in cartItems)
             {
-                if (item.Product.StockQuantity < item.CartItem.Quantity)
+                if (item.StockQuantity < item.Quantity)
                 {
-                    throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
+                    throw new InvalidOperationException($"Insufficient stock for product: {item.ProductName}");
                 }
             }
 
             var order = new Order
             {
                 UserId = userId,
-                TotalAmount = cartItems.Sum(x => x.Product.Price * x.CartItem.Quantity)
+                TotalAmount = cartItems.Sum(x => x.UnitPrice * x.Quantity)
             };
 
             await _dbContext.Orders.AddAsync(order);
             await _unitOfWork.CommitAsync();
 
+            var cartItemIds = cartItems.Select(item => item.CartItemId).ToList();
+            var claimedCartItems = await _dbContext.CartItems
+                .Where(ci => cartItemIds.Contains(ci.Id) && !ci.IsDeleted)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(ci => ci.IsDeleted, true)
+                    .SetProperty(ci => ci.UpdatedDate, DateTime.UtcNow));
+
+            if (claimedCartItems != cartItems.Count)
+            {
+                throw new InvalidOperationException("Cart changed while placing order. Please review your cart and try again.");
+            }
+
             foreach (var item in cartItems)
             {
+                var decrementedStock = await _dbContext.Products
+                    .Where(p =>
+                        p.Id == item.ProductId &&
+                        !p.IsDeleted &&
+                        p.IsActive &&
+                        p.StockQuantity >= item.Quantity)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.StockQuantity, p => p.StockQuantity - item.Quantity)
+                        .SetProperty(p => p.UpdatedDate, DateTime.UtcNow));
+
+                if (decrementedStock != 1)
+                {
+                    throw new InvalidOperationException($"Insufficient stock for product: {item.ProductName}");
+                }
+
                 await _dbContext.OrderItems.AddAsync(new OrderItem
                 {
                     OrderId = order.Id,
-                    ProductId = item.Product.Id,
-                    UnitPrice = item.Product.Price,
-                    Quantity = item.CartItem.Quantity
+                    ProductId = item.ProductId,
+                    UnitPrice = item.UnitPrice,
+                    Quantity = item.Quantity
                 });
-
-                item.Product.StockQuantity -= item.CartItem.Quantity;
-                item.Product.UpdatedDate = DateTime.UtcNow;
-                item.CartItem.IsDeleted = true;
-                item.CartItem.UpdatedDate = DateTime.UtcNow;
             }
 
             await _unitOfWork.CommitAsync();
+            await transaction.CommitAsync();
+
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,
@@ -90,6 +123,14 @@ namespace TerraVision.Api.Services
 
             return await GetMyOrderByIdAsync(userId, order.Id);
         }
+
+        private sealed record CheckoutCartItem(
+            int CartItemId,
+            int ProductId,
+            string ProductName,
+            decimal UnitPrice,
+            int Quantity,
+            int StockQuantity);
 
         public async Task<IEnumerable<OrderDto>> GetMyOrdersAsync(int userId)
         {
