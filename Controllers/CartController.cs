@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TerraVision.Api.Interfaces;
@@ -59,7 +60,7 @@ namespace TerraVision.Api.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst("sub")?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
             if (!int.TryParse(userIdClaim, out var userId))
             {
                 throw new UnauthorizedAccessException("Invalid user identity.");
