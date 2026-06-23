@@ -59,16 +59,23 @@ namespace TerraVision.Api.Services
             }
 
             var now = DateTime.UtcNow;
-            var cartItemIds = cartItems.Select(item => item.Id).ToList();
-            var claimedItemCount = await _dbContext.CartItems
-                .Where(ci => cartItemIds.Contains(ci.Id) && ci.CartId == cart.Id && !ci.IsDeleted)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(ci => ci.IsDeleted, true)
-                    .SetProperty(ci => ci.UpdatedDate, now));
-
-            if (claimedItemCount != cartItems.Count)
+            foreach (var item in cartItems.OrderBy(item => item.Id))
             {
-                throw new InvalidOperationException("Cart changed while checkout was in progress. Please retry.");
+                var claimedItemCount = await _dbContext.CartItems
+                    .Where(ci =>
+                        ci.Id == item.Id &&
+                        ci.CartId == cart.Id &&
+                        !ci.IsDeleted &&
+                        ci.Quantity == item.Quantity &&
+                        ci.UpdatedDate == item.UpdatedDate)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(ci => ci.IsDeleted, true)
+                        .SetProperty(ci => ci.UpdatedDate, now));
+
+                if (claimedItemCount != 1)
+                {
+                    throw new InvalidOperationException("Cart changed while checkout was in progress. Please retry.");
+                }
             }
 
             var order = new Order
