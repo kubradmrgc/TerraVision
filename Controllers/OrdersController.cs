@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TerraVision.Api.Extensions;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
 
@@ -60,13 +61,7 @@ namespace TerraVision.Api.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst("sub")?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
-            {
-                throw new UnauthorizedAccessException("Invalid user identity.");
-            }
-
-            return userId;
+            return User.GetRequiredUserId();
         }
     }
 }
