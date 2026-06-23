@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using TerraVision.Api.Data;
 using TerraVision.Api.Entities;
@@ -26,6 +27,8 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
             if (cart == null)
             {
@@ -33,11 +36,8 @@ namespace TerraVision.Api.Services
             }
 
             var cartItems = await _dbContext.CartItems
+                .Include(ci => ci.Product)
                 .Where(ci => ci.CartId == cart.Id && !ci.IsDeleted)
-                .Join(_dbContext.Products,
-                    ci => ci.ProductId,
-                    p => p.Id,
-                    (ci, p) => new { CartItem = ci, Product = p })
                 .ToListAsync();
 
             if (cartItems.Count == 0)
@@ -47,7 +47,12 @@ namespace TerraVision.Api.Services
 
             foreach (var item in cartItems)
             {
-                if (item.Product.StockQuantity < item.CartItem.Quantity)
+                if (item.Product.IsDeleted || !item.Product.IsActive)
+                {
+                    throw new InvalidOperationException($"Product is unavailable: {item.Product.Name}");
+                }
+
+                if (item.Product.StockQuantity < item.Quantity)
                 {
                     throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
                 }
@@ -56,29 +61,44 @@ namespace TerraVision.Api.Services
             var order = new Order
             {
                 UserId = userId,
-                TotalAmount = cartItems.Sum(x => x.Product.Price * x.CartItem.Quantity)
+                TotalAmount = cartItems.Sum(x => x.Product.Price * x.Quantity)
             };
 
             await _dbContext.Orders.AddAsync(order);
-            await _unitOfWork.CommitAsync();
+            await _dbContext.SaveChangesAsync();
 
             foreach (var item in cartItems)
             {
+                var stockUpdated = await _dbContext.Products
+                    .Where(p =>
+                        p.Id == item.ProductId &&
+                        !p.IsDeleted &&
+                        p.IsActive &&
+                        p.StockQuantity >= item.Quantity)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.StockQuantity, p => p.StockQuantity - item.Quantity)
+                        .SetProperty(p => p.UpdatedDate, DateTime.UtcNow));
+
+                if (stockUpdated != 1)
+                {
+                    throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
+                }
+
                 await _dbContext.OrderItems.AddAsync(new OrderItem
                 {
                     OrderId = order.Id,
                     ProductId = item.Product.Id,
                     UnitPrice = item.Product.Price,
-                    Quantity = item.CartItem.Quantity
+                    Quantity = item.Quantity
                 });
 
-                item.Product.StockQuantity -= item.CartItem.Quantity;
-                item.Product.UpdatedDate = DateTime.UtcNow;
-                item.CartItem.IsDeleted = true;
-                item.CartItem.UpdatedDate = DateTime.UtcNow;
+                item.IsDeleted = true;
+                item.UpdatedDate = DateTime.UtcNow;
             }
 
-            await _unitOfWork.CommitAsync();
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,

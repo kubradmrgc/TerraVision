@@ -45,7 +45,7 @@ namespace TerraVision.Api.Services
 
             var cart = await GetOrCreateCartAsync(userId);
             var existingItem = await _dbContext.CartItems
-                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId && !ci.IsDeleted);
+                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId);
 
             if (existingItem == null)
             {
@@ -56,8 +56,20 @@ namespace TerraVision.Api.Services
                     Quantity = request.Quantity
                 });
             }
+            else if (existingItem.IsDeleted)
+            {
+                existingItem.Quantity = request.Quantity;
+                existingItem.IsDeleted = false;
+                existingItem.IsActive = true;
+                existingItem.UpdatedDate = DateTime.UtcNow;
+            }
             else
             {
+                if (request.Quantity > int.MaxValue - existingItem.Quantity)
+                {
+                    throw new ArgumentException("Quantity is too large.");
+                }
+
                 existingItem.Quantity += request.Quantity;
                 existingItem.UpdatedDate = DateTime.UtcNow;
             }

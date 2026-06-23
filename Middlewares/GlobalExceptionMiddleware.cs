@@ -38,7 +38,17 @@ namespace TerraVision.Api.Middlewares
             var message = "Sunucu hatası oluştu, lütfen daha sonra tekrar deneyin.";
 
             // Örnek: Basitçe ArgumentException veya bilinen Exception tiplerini 400 Bad Request yapabilirsiniz.
-            if (exception is ArgumentException || exception is InvalidOperationException)
+            if (exception is UnauthorizedAccessException)
+            {
+                statusCode = (int)HttpStatusCode.Unauthorized;
+                message = exception.Message;
+            }
+            else if (exception is KeyNotFoundException)
+            {
+                statusCode = (int)HttpStatusCode.NotFound;
+                message = exception.Message;
+            }
+            else if (exception is ArgumentException || exception is InvalidOperationException)
             {
                 statusCode = (int)HttpStatusCode.BadRequest;
                 message = exception.Message;
