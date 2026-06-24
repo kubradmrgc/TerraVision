@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using TerraVision.Api.Extensions;
 
 namespace TerraVision.Api.Hubs
 {
@@ -12,10 +13,9 @@ namespace TerraVision.Api.Hubs
 
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst("sub")?.Value;
-            if (!string.IsNullOrWhiteSpace(userId))
+            if (Context.User?.TryGetUserId(out var userId) == true)
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, BuildUserGroup(userId));
+                await Groups.AddToGroupAsync(Context.ConnectionId, BuildUserGroup(userId.ToString()));
             }
 
             await base.OnConnectedAsync();
@@ -23,10 +23,9 @@ namespace TerraVision.Api.Hubs
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?.FindFirst("sub")?.Value;
-            if (!string.IsNullOrWhiteSpace(userId))
+            if (Context.User?.TryGetUserId(out var userId) == true)
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, BuildUserGroup(userId));
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, BuildUserGroup(userId.ToString()));
             }
 
             await base.OnDisconnectedAsync(exception);

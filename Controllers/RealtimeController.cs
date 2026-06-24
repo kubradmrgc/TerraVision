@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TerraVision.Api.Extensions;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.Realtime;
 
@@ -20,8 +21,7 @@ namespace TerraVision.Api.Controllers
         [HttpPost("cart-changed")]
         public async Task<IActionResult> BroadcastCartChanged([FromBody] CartChangedEvent request)
         {
-            var tokenUserId = User.FindFirst("sub")?.Value;
-            if (!int.TryParse(tokenUserId, out var userId))
+            if (!User.TryGetUserId(out var userId))
             {
                 return Unauthorized("Invalid user identity");
             }

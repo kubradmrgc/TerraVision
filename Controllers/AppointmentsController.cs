@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TerraVision.Api.Extensions;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
 
@@ -22,9 +22,7 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> Create([FromBody] CreateAppointmentRequest request)
         {
-            // Extract logged-in customer's ID from JWT Claims
-            var customerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(customerIdStr, out int customerId))
+            if (!User.TryGetUserId(out var customerId))
                 return Unauthorized();
 
             var appointment = await _appointmentService.CreateAppointmentAsync(customerId, request);
@@ -42,8 +40,7 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> GetMyCustomerAppointments()
         {
-            var customerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(customerIdStr, out int customerId)) return Unauthorized();
+            if (!User.TryGetUserId(out var customerId)) return Unauthorized();
 
             var appointments = await _appointmentService.GetCustomerAppointmentsAsync(customerId);
             return Ok(appointments);
@@ -53,8 +50,7 @@ namespace TerraVision.Api.Controllers
         [Authorize(Roles = "Consultant,Admin")]
         public async Task<IActionResult> GetMyConsultantAppointments()
         {
-            var consultantIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(consultantIdStr, out int consultantId)) return Unauthorized();
+            if (!User.TryGetUserId(out var consultantId)) return Unauthorized();
 
             var appointments = await _appointmentService.GetConsultantAppointmentsAsync(consultantId);
             return Ok(appointments);
@@ -66,8 +62,7 @@ namespace TerraVision.Api.Controllers
         {
             if (id != request.Id) return BadRequest("ID mismatch");
 
-            var consultantIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(consultantIdStr, out int consultantId)) return Unauthorized();
+            if (!User.TryGetUserId(out var consultantId)) return Unauthorized();
 
             var appointment = await _appointmentService.UpdateAppointmentStatusAsync(consultantId, request);
             return Ok(appointment);

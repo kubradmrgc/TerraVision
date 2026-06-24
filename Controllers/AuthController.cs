@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TerraVision.Api.Extensions;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.Auth;
 
@@ -44,8 +45,7 @@ namespace TerraVision.Api.Controllers
         [Authorize]
         public async Task<IActionResult> Logout()
         {
-            var userIdClaim = User.FindFirst("sub")?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (!User.TryGetUserId(out var userId))
             {
                 return Unauthorized("Invalid user identity.");
             }
