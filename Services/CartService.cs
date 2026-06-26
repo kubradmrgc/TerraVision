@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using TerraVision.Api.Data;
 using TerraVision.Api.Entities;
@@ -43,9 +44,12 @@ namespace TerraVision.Api.Services
                 throw new KeyNotFoundException("Product not found.");
             }
 
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var cart = await GetOrCreateCartAsync(userId);
             var existingItem = await _dbContext.CartItems
-                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId && !ci.IsDeleted);
+                .AsNoTracking()
+                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId);
 
             if (existingItem == null)
             {
@@ -58,11 +62,49 @@ namespace TerraVision.Api.Services
             }
             else
             {
-                existingItem.Quantity += request.Quantity;
-                existingItem.UpdatedDate = DateTime.UtcNow;
+                var nowUtc = DateTime.UtcNow;
+                int updatedRows;
+                if (existingItem.IsDeleted)
+                {
+                    updatedRows = await _dbContext.CartItems
+                        .Where(ci =>
+                            ci.Id == existingItem.Id &&
+                            ci.CartId == cart.Id &&
+                            ci.ProductId == request.ProductId &&
+                            ci.IsDeleted)
+                        .ExecuteUpdateAsync(updates => updates
+                            .SetProperty(ci => ci.Quantity, request.Quantity)
+                            .SetProperty(ci => ci.IsDeleted, false)
+                            .SetProperty(ci => ci.UpdatedDate, nowUtc));
+                }
+                else
+                {
+                    if (existingItem.Quantity > int.MaxValue - request.Quantity)
+                    {
+                        throw new ArgumentException("Cart item quantity is too large.");
+                    }
+
+                    updatedRows = await _dbContext.CartItems
+                        .Where(ci =>
+                            ci.Id == existingItem.Id &&
+                            ci.CartId == cart.Id &&
+                            ci.ProductId == request.ProductId &&
+                            ci.Quantity == existingItem.Quantity &&
+                            !ci.IsDeleted)
+                        .ExecuteUpdateAsync(updates => updates
+                            .SetProperty(ci => ci.Quantity, ci => ci.Quantity + request.Quantity)
+                            .SetProperty(ci => ci.UpdatedDate, nowUtc));
+                }
+
+                if (updatedRows != 1)
+                {
+                    throw new InvalidOperationException("Cart changed. Please review your cart and try again.");
+                }
             }
 
             await _unitOfWork.CommitAsync();
+            await transaction.CommitAsync();
+
             await PublishCartChangedAsync(userId, request.ProductId, request.Quantity, "added");
             return await BuildCartDtoAsync(cart.Id, userId);
         }
@@ -71,6 +113,7 @@ namespace TerraVision.Api.Services
         {
             var cart = await GetOrCreateCartAsync(userId);
             var item = await _dbContext.CartItems
+                .AsNoTracking()
                 .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId && !ci.IsDeleted);
 
             if (item == null)
@@ -78,15 +121,38 @@ namespace TerraVision.Api.Services
                 throw new KeyNotFoundException("Cart item not found.");
             }
 
+            var nowUtc = DateTime.UtcNow;
+            int updatedRows;
             if (request.Quantity <= 0)
             {
-                item.IsDeleted = true;
-                item.UpdatedDate = DateTime.UtcNow;
+                updatedRows = await _dbContext.CartItems
+                    .Where(ci =>
+                        ci.Id == item.Id &&
+                        ci.CartId == cart.Id &&
+                        ci.ProductId == request.ProductId &&
+                        ci.Quantity == item.Quantity &&
+                        !ci.IsDeleted)
+                    .ExecuteUpdateAsync(updates => updates
+                        .SetProperty(ci => ci.IsDeleted, true)
+                        .SetProperty(ci => ci.UpdatedDate, nowUtc));
             }
             else
             {
-                item.Quantity = request.Quantity;
-                item.UpdatedDate = DateTime.UtcNow;
+                updatedRows = await _dbContext.CartItems
+                    .Where(ci =>
+                        ci.Id == item.Id &&
+                        ci.CartId == cart.Id &&
+                        ci.ProductId == request.ProductId &&
+                        ci.Quantity == item.Quantity &&
+                        !ci.IsDeleted)
+                    .ExecuteUpdateAsync(updates => updates
+                        .SetProperty(ci => ci.Quantity, request.Quantity)
+                        .SetProperty(ci => ci.UpdatedDate, nowUtc));
+            }
+
+            if (updatedRows != 1)
+            {
+                throw new InvalidOperationException("Cart changed. Please review your cart and try again.");
             }
 
             await _unitOfWork.CommitAsync();
@@ -98,6 +164,7 @@ namespace TerraVision.Api.Services
         {
             var cart = await GetOrCreateCartAsync(userId);
             var item = await _dbContext.CartItems
+                .AsNoTracking()
                 .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == productId && !ci.IsDeleted);
 
             if (item == null)
@@ -105,8 +172,23 @@ namespace TerraVision.Api.Services
                 return await BuildCartDtoAsync(cart.Id, userId);
             }
 
-            item.IsDeleted = true;
-            item.UpdatedDate = DateTime.UtcNow;
+            var nowUtc = DateTime.UtcNow;
+            var updatedRows = await _dbContext.CartItems
+                .Where(ci =>
+                    ci.Id == item.Id &&
+                    ci.CartId == cart.Id &&
+                    ci.ProductId == productId &&
+                    ci.Quantity == item.Quantity &&
+                    !ci.IsDeleted)
+                .ExecuteUpdateAsync(updates => updates
+                    .SetProperty(ci => ci.IsDeleted, true)
+                    .SetProperty(ci => ci.UpdatedDate, nowUtc));
+
+            if (updatedRows != 1)
+            {
+                throw new InvalidOperationException("Cart changed. Please review your cart and try again.");
+            }
+
             await _unitOfWork.CommitAsync();
             await PublishCartChangedAsync(userId, productId, 0, "removed");
             return await BuildCartDtoAsync(cart.Id, userId);
@@ -115,15 +197,12 @@ namespace TerraVision.Api.Services
         public async Task<CartDto> ClearAsync(int userId)
         {
             var cart = await GetOrCreateCartAsync(userId);
-            var items = await _dbContext.CartItems
+            var nowUtc = DateTime.UtcNow;
+            await _dbContext.CartItems
                 .Where(ci => ci.CartId == cart.Id && !ci.IsDeleted)
-                .ToListAsync();
-
-            foreach (var item in items)
-            {
-                item.IsDeleted = true;
-                item.UpdatedDate = DateTime.UtcNow;
-            }
+                .ExecuteUpdateAsync(updates => updates
+                    .SetProperty(ci => ci.IsDeleted, true)
+                    .SetProperty(ci => ci.UpdatedDate, nowUtc));
 
             await _unitOfWork.CommitAsync();
             await PublishCartChangedAsync(userId, 0, 0, "cleared");
@@ -147,6 +226,7 @@ namespace TerraVision.Api.Services
         private async Task<CartDto> BuildCartDtoAsync(int cartId, int userId)
         {
             var items = await _dbContext.CartItems
+                .AsNoTracking()
                 .Where(ci => ci.CartId == cartId && !ci.IsDeleted)
                 .Join(_dbContext.Products,
                     ci => ci.ProductId,

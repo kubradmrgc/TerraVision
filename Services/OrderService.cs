@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using TerraVision.Api.Data;
 using TerraVision.Api.Entities;
@@ -26,6 +27,8 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+
             var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
             if (cart == null)
             {
@@ -33,6 +36,7 @@ namespace TerraVision.Api.Services
             }
 
             var cartItems = await _dbContext.CartItems
+                .AsNoTracking()
                 .Where(ci => ci.CartId == cart.Id && !ci.IsDeleted)
                 .Join(_dbContext.Products,
                     ci => ci.ProductId,
@@ -45,9 +49,41 @@ namespace TerraVision.Api.Services
                 throw new InvalidOperationException("Cart is empty.");
             }
 
+            var nowUtc = DateTime.UtcNow;
             foreach (var item in cartItems)
             {
-                if (item.Product.StockQuantity < item.CartItem.Quantity)
+                if (item.CartItem.Quantity <= 0)
+                {
+                    throw new InvalidOperationException($"Invalid quantity for product: {item.Product.Name}");
+                }
+
+                var claimedRows = await _dbContext.CartItems
+                    .Where(ci =>
+                        ci.Id == item.CartItem.Id &&
+                        ci.CartId == cart.Id &&
+                        ci.ProductId == item.Product.Id &&
+                        ci.Quantity == item.CartItem.Quantity &&
+                        !ci.IsDeleted)
+                    .ExecuteUpdateAsync(updates => updates
+                        .SetProperty(ci => ci.IsDeleted, true)
+                        .SetProperty(ci => ci.UpdatedDate, nowUtc));
+
+                if (claimedRows != 1)
+                {
+                    throw new InvalidOperationException("Cart changed during checkout. Please review your cart and try again.");
+                }
+
+                var stockRows = await _dbContext.Products
+                    .Where(p =>
+                        p.Id == item.Product.Id &&
+                        !p.IsDeleted &&
+                        p.IsActive &&
+                        p.StockQuantity >= item.CartItem.Quantity)
+                    .ExecuteUpdateAsync(updates => updates
+                        .SetProperty(p => p.StockQuantity, p => p.StockQuantity - item.CartItem.Quantity)
+                        .SetProperty(p => p.UpdatedDate, nowUtc));
+
+                if (stockRows != 1)
                 {
                     throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
                 }
@@ -59,26 +95,20 @@ namespace TerraVision.Api.Services
                 TotalAmount = cartItems.Sum(x => x.Product.Price * x.CartItem.Quantity)
             };
 
-            await _dbContext.Orders.AddAsync(order);
-            await _unitOfWork.CommitAsync();
-
             foreach (var item in cartItems)
             {
-                await _dbContext.OrderItems.AddAsync(new OrderItem
+                order.Items.Add(new OrderItem
                 {
-                    OrderId = order.Id,
                     ProductId = item.Product.Id,
                     UnitPrice = item.Product.Price,
                     Quantity = item.CartItem.Quantity
                 });
-
-                item.Product.StockQuantity -= item.CartItem.Quantity;
-                item.Product.UpdatedDate = DateTime.UtcNow;
-                item.CartItem.IsDeleted = true;
-                item.CartItem.UpdatedDate = DateTime.UtcNow;
             }
 
+            await _dbContext.Orders.AddAsync(order);
             await _unitOfWork.CommitAsync();
+            await transaction.CommitAsync();
+
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,
