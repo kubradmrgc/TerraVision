@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using TerraVision.Api.Data;
 using TerraVision.Api.Entities;
@@ -26,6 +27,8 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
             if (cart == null)
             {
@@ -47,6 +50,11 @@ namespace TerraVision.Api.Services
 
             foreach (var item in cartItems)
             {
+                if (item.CartItem.Quantity <= 0)
+                {
+                    throw new InvalidOperationException($"Invalid quantity for product: {item.Product.Name}");
+                }
+
                 if (item.Product.StockQuantity < item.CartItem.Quantity)
                 {
                     throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
@@ -62,8 +70,23 @@ namespace TerraVision.Api.Services
             await _dbContext.Orders.AddAsync(order);
             await _unitOfWork.CommitAsync();
 
+            var updatedAtUtc = DateTime.UtcNow;
             foreach (var item in cartItems)
             {
+                var stockRowsUpdated = await _dbContext.Products
+                    .Where(p =>
+                        p.Id == item.Product.Id &&
+                        !p.IsDeleted &&
+                        p.IsActive &&
+                        p.StockQuantity >= item.CartItem.Quantity)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.StockQuantity, p => p.StockQuantity - item.CartItem.Quantity)
+                        .SetProperty(p => p.UpdatedDate, updatedAtUtc));
+                if (stockRowsUpdated != 1)
+                {
+                    throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
+                }
+
                 await _dbContext.OrderItems.AddAsync(new OrderItem
                 {
                     OrderId = order.Id,
@@ -72,13 +95,13 @@ namespace TerraVision.Api.Services
                     Quantity = item.CartItem.Quantity
                 });
 
-                item.Product.StockQuantity -= item.CartItem.Quantity;
-                item.Product.UpdatedDate = DateTime.UtcNow;
                 item.CartItem.IsDeleted = true;
-                item.CartItem.UpdatedDate = DateTime.UtcNow;
+                item.CartItem.UpdatedDate = updatedAtUtc;
             }
 
             await _unitOfWork.CommitAsync();
+            await transaction.CommitAsync();
+
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,
