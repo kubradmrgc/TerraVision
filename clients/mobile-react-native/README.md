@@ -11,6 +11,11 @@ Admin urun secimi icin `@react-native-picker/picker` kullanilir.
 3. Android emulator veya gercek cihazdan API'ye ulasilabildigini dogrulayin.
 4. `npx react-native run-android` veya `npx react-native run-ios`
 
+Android release build imzalamasi icin Gradle'a `TERRAVISION_UPLOAD_STORE_FILE`,
+`TERRAVISION_UPLOAD_STORE_PASSWORD`, `TERRAVISION_UPLOAD_KEY_ALIAS` ve
+`TERRAVISION_UPLOAD_KEY_PASSWORD` property'leri verilmelidir. Bu property'ler
+yoksa release artifact debug keystore ile imzalanmaz.
+
 ## Icerik
 
 - `src/services/apiClient.ts`: Axios istemcisi ve JWT header otomasyonu

@@ -71,6 +71,11 @@ def enableProguardInReleaseBuilds = false
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def hasReleaseSigningConfig =
+        project.hasProperty('TERRAVISION_UPLOAD_STORE_FILE') &&
+        project.hasProperty('TERRAVISION_UPLOAD_STORE_PASSWORD') &&
+        project.hasProperty('TERRAVISION_UPLOAD_KEY_ALIAS') &&
+        project.hasProperty('TERRAVISION_UPLOAD_KEY_PASSWORD')
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -92,15 +97,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigningConfig) {
+            release {
+                storeFile file(TERRAVISION_UPLOAD_STORE_FILE)
+                storePassword TERRAVISION_UPLOAD_STORE_PASSWORD
+                keyAlias TERRAVISION_UPLOAD_KEY_ALIAS
+                keyPassword TERRAVISION_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (hasReleaseSigningConfig) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
