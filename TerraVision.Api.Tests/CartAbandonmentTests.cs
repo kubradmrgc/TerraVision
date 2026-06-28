@@ -320,5 +320,8 @@ public class CartAbandonmentTests
         public Task BroadcastExchangeProductListedAsync(ExchangeProductDto product) => Task.CompletedTask;
 
         public Task BroadcastNotificationCreatedAsync(NotificationCreatedEvent notificationEvent) => Task.CompletedTask;
+
+        public Task BroadcastChatMessageReceivedAsync(int sessionId, ChatMessageReceivedEvent chatEvent) =>
+            Task.CompletedTask;
     }
 }

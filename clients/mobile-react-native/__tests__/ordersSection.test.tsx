@@ -4,11 +4,16 @@ import { OrdersSection } from '../src/features/orders/OrdersSection';
 import { getPalette } from '../src/theme/mobileTheme';
 import { act } from 'react-test-renderer';
 
+jest.mock('../src/features/orders/OrderTrackingModal', () => ({
+  OrderTrackingModal: () => null
+}));
+
 jest.mock('react-native', () => ({
   Text: 'Text',
   View: 'View',
   ScrollView: 'ScrollView',
   TouchableOpacity: 'TouchableOpacity',
+  Platform: { OS: 'ios' },
   StyleSheet: { create: <T,>(styles: T) => styles, hairlineWidth: 1 },
   Alert: { alert: jest.fn() }
 }));
@@ -25,7 +30,7 @@ describe('OrdersSection', () => {
     });
 
     const allText = tree.root.findAllByType('Text' as any).map((node) => node.props.children).flat().join(' ');
-    expect(allText).toContain('No orders yet');
+    expect(allText).toContain('Henüz sipariş yok');
   });
 
   it('renders Stitch-style order cards for list mode', () => {
@@ -61,9 +66,9 @@ describe('OrdersSection', () => {
     const textDump = tree.root.findAllByType('Text' as any).map((node) => node.props.children).flat().join(' ');
     expect(textDump).toContain('TV-0011');
     expect(textDump).toContain('TV-0012');
-    expect(textDump).toContain('Pending');
-    expect(textDump).toContain('Confirmed');
-    expect(textDump).toContain('Active Pipeline');
+    expect(textDump).toContain('Beklemede');
+    expect(textDump).toContain('Onaylandı');
+    expect(textDump).toContain('Aktif süreç');
   });
 
   it('renders dark bento header and new-order placeholder', () => {
@@ -81,8 +86,8 @@ describe('OrdersSection', () => {
       );
     });
     const textDump = tree.root.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
-    expect(textDump).toContain('Active Orders');
-    expect(textDump).toContain('Real-time logistics');
+    expect(textDump).toContain('Aktif siparişler');
+    expect(textDump).toContain('Gerçek zamanlı lojistik');
     expect(textDump).toContain('New Order');
   });
 });

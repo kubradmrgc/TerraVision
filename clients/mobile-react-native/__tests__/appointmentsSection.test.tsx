@@ -78,7 +78,7 @@ describe('AppointmentsSection', () => {
     const customer = renderSection({ role: 1 });
     const customerTextDump = customer.tree.root.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
     expect(customerTextDump).toContain('New Appointment');
-    expect(customerTextDump).toContain('Schedule Appointment');
+    expect(customerTextDump).toContain('Randevu planla');
     expect(customerTextDump).toContain('Date');
     expect(customerTextDump).toContain('Time');
     expect(customerTextDump).not.toContain('Role:');
@@ -87,10 +87,10 @@ describe('AppointmentsSection', () => {
     const consultant = renderSection({ role: 2, pendingAppointmentsCount: 1 });
     const consultantTextDump = consultant.tree.root.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
     expect(consultantTextDump).not.toContain('New Appointment');
-    expect(consultantTextDump).toContain('Consultant Appointments');
+    expect(consultantTextDump).toContain('Danışman randevuları');
     expect(consultantTextDump).toContain('Manage your daily field operation schedule');
     expect(consultantTextDump).toContain('Total Booked');
-    expect(consultantTextDump).toContain('Pending Approval');
+    expect(consultantTextDump).toContain('Onay bekliyor');
     expect(consultantTextDump).not.toContain('devre disi');
     consultant.tree.unmount();
   });
@@ -121,7 +121,7 @@ describe('AppointmentsSection', () => {
     const touchables = tree.root.findAll((node) => node.props && typeof node.props.onPress === 'function');
     const approvedFilterChip = touchables.find((node) => {
       const textDump = node.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
-      return textDump.includes('Approved');
+      return textDump.includes('Onaylandı');
     });
 
     expect(approvedFilterChip).toBeDefined();
@@ -170,7 +170,7 @@ describe('AppointmentsSection', () => {
   it('shows loading message while appointments are loading', () => {
     const { tree } = renderSection({ isLoading: true, appointments: [] });
     const textDump = tree.root.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
-    expect(textDump).toContain('Randevular yukleniyor');
+    expect(textDump).toContain('Randevular yükleniyor');
     tree.unmount();
   });
 
@@ -184,7 +184,7 @@ describe('AppointmentsSection', () => {
   it('shows empty state when there are no appointments', () => {
     const { tree } = renderSection({ isLoading: false, errorMessage: null, appointments: [] });
     const textDump = tree.root.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
-    expect(textDump).toContain('Henuz randevu bulunmuyor');
+    expect(textDump).toContain('Henüz randevu bulunmuyor');
     tree.unmount();
   });
 
@@ -198,10 +198,10 @@ describe('AppointmentsSection', () => {
   it('renders controller validation message under the create form', () => {
     const { tree } = renderSection({
       role: 1,
-      appointmentErrorMessage: 'Gecerli bir consultant ID girin.'
+      appointmentErrorMessage: 'Geçerli bir danışman numarası girin.'
     });
     const textDump = tree.root.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
-    expect(textDump).toContain('Gecerli bir consultant ID girin.');
+    expect(textDump).toContain('Geçerli bir danışman numarası girin.');
     tree.unmount();
   });
 
@@ -237,7 +237,7 @@ describe('AppointmentsSection', () => {
     const textDump = tree.root.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
     expect(textDump).toContain('Service Appointments');
     expect(textDump).toContain('Book Visit');
-    expect(textDump).toContain('All Records');
+    expect(textDump).toContain('Tüm kayıtlar');
     expect(textDump).toContain('12');
     tree.unmount();
   });
@@ -256,13 +256,13 @@ describe('AppointmentsSection', () => {
     });
     const textDump = tree.root.findAllByType('Text' as any).map((n) => n.props.children).flat().join(' ');
     expect(textDump).toContain('DAILY OVERVIEW');
-    expect(textDump).toContain('12 Scheduled');
-    expect(textDump).toContain('4 Pending Approval');
+    expect(textDump).toContain('12 planlandı');
+    expect(textDump).toContain('4 onay bekliyor');
     expect(textDump).toContain('AVG DURATION');
     expect(textDump).toContain('45m');
     expect(textDump).toContain('COMPLETED');
     expect(textDump).toContain('8');
-    expect(textDump).toContain('Consultant Appointments');
+    expect(textDump).toContain('Danışman randevuları');
     tree.unmount();
   });
 });

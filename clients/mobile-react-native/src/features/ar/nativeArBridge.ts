@@ -1,4 +1,4 @@
-import { Linking, NativeModules, Platform } from 'react-native';
+import { Alert, Linking, NativeModules, Platform } from 'react-native';
 import { ArPreviewResponse } from '../../types/ar';
 import { isDevReachableModelUrl, resolveArModelUrl } from './arModelUrl';
 
@@ -8,6 +8,7 @@ const canLaunchModelUrl = (value: string) =>
   isHttpsUrl(value) || (__DEV__ && isDevReachableModelUrl(value));
 
 const SCENE_VIEWER_PACKAGE = 'com.google.android.googlequicksearchbox';
+const GOOGLE_APP_PLAY_STORE = 'market://details?id=com.google.android.googlequicksearchbox';
 /** Public HTTPS tree used for Scene Viewer camera AR when dev model is LAN/http only. */
 const DEV_HTTPS_AR_DEMO_MODEL =
   'https://static.poly.pizza/7f84a768-ac30-48d4-9c5d-f760492e7867.glb';
@@ -28,7 +29,7 @@ const buildAndroidSceneViewerUrl = (preview: ArPreviewResponse): string => {
   const encodedTitle = encodeURIComponent(preview.productName);
   const fallbackUrl = encodeURIComponent(modelUrl);
 
-  return `intent://arvr.google.com/scene-viewer/1.0?file=${encodedFile}&mode=ar_preferred&title=${encodedTitle}#Intent;scheme=https;package=${SCENE_VIEWER_PACKAGE};action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
+  return `intent://arvr.google.com/scene-viewer/1.0?file=${encodedFile}&mode=3d_preferred&title=${encodedTitle}#Intent;scheme=https;package=${SCENE_VIEWER_PACKAGE};action=android.intent.action.VIEW;S.browser_fallback_url=${fallbackUrl};end;`;
 };
 
 const buildIosQuickLookUrl = (preview: ArPreviewResponse): string => {
@@ -37,6 +38,13 @@ const buildIosQuickLookUrl = (preview: ArPreviewResponse): string => {
 };
 
 type NativeArModule = {
+  getArEnvironmentStatus?: () => Promise<{
+    arCoreInstalled: boolean;
+    arCoreVersion: string;
+    googleAppInstalled: boolean;
+    googleAppVersion: string;
+    googleAppUpdateRecommended: boolean;
+  }>;
   launchArSession: (
     modelUrl: string,
     modelFormat: string,
@@ -48,6 +56,38 @@ type NativeArModule = {
 
 const nativeArModule = NativeModules.TerraVisionAr as NativeArModule | undefined;
 
+async function confirmAndroidArLaunch(): Promise<boolean> {
+  const status = nativeArModule?.getArEnvironmentStatus
+    ? await nativeArModule.getArEnvironmentStatus().catch(() => null)
+    : null;
+
+  const updateHint = status?.googleAppUpdateRecommended
+    ? '\n\nGoogle uygulamanız eski bir sürümde (AR hatası bilinen aralık). Play Store\'dan Google uygulamasını güncelleyin.'
+    : '';
+
+  return new Promise((resolve) => {
+    Alert.alert(
+      'Kamera ile AR',
+      `Scene Viewer açılacak. Siyah veya koyu 3D ekranda modeli gördükten sonra alttaki "Ortamınızda görüntüleyin" düğmesine dokunun ve kamera iznini verin.${updateHint}`,
+      [
+        { text: 'İptal', style: 'cancel', onPress: () => resolve(false) },
+        ...(status?.googleAppUpdateRecommended
+          ? [
+              {
+                text: 'Google uygulamasını güncelle',
+                onPress: () => {
+                  Linking.openURL(GOOGLE_APP_PLAY_STORE).catch(() => undefined);
+                  resolve(false);
+                }
+              }
+            ]
+          : []),
+        { text: 'Devam', onPress: () => resolve(true) }
+      ]
+    );
+  });
+}
+
 export async function launchNativeAr(preview: ArPreviewResponse): Promise<void> {
   const modelUrl = resolveArModelUrl(preview.modelUrl);
   if (!canLaunchModelUrl(modelUrl)) {
@@ -57,6 +97,11 @@ export async function launchNativeAr(preview: ArPreviewResponse): Promise<void> 
   }
 
   if (Platform.OS === 'android') {
+    const confirmed = await confirmAndroidArLaunch();
+    if (!confirmed) {
+      return;
+    }
+
     if (nativeArModule?.launchArSession) {
       await nativeArModule.launchArSession(
         modelUrl,

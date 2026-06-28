@@ -44,7 +44,7 @@ export function CampaignDetailModal({
       setDetail(data);
     } catch (err) {
       setDetail(null);
-      setError(toStatusMessage(err, 'Kampanya yüklenemedi.'));
+      setError(toStatusMessage(err, 'Kampanya yüklenemedi.', {}));
     } finally {
       setLoading(false);
     }
@@ -75,10 +75,10 @@ export function CampaignDetailModal({
           </View>
 
           {loading ? (
-            <ActivityIndicator style={styles.loader} color={palette.primary} />
+            <ActivityIndicator style={styles.loader} color={palette.brandTitle} />
           ) : null}
           {error ? (
-            <Text style={[styles.error, { color: palette.error }]} role="alert">
+            <Text style={[styles.error, { color: palette.stockLowPillText }]} role="alert">
               {error}
             </Text>
           ) : null}

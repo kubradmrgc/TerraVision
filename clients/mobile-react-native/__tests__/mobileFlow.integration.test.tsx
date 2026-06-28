@@ -15,6 +15,16 @@ jest.mock('react-native', () => ({
   Alert: { alert: jest.fn() }
 }));
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(async () => null),
+    setItem: jest.fn(async () => undefined),
+    removeItem: jest.fn(async () => undefined),
+    multiRemove: jest.fn(async () => undefined)
+  }
+}));
+
 jest.mock('@react-native-documents/picker', () => ({
   errorCodes: { OPERATION_CANCELED: 'OPERATION_CANCELED' },
   isErrorWithCode: jest.fn(() => false),
@@ -31,28 +41,27 @@ jest.mock('../src/features/auth/session', () => ({
   buildPostLogoutState: jest.requireActual('../src/features/auth/session').buildPostLogoutState
 }));
 
-jest.mock('../src/features/app/useCommerceQueries', () => ({
-  useCommerceQueries: () => ({
-    productsQuery: { data: [{ id: 1, name: 'P1', isArCompatible: false }], isLoading: false, error: null },
-    cartQuery: { data: { totalAmount: 0, items: [] }, isLoading: false, error: null },
-    ordersQuery: { data: [], isLoading: false, error: null },
-    appointmentsQuery: {
-      data: [
-        { id: 201, customerId: 10, consultantId: 2, appointmentDate: '2026-05-20T10:30:00Z', notes: 'n1', status: 1 },
-        { id: 202, customerId: 10, consultantId: 2, appointmentDate: '2026-05-21T11:00:00Z', notes: 'n2', status: 2 }
-      ],
-      isLoading: false,
-      error: null
-    },
-    createAppointmentMutation: { mutateAsync: jest.fn(), isPending: false },
-    updateAppointmentStatusMutation: { mutateAsync: mockUpdateAppointmentStatus, isPending: false },
-    addItemMutation: { mutateAsync: mockAddItem, isPending: false },
-    updateItemMutation: { mutateAsync: jest.fn(), isPending: false },
-    removeItemMutation: { mutateAsync: jest.fn(), isPending: false },
-    clearCartMutation: { mutateAsync: jest.fn(), isPending: false },
-    placeOrderMutation: { mutateAsync: mockPlaceOrder, isPending: false }
-  })
-}));
+jest.mock('../src/features/app/useCommerceQueries', () => {
+  const { buildCommerceQueriesMock } = jest.requireActual('../src/test-support/commerceQueriesMock');
+  return {
+    useCommerceQueries: () => ({
+      ...buildCommerceQueriesMock(),
+      productsQuery: { data: [{ id: 1, name: 'P1', isArCompatible: false }], isLoading: false, error: null },
+      cartQuery: { data: { totalAmount: 0, items: [] }, isLoading: false, error: null },
+      appointmentsQuery: {
+        data: [
+          { id: 201, customerId: 10, consultantId: 2, appointmentDate: '2026-05-20T10:30:00Z', notes: 'n1', status: 1 },
+          { id: 202, customerId: 10, consultantId: 2, appointmentDate: '2026-05-21T11:00:00Z', notes: 'n2', status: 2 }
+        ],
+        isLoading: false,
+        error: null
+      },
+      updateAppointmentStatusMutation: { mutateAsync: mockUpdateAppointmentStatus, isPending: false },
+      addItemMutation: { mutateAsync: mockAddItem, isPending: false },
+      placeOrderMutation: { mutateAsync: mockPlaceOrder, isPending: false }
+    })
+  };
+});
 
 jest.mock('../src/services/authService', () => ({
   authService: {
@@ -142,7 +151,7 @@ describe('mobile integration scenarios', () => {
       await latest!.handlePlaceOrder();
     });
 
-    expect(latest!.orderErrorMessage).toContain('Sepet bos');
+    expect(latest!.orderErrorMessage).toContain('Sepet boş');
     renderer!.unmount();
   });
 
@@ -239,7 +248,7 @@ describe('mobile integration scenarios', () => {
       await latest!.handleUpdateAppointmentStatus(999, 4);
     });
 
-    expect(latest!.appointmentErrorMessage).toContain('Randevu bulunamadi');
+    expect(latest!.appointmentErrorMessage).toContain('Randevu bulunamadı');
     renderer!.unmount();
   });
 

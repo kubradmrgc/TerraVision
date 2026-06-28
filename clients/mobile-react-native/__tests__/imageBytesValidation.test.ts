@@ -18,7 +18,7 @@ describe('imageBytesValidation', () => {
   });
 
   it('rejects empty blob', async () => {
-    const blob = new Blob([], { type: 'image/jpeg' });
+    const blob = new Blob([], { type: 'image/jpeg', lastModified: Date.now() });
     const result = await validateImageBlobForUpload(blob, 'photo.jpg');
     expect(result).toEqual({ error: 'Fotoğraf okunamadı veya boş. Başka bir görsel deneyin.' });
   });

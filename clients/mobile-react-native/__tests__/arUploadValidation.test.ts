@@ -16,7 +16,7 @@ describe('arUploadValidation', () => {
       type: 'application/zip',
       size: 1000
     });
-    expect(error).toContain('Desteklenen AR formatlari');
+    expect(error).toContain('Desteklenen AR formatları');
   });
 
   it('rejects oversized files', () => {

@@ -9,8 +9,11 @@ const HEADER_BYTES = 16;
 /** React Native Hermes often lacks Blob.prototype.arrayBuffer — use FileReader. */
 async function readBlobPrefix(blob: Blob, byteCount: number): Promise<Uint8Array> {
   const slice = typeof blob.slice === 'function' ? blob.slice(0, byteCount) : blob;
-  if (typeof slice.arrayBuffer === 'function') {
-    return new Uint8Array(await slice.arrayBuffer());
+  const sliceWithArrayBuffer = slice as Blob & {
+    arrayBuffer?: () => Promise<ArrayBuffer>;
+  };
+  if (typeof sliceWithArrayBuffer.arrayBuffer === 'function') {
+    return new Uint8Array(await sliceWithArrayBuffer.arrayBuffer());
   }
 
   return new Promise((resolve, reject) => {

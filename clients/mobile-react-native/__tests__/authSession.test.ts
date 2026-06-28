@@ -82,6 +82,6 @@ describe('auth session helpers', () => {
 
   it('contains standardized auth copy', () => {
     expect(AUTH_UI_MESSAGES.sessionExpired).toContain('Oturum');
-    expect(AUTH_UI_MESSAGES.loginFailed).toContain('Email');
+    expect(AUTH_UI_MESSAGES.loginFailed).toContain('E-posta');
   });
 });

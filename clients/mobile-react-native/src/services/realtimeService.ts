@@ -5,13 +5,14 @@ import {
   createHandlerRegistry,
   delayBeforeConnectRetry,
   INITIAL_CONNECT_MAX_ROUNDS,
+  isRealtimeUnauthorizedError,
   registerStandardHubHandlers,
   sleep,
   startHubWithTransportFallback,
   wireHubLifecycle
 } from '@terravision/shared';
 import { SIGNALR_HUB_URL } from '../config/env';
-import { tokenStore } from './tokenStore';
+import { tokenRefresh } from './apiClient';
 import type {
   ChatMessageReceivedEvent,
   ExchangeOfferReceivedEvent,
@@ -48,7 +49,7 @@ class RealtimeService {
     const connection = buildHubConnection({
       hubUrl: SIGNALR_HUB_URL,
       transport,
-      getAccessToken: () => tokenStore.getToken(),
+      getAccessToken: () => tokenRefresh.getValidAccessToken(),
       automaticReconnectDelays: AUTOMATIC_RECONNECT_DELAYS_MS,
       registerHandlers: (hub) => {
         registerStandardHubHandlers(hub, {
@@ -91,6 +92,31 @@ class RealtimeService {
     this.emitStatus('connected');
   }
 
+  private async tryConnectOnce(): Promise<void> {
+    const token = await tokenRefresh.getValidAccessToken();
+    if (!token) {
+      this.emitStatus('offline');
+      return;
+    }
+
+    try {
+      await this.startWithTransportFallback();
+    } catch (err) {
+      if (!isRealtimeUnauthorizedError(err)) {
+        throw err;
+      }
+
+      await this.stopAndClearConnection();
+      const refreshed = await tokenRefresh.refreshAccessToken().catch(() => null);
+      if (!refreshed) {
+        this.emitStatus('offline');
+        return;
+      }
+
+      await this.startWithTransportFallback();
+    }
+  }
+
   async connect(): Promise<void> {
     if (this.connection?.state === 'Connected' || this.connecting) {
       return;
@@ -112,9 +138,13 @@ class RealtimeService {
           this.emitStatus('connecting');
         }
         try {
-          await this.startWithTransportFallback();
+          await this.tryConnectOnce();
           return;
         } catch (err) {
+          if (isRealtimeUnauthorizedError(err)) {
+            this.emitStatus('offline');
+            return;
+          }
           lastError = err;
           this.emitStatus('degraded');
           await this.stopAndClearConnection();

@@ -1,5 +1,8 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
-import { API_ROUTES } from '../apiContract';
+import {
+  createTokenRefreshCoordinator,
+  type TokenRefreshCoordinator
+} from './createTokenRefreshCoordinator';
 import type { TokenStore } from './tokenStore';
 import { resolveTokenStoreValue } from './tokenStore';
 
@@ -7,10 +10,13 @@ export interface CreateApiClientOptions {
   baseURL: string;
   tokenStore: TokenStore;
   timeout?: number;
+  /** Optional shared coordinator (e.g. also used by SignalR). */
+  tokenRefresh?: TokenRefreshCoordinator;
 }
 
 export interface AuthenticatedApiClient {
   client: AxiosInstance;
+  tokenRefresh: TokenRefreshCoordinator;
   /** Register handler invoked when refresh fails after 401 (mobile logout redirect, etc.). */
   onUnauthorized(handler: () => void | Promise<void>): void;
 }
@@ -18,30 +24,10 @@ export interface AuthenticatedApiClient {
 export function createApiClient(options: CreateApiClientOptions): AuthenticatedApiClient {
   const { baseURL, tokenStore, timeout = 15_000 } = options;
   const client = axios.create({ baseURL, timeout });
+  const tokenRefresh =
+    options.tokenRefresh ?? createTokenRefreshCoordinator({ baseURL, tokenStore });
 
-  let refreshPromise: Promise<string> | null = null;
   let unauthorizedHandler: (() => void | Promise<void>) | null = null;
-
-  async function refreshAccessToken(): Promise<string> {
-    if (!refreshPromise) {
-      refreshPromise = (async () => {
-        const refreshToken = await resolveTokenStoreValue(tokenStore.getRefreshToken());
-        if (!refreshToken) {
-          throw new Error('No refresh token');
-        }
-
-        const response = await axios.post(`${baseURL}${API_ROUTES.authRefresh}`, { refreshToken });
-        const token = response.data.token as string;
-        const newRefreshToken = response.data.refreshToken as string;
-        await resolveTokenStoreValue(tokenStore.setTokens(token, newRefreshToken));
-        return token;
-      })().finally(() => {
-        refreshPromise = null;
-      });
-    }
-
-    return refreshPromise;
-  }
 
   client.interceptors.request.use(async (config) => {
     const token = await resolveTokenStoreValue(tokenStore.getAccessToken());
@@ -59,7 +45,7 @@ export function createApiClient(options: CreateApiClientOptions): AuthenticatedA
         originalRequest._retry = true;
 
         try {
-          const token = await refreshAccessToken();
+          const token = await tokenRefresh.refreshAccessToken();
           originalRequest.headers = originalRequest.headers ?? {};
           originalRequest.headers.Authorization = `Bearer ${token}`;
           return client(originalRequest);
@@ -75,6 +61,7 @@ export function createApiClient(options: CreateApiClientOptions): AuthenticatedA
 
   return {
     client,
+    tokenRefresh,
     onUnauthorized(handler: () => void | Promise<void>) {
       unauthorizedHandler = handler;
     }

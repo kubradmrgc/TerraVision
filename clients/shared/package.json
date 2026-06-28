@@ -7,6 +7,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
+    "@babel/runtime": "^7.25.0",
     "axios": "^1.12.2"
   },
   "peerDependencies": {
@@ -26,6 +27,6 @@
     "./realtime/realtimePolicy": "./src/realtime/realtimePolicy.ts"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test test/apiContract.test.mjs test/commerce.test.mjs test/httpErrors.test.mjs test/realtimePolicy.test.mjs test/syncOnReconnect.test.mjs test/registerValidation.test.mjs test/productFilter.test.mjs test/fetchCatalogPlants.test.mjs"
+    "test": "node --experimental-strip-types --test test/apiContract.test.mjs test/commerce.test.mjs test/httpErrors.test.mjs test/jwt.test.mjs test/realtimePolicy.test.mjs test/realtimeErrors.test.mjs test/syncOnReconnect.test.mjs test/registerValidation.test.mjs test/productFilter.test.mjs test/fetchCatalogPlants.test.mjs"
   }
 }

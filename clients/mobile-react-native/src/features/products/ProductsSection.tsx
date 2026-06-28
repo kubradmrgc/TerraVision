@@ -1,21 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
-  FlatList,
-  Image,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
-  StyleSheet,
-  type ListRenderItem
+  StyleSheet
 } from 'react-native';
 import type { StoreCampaignDto, StorefrontDto } from '@terravision/shared';
 import { Picker } from '@react-native-picker/picker';
-import { PRODUCT_SORT_OPTIONS, isProductFilterActive, type ProductSortKey } from '@terravision/shared';
+import type { ProductSortKey } from '@terravision/shared';
 import type { ProductDto } from '../../types/product';
 import type { CategoryDto } from '../../services/categoryService';
-import { API_BASE_URL } from '../../config/env';
 import type { UploadFileInput } from '../../services/mediaService';
 import type { MobilePalette } from '../app/types';
 import { StateMessage } from '../../ui/StateMessage';
@@ -59,173 +54,6 @@ type Props = {
   storefront: StorefrontDto | null;
   isStorefrontLoading: boolean;
 };
-
-function formatPriceTry(value: number): string {
-  try {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 2 }).format(value);
-  } catch {
-    return `${value} TL`;
-  }
-}
-
-const LOW_STOCK_MAX = 5;
-
-function resolveProductImageUrl(path: string): string {
-  if (!path) {
-    return '';
-  }
-  if (/^https?:\/\//i.test(path)) {
-    return path;
-  }
-  return `${API_BASE_URL.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
-}
-
-function ProductCard({
-  item,
-  palette,
-  onAddToCart,
-  onPreviewAr,
-  onOpenDetail
-}: {
-  item: ProductDto;
-  palette: MobilePalette;
-  onAddToCart: (id: number) => void;
-  onPreviewAr: (id: number) => void;
-  onOpenDetail: (id: number) => void;
-}): React.JSX.Element {
-  const [imageFailed, setImageFailed] = useState(false);
-  const showImage = Boolean(item.imageUrl?.trim()) && !imageFailed;
-  const price = typeof item.price === 'number' ? item.price : 0;
-  const stockQty = typeof item.stockQuantity === 'number' ? item.stockQuantity : 0;
-  const inStock = stockQty > 0;
-  const lowStock = inStock && stockQty <= LOW_STOCK_MAX;
-
-  const stockBadgeStyle = !inStock
-    ? {
-        backgroundColor: palette.mutedCard,
-        borderColor: palette.outlineVariant,
-        color: palette.subText,
-        label: 'STOKTA YOK'
-      }
-    : lowStock
-      ? {
-          backgroundColor: palette.stockLowPillBg,
-          borderColor: palette.stockLowPillBorder,
-          color: palette.stockLowPillText,
-          label: `AZ STOK (${stockQty})`
-        }
-      : {
-          backgroundColor: palette.stockPillBg,
-          borderColor: palette.stockPillBorder,
-          color: palette.stockPillText,
-          label: 'STOKTA'
-        };
-
-  const addToCartOutline = palette.productUseOutlineAddToCart;
-
-  return (
-    <View
-      style={[
-        styles.productCard,
-        { backgroundColor: palette.elevatedSurface, borderColor: palette.outlineVariant }
-      ]}
-    >
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => onOpenDetail(item.id)}
-        accessibilityRole="button"
-        accessibilityLabel={`${item.name} detayını aç`}
-      >
-        <View style={[styles.imageWrap, { backgroundColor: palette.surfaceDim }]}>
-          {showImage ? (
-            <Image
-              source={{ uri: resolveProductImageUrl(item.imageUrl) }}
-              style={styles.productImage}
-              resizeMode="cover"
-              onError={() => setImageFailed(true)}
-            />
-          ) : (
-            <View style={[styles.imageFallback, { backgroundColor: palette.imagePlaceholder }]}>
-              <Text style={[styles.imageFallbackText, { color: palette.subText }]}>Görsel yok</Text>
-            </View>
-          )}
-          <View style={styles.badgeStack}>
-            {item.isArCompatible ? (
-              <View
-                style={[
-                  styles.badgeMint,
-                  { backgroundColor: palette.arPillBg, borderColor: palette.arPillBorder, borderWidth: 1 }
-                ]}
-              >
-                <Text style={[styles.badgeMintText, { color: palette.arPillText }]}>AR hazır</Text>
-              </View>
-            ) : null}
-            <View
-              style={[
-                styles.badgeStock,
-                {
-                  backgroundColor: stockBadgeStyle.backgroundColor,
-                  borderColor: stockBadgeStyle.borderColor,
-                  borderWidth: 1
-                }
-              ]}
-            >
-              <Text style={[styles.badgeStockText, { color: stockBadgeStyle.color }]}>{stockBadgeStyle.label}</Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.cardBodyTop}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.productName, { color: palette.text }]} numberOfLines={2}>
-              {item.name}
-            </Text>
-            <Text style={[styles.productPrice, { color: palette.brandTitle }]}>{formatPriceTry(price)}</Text>
-          </View>
-          <Text style={[styles.productDesc, { color: palette.subText }]} numberOfLines={2}>
-            {item.description?.trim() ? item.description : '—'}
-          </Text>
-        </View>
-      </TouchableOpacity>
-      <View style={styles.cardBodyActions}>
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[
-              styles.primaryCta,
-              {
-                backgroundColor: palette.productCtaBg,
-                borderWidth: addToCartOutline ? 1 : 0,
-                borderColor: addToCartOutline ? palette.productCtaBorder : 'transparent'
-              }
-            ]}
-            onPress={() => onAddToCart(item.id)}
-            accessibilityRole="button"
-            accessibilityLabel={`${item.name} sepete ekle`}
-          >
-            <Text style={[styles.primaryCtaText, { color: palette.productCtaFg }]}>+ Sepete ekle</Text>
-          </TouchableOpacity>
-          {!addToCartOutline ? (
-            <TouchableOpacity
-              style={[styles.iconGhost, { borderColor: palette.outlineVariant }]}
-              accessibilityRole="button"
-              accessibilityLabel="Favoriler (yakında)"
-              disabled
-            >
-              <Text style={[styles.heartIcon, { color: palette.subText }]}>♡</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-        {item.isArCompatible ? (
-          <TouchableOpacity
-            style={[styles.arLink, { borderColor: palette.outlineVariant, backgroundColor: palette.surfaceLowest }]}
-            onPress={() => onPreviewAr(item.id)}
-          >
-            <Text style={[styles.arLinkText, { color: palette.brandTitle }]}>AR'da görüntüle</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-    </View>
-  );
-}
 
 function CampaignCard({
   campaign,
@@ -284,16 +112,6 @@ export function ProductsSection(props: Props): React.JSX.Element {
     [props.storefront?.dealProducts]
   );
   const campaigns = props.storefront?.campaigns ?? [];
-
-  const renderItem: ListRenderItem<ProductDto> = ({ item }) => (
-    <ProductCard
-      item={item}
-      palette={palette}
-      onAddToCart={props.onAddToCart}
-      onPreviewAr={props.onPreviewAr}
-      onOpenDetail={props.onOpenDetail}
-    />
-  );
 
   return (
     <View style={styles.root}>
@@ -555,58 +373,12 @@ const styles = StyleSheet.create({
   clearFileText: { fontSize: 14, fontWeight: '600' },
   adminUploadBtn: { marginTop: 12 },
   disabledOpacity: { opacity: 0.55 },
-  productCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2
-  },
-  imageWrap: { height: 192, width: '100%', position: 'relative' },
-  productImage: { width: '100%', height: '100%' },
-  imageFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  imageFallbackText: { fontSize: 13, fontWeight: '500' },
-  badgeStack: { position: 'absolute', top: 8, right: 8, alignItems: 'flex-end' },
-  badgeMint: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, marginBottom: 6 },
-  badgeMintText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
-  badgeStock: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  badgeStockText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
-  cardBody: { padding: 16 },
-  cardBodyTop: { paddingHorizontal: 16, paddingTop: 14 },
-  cardBodyActions: { paddingHorizontal: 16, paddingBottom: 14 },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
-  productName: { flex: 1, fontSize: 18, fontWeight: '600', letterSpacing: -0.2 },
-  productPrice: { fontSize: 18, fontWeight: '600' },
-  productDesc: { fontSize: 14, lineHeight: 20, marginBottom: 12 },
-  actionRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   primaryCta: {
-    flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  primaryCtaText: { fontSize: 14, fontWeight: '600' },
-  iconGhost: {
-    width: 48,
-    height: 48,
-    marginLeft: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  heartIcon: { fontSize: 20 },
-  arLink: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center'
-  },
-  arLinkText: { fontSize: 14, fontWeight: '600' }
+  primaryCtaText: { fontSize: 14, fontWeight: '600' }
 });

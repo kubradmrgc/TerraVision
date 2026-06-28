@@ -31,10 +31,7 @@ export function resolveArModelUrl(modelUrl: string): string {
     const parsed = new URL(trimmed);
     const api = new URL(getArModelBaseUrl());
     if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-      parsed.hostname = api.hostname;
-      parsed.port = api.port;
-      parsed.protocol = api.protocol;
-      return parsed.toString();
+      return `${api.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
     }
     return trimmed;
   } catch {

@@ -200,8 +200,7 @@ export function ArExperienceModal({
 
           {!hasLaunchedAr ? (
             <Text style={[styles.hint, { color: palette.subText }]}>
-              AR açılınca kamera izni istenebilir. Zemin görmek için telefonu yatay bir yüzeye tutun; gerekirse
-              alttaki "Ortamınızda görüntüleyin" düğmesine dokunun.
+              Scene Viewer açılır. Modeli gördükten sonra alttaki "Ortamınızda görüntüleyin" düğmesine dokunun; kamera izni istenirse verin. Google uygulamasını güncel tutun.
             </Text>
           ) : (
             <Text style={[styles.hint, { color: palette.subText }]}>

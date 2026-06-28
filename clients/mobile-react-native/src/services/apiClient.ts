@@ -9,12 +9,13 @@ const tokenStore: TokenStore = {
   clearTokens: () => mobileTokenStore.clearToken()
 };
 
-const { client, onUnauthorized: registerUnauthorized } = createApiClient({
+const { client, tokenRefresh, onUnauthorized: registerUnauthorized } = createApiClient({
   baseURL: API_BASE_URL,
   tokenStore
 });
 
 export const apiClient = client;
+export { tokenRefresh };
 
 export function onUnauthorized(handler: () => void): void {
   registerUnauthorized(handler);

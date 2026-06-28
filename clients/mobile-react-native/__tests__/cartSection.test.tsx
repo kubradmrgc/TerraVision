@@ -76,8 +76,8 @@ describe('CartSection', () => {
       );
     });
 
-    const place = findByLabel(tree.root, 'Place order');
-    const clear = findByLabel(tree.root, 'Clear cart');
+    const place = findByLabel(tree.root, 'Siparişi tamamla');
+    const clear = findByLabel(tree.root, 'Sepeti temizle');
     expect(place.length).toBe(1);
     expect(place[0].props.disabled).toBe(true);
     expect(clear.length).toBe(0);
@@ -149,11 +149,11 @@ describe('CartSection', () => {
     });
 
     const texts = tree.root.findAll(
-      (n) => (n as { type?: string }).type === 'Text' && n.props && n.props.children === 'Order Summary'
+      (n) => (n as { type?: string }).type === 'Text' && n.props && n.props.children === 'Sipariş özeti'
     );
     expect(texts.length).toBeGreaterThan(0);
     const pillLabels = tree.root.findAll(
-      (n) => (n as { type?: string }).type === 'Text' && n.props && n.props.children === 'Place order'
+      (n) => (n as { type?: string }).type === 'Text' && n.props && n.props.children === 'Siparişi tamamla'
     );
     expect(pillLabels.length).toBeGreaterThan(0);
   });

@@ -15,7 +15,7 @@ describe('mobileTheme', () => {
   });
 
   it('resolves known and unknown order statuses', () => {
-    expect(getOrderStatusLabel(1)).toBe('Pending');
-    expect(getOrderStatusLabel(99)).toBe('Unknown(99)');
+    expect(getOrderStatusLabel(1)).toBe('Beklemede');
+    expect(getOrderStatusLabel(99)).toBe('Bilinmeyen (99)');
   });
 });

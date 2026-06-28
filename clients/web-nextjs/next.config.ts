@@ -1,8 +1,9 @@
 import type { NextConfig } from 'next';
+import type { RemotePattern } from 'next/dist/shared/lib/image-config';
 import path from 'path';
 
 function addApiAssetPatterns(
-  patterns: NonNullable<NextConfig['images']>['remotePatterns'],
+  patterns: RemotePattern[],
   protocol: 'http' | 'https',
   hostname: string,
   port: string
@@ -22,8 +23,8 @@ function addApiAssetPatterns(
   }
 }
 
-function buildRemotePatterns(): NonNullable<NextConfig['images']>['remotePatterns'] {
-  const patterns: NonNullable<NextConfig['images']>['remotePatterns'] = [];
+function buildRemotePatterns(): RemotePattern[] {
+  const patterns: RemotePattern[] = [];
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5090';
   const cdnBase = process.env.NEXT_PUBLIC_MEDIA_CDN_BASE_URL;
 

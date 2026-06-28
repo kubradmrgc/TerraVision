@@ -13,6 +13,16 @@ jest.mock('react-native', () => ({
   Alert: { alert: jest.fn() }
 }));
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(async () => null),
+    setItem: jest.fn(async () => undefined),
+    removeItem: jest.fn(async () => undefined),
+    multiRemove: jest.fn(async () => undefined)
+  }
+}));
+
 jest.mock('@react-native-documents/picker', () => ({
   errorCodes: { OPERATION_CANCELED: 'OPERATION_CANCELED' },
   isErrorWithCode: jest.fn(() => false),
@@ -31,20 +41,12 @@ jest.mock('../src/features/auth/session', () => ({
 }));
 
 jest.mock('../src/features/app/useCommerceQueries', () => {
+  const { buildCommerceQueriesMock } = jest.requireActual('../src/test-support/commerceQueriesMock');
   mockCreateAppointmentMutateAsync = jest.fn(async () => ({ id: 42 }));
   return {
     useCommerceQueries: () => ({
-      productsQuery: { data: [], isLoading: false, error: null },
-      cartQuery: { data: null, isLoading: false, error: null },
-      ordersQuery: { data: [], isLoading: false, error: null },
-      appointmentsQuery: { data: [], isLoading: false, error: null },
-      createAppointmentMutation: { mutateAsync: mockCreateAppointmentMutateAsync, isPending: false },
-      updateAppointmentStatusMutation: { mutateAsync: jest.fn(), isPending: false },
-      addItemMutation: { mutateAsync: jest.fn(), isPending: false },
-      updateItemMutation: { mutateAsync: jest.fn(), isPending: false },
-      removeItemMutation: { mutateAsync: jest.fn(), isPending: false },
-      clearCartMutation: { mutateAsync: jest.fn(), isPending: false },
-      placeOrderMutation: { mutateAsync: jest.fn(), isPending: false }
+      ...buildCommerceQueriesMock(),
+      createAppointmentMutation: { mutateAsync: mockCreateAppointmentMutateAsync, isPending: false }
     })
   };
 });
@@ -194,7 +196,7 @@ describe('useMobileAppController handleCreateAppointment', () => {
     await act(async () => {
       await latest!.handleCreateAppointment();
     });
-    expect(latest!.appointmentErrorMessage).toContain('musteri hesabi');
+    expect(latest!.appointmentErrorMessage).toContain('müşteri hesabı');
     expect(mockCreateAppointmentMutateAsync).not.toHaveBeenCalled();
     renderer!.unmount();
   });
@@ -207,7 +209,7 @@ describe('useMobileAppController handleCreateAppointment', () => {
     await act(async () => {
       await latest!.handleCreateAppointment();
     });
-    expect(latest!.appointmentErrorMessage).toContain('consultant ID');
+    expect(latest!.appointmentErrorMessage).toContain('danışman');
     expect(mockCreateAppointmentMutateAsync).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -216,7 +218,7 @@ describe('useMobileAppController handleCreateAppointment', () => {
     await act(async () => {
       await latest!.handleCreateAppointment();
     });
-    expect(latest!.appointmentErrorMessage).toContain('consultant ID');
+    expect(latest!.appointmentErrorMessage).toContain('danışman');
 
     await act(async () => {
       latest!.setAppointmentConsultantId('1.5');
@@ -224,7 +226,7 @@ describe('useMobileAppController handleCreateAppointment', () => {
     await act(async () => {
       await latest!.handleCreateAppointment();
     });
-    expect(latest!.appointmentErrorMessage).toContain('consultant ID');
+    expect(latest!.appointmentErrorMessage).toContain('danışman');
 
     await act(async () => {
       latest!.setAppointmentConsultantId('x');
@@ -232,7 +234,7 @@ describe('useMobileAppController handleCreateAppointment', () => {
     await act(async () => {
       await latest!.handleCreateAppointment();
     });
-    expect(latest!.appointmentErrorMessage).toContain('consultant ID');
+    expect(latest!.appointmentErrorMessage).toContain('danışman');
 
     renderer.unmount();
   });
