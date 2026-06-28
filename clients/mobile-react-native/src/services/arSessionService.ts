@@ -5,6 +5,7 @@ import {
   putFileToPresignedUrl,
   type PresignUploadResponse
 } from '@terravision/shared';
+import type { AxiosProgressEvent } from 'axios';
 import { apiClient } from './apiClient';
 import { UploadFileInput } from './mediaService';
 
@@ -73,7 +74,7 @@ export const arSessionService = {
 
     const { data } = await apiClient.post<ArSessionResponseDto>(API_ROUTES.AR.saveSession, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: (event) => {
+      onUploadProgress: (event: AxiosProgressEvent) => {
         if (!options?.onProgress || !event.total) {
           return;
         }

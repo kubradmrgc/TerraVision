@@ -24,6 +24,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install shared package dependencies
+        working-directory: clients/shared
+        run: npm ci
       - name: Install and build Next.js client
         working-directory: clients/web-nextjs
         run: |
@@ -37,6 +40,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install shared package dependencies
+        working-directory: clients/shared
+        run: npm ci
       - name: Mobile release gate (typecheck, lint, test)
         working-directory: clients/mobile-react-native
         run: |

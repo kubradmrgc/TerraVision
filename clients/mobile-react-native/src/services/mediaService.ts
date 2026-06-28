@@ -3,6 +3,7 @@ import {
   uploadWithPresignFallback,
   type PresignUploadResponse
 } from '@terravision/shared';
+import type { AxiosProgressEvent } from 'axios';
 import { apiClient } from './apiClient';
 
 export interface UploadArModelResult {
@@ -73,7 +74,7 @@ export const mediaService = {
           formData,
           {
             headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: (event) => {
+            onUploadProgress: (event: AxiosProgressEvent) => {
               if (!options?.onProgress || !event.total) {
                 return;
               }
