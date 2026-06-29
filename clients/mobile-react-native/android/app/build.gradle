@@ -72,6 +72,16 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def releaseSigningValue = { name ->
+    project.findProperty(name) ?: System.getenv(name)
+}
+
+def releaseStoreFile = releaseSigningValue("TERRAVISION_RELEASE_STORE_FILE")
+def releaseStorePassword = releaseSigningValue("TERRAVISION_RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = releaseSigningValue("TERRAVISION_RELEASE_KEY_ALIAS")
+def releaseKeyPassword = releaseSigningValue("TERRAVISION_RELEASE_KEY_PASSWORD")
+def hasReleaseSigningConfig = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -92,15 +102,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigningConfig) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (hasReleaseSigningConfig) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
@@ -115,5 +133,18 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def releaseTaskNames = ["assembleRelease", "bundleRelease", "installRelease"]
+    def isReleaseBuild = taskGraph.allTasks.any { task -> releaseTaskNames.contains(task.name) }
+
+    if (isReleaseBuild && !hasReleaseSigningConfig) {
+        throw new GradleException(
+            "Android release signing is not configured. Set TERRAVISION_RELEASE_STORE_FILE, " +
+                "TERRAVISION_RELEASE_STORE_PASSWORD, TERRAVISION_RELEASE_KEY_ALIAS, and " +
+                "TERRAVISION_RELEASE_KEY_PASSWORD; release builds must not use the debug keystore."
+        )
     }
 }
