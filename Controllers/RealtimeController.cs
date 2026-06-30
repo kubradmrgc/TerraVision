@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TerraVision.Api.Interfaces;
@@ -20,7 +21,7 @@ namespace TerraVision.Api.Controllers
         [HttpPost("cart-changed")]
         public async Task<IActionResult> BroadcastCartChanged([FromBody] CartChangedEvent request)
         {
-            var tokenUserId = User.FindFirst("sub")?.Value;
+            var tokenUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
             if (!int.TryParse(tokenUserId, out var userId))
             {
                 return Unauthorized("Invalid user identity");

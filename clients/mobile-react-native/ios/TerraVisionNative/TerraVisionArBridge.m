@@ -9,9 +9,4 @@ RCT_EXTERN_METHOD(launchArSession:(NSString *)modelUrl
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-+ (BOOL)requiresMainQueueSetup
-{
-  return YES;
-}
-
 @end
