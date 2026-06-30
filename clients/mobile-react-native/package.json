@@ -7,7 +7,8 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "node scripts/patch-react-native-gradle-plugin.js"
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.85.2",
