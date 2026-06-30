@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.Options;
 using TerraVision.Api.Entities;
+using TerraVision.Api.Enums;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.Auth;
 using TerraVision.Api.Settings;
@@ -28,7 +29,10 @@ namespace TerraVision.Api.Services
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
         {
-            var user = await _userRepository.SingleOrDefaultAsync(x => x.Email == request.Email);
+            var user = await _userRepository.SingleOrDefaultAsync(x =>
+                x.Email == request.Email &&
+                !x.IsDeleted &&
+                x.IsActive);
             
             if (user == null)
                 throw new Exception("Invalid email or password.");
@@ -61,7 +65,7 @@ namespace TerraVision.Api.Services
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Email = request.Email,
-                Role = request.Role,
+                Role = UserRole.Customer,
                 PasswordHash = passwordHash,
                 // Salt is typically handled inside the BCrypt hash format itself now, 
                 // but setting to empty or a basic value to avoid EF Core empty array issues if required
@@ -79,7 +83,9 @@ namespace TerraVision.Api.Services
             var user = await _userRepository.SingleOrDefaultAsync(x =>
                 x.RefreshToken == request.RefreshToken &&
                 x.RefreshTokenExpiresAtUtc != null &&
-                x.RefreshTokenExpiresAtUtc > DateTime.UtcNow);
+                x.RefreshTokenExpiresAtUtc > DateTime.UtcNow &&
+                !x.IsDeleted &&
+                x.IsActive);
 
             if (user == null)
             {

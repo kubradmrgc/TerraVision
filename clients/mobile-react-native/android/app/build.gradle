@@ -71,6 +71,13 @@ def enableProguardInReleaseBuilds = false
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def releaseStoreFile = project.findProperty("TERRAVISION_RELEASE_STORE_FILE") ?: System.getenv("TERRAVISION_RELEASE_STORE_FILE")
+def releaseStorePassword = project.findProperty("TERRAVISION_RELEASE_STORE_PASSWORD") ?: System.getenv("TERRAVISION_RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = project.findProperty("TERRAVISION_RELEASE_KEY_ALIAS") ?: System.getenv("TERRAVISION_RELEASE_KEY_ALIAS")
+def releaseKeyPassword = project.findProperty("TERRAVISION_RELEASE_KEY_PASSWORD") ?: System.getenv("TERRAVISION_RELEASE_KEY_PASSWORD")
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every {
+    it != null && it.toString().trim()
+}
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -84,6 +91,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [usesCleartextTraffic: "false"]
     }
     signingConfigs {
         debug {
@@ -92,15 +100,24 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
