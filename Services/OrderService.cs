@@ -26,6 +26,8 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> PlaceOrderFromCartAsync(int userId, PlaceOrderRequest request)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
             var cart = await _dbContext.Carts.SingleOrDefaultAsync(c => c.UserId == userId && !c.IsDeleted);
             if (cart == null)
             {
@@ -33,11 +35,8 @@ namespace TerraVision.Api.Services
             }
 
             var cartItems = await _dbContext.CartItems
+                .Include(ci => ci.Product)
                 .Where(ci => ci.CartId == cart.Id && !ci.IsDeleted)
-                .Join(_dbContext.Products,
-                    ci => ci.ProductId,
-                    p => p.Id,
-                    (ci, p) => new { CartItem = ci, Product = p })
                 .ToListAsync();
 
             if (cartItems.Count == 0)
@@ -47,38 +46,58 @@ namespace TerraVision.Api.Services
 
             foreach (var item in cartItems)
             {
-                if (item.Product.StockQuantity < item.CartItem.Quantity)
+                if (item.Product.IsDeleted || !item.Product.IsActive)
+                {
+                    throw new InvalidOperationException($"Product is no longer available: {item.Product.Name}");
+                }
+
+                if (item.Product.StockQuantity < item.Quantity)
                 {
                     throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
                 }
             }
 
+            var updatedAtUtc = DateTime.UtcNow;
             var order = new Order
             {
                 UserId = userId,
-                TotalAmount = cartItems.Sum(x => x.Product.Price * x.CartItem.Quantity)
+                TotalAmount = cartItems.Sum(x => x.Product.Price * x.Quantity)
             };
-
-            await _dbContext.Orders.AddAsync(order);
-            await _unitOfWork.CommitAsync();
 
             foreach (var item in cartItems)
             {
-                await _dbContext.OrderItems.AddAsync(new OrderItem
+                var claimedRows = await _dbContext.CartItems
+                    .Where(ci => ci.Id == item.Id && ci.CartId == cart.Id && !ci.IsDeleted && ci.Quantity == item.Quantity)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(ci => ci.IsDeleted, true)
+                        .SetProperty(ci => ci.UpdatedDate, updatedAtUtc));
+                if (claimedRows != 1)
                 {
-                    OrderId = order.Id,
+                    throw new InvalidOperationException("Cart changed while placing the order. Please review your cart and try again.");
+                }
+
+                var stockRows = await _dbContext.Products
+                    .Where(p => p.Id == item.ProductId && !p.IsDeleted && p.IsActive && p.StockQuantity >= item.Quantity)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.StockQuantity, p => p.StockQuantity - item.Quantity)
+                        .SetProperty(p => p.UpdatedDate, updatedAtUtc));
+                if (stockRows != 1)
+                {
+                    throw new InvalidOperationException($"Insufficient stock for product: {item.Product.Name}");
+                }
+
+                order.Items.Add(new OrderItem
+                {
                     ProductId = item.Product.Id,
                     UnitPrice = item.Product.Price,
-                    Quantity = item.CartItem.Quantity
+                    Quantity = item.Quantity
                 });
-
-                item.Product.StockQuantity -= item.CartItem.Quantity;
-                item.Product.UpdatedDate = DateTime.UtcNow;
-                item.CartItem.IsDeleted = true;
-                item.CartItem.UpdatedDate = DateTime.UtcNow;
             }
 
+            await _dbContext.Orders.AddAsync(order);
             await _unitOfWork.CommitAsync();
+            await transaction.CommitAsync();
+
             await _realtimeSyncService.BroadcastOrderCreatedAsync(new OrderCreatedEvent
             {
                 UserId = userId,
@@ -248,6 +267,8 @@ namespace TerraVision.Api.Services
 
         public async Task<OrderDto> UpdateOrderStatusAsync(int orderId, int updatedByUserId, UpdateOrderStatusRequest request)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
             var order = await _dbContext.Orders
                 .SingleOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
             if (order == null)
@@ -261,11 +282,45 @@ namespace TerraVision.Api.Services
                 throw new InvalidOperationException($"Invalid status transition: {previousStatus} -> {request.Status}");
             }
 
+            var updatedAtUtc = DateTime.UtcNow;
+            var updatedRows = await _dbContext.Orders
+                .Where(o => o.Id == order.Id && !o.IsDeleted && o.Status == previousStatus)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(o => o.Status, request.Status)
+                    .SetProperty(o => o.UpdatedByUserId, updatedByUserId)
+                    .SetProperty(o => o.UpdatedReason, request.Reason)
+                    .SetProperty(o => o.UpdatedDate, updatedAtUtc));
+            if (updatedRows != 1)
+            {
+                throw new InvalidOperationException("Order status changed while updating. Please reload and try again.");
+            }
+
+            if (request.Status == OrderStatus.Cancelled && previousStatus != OrderStatus.Cancelled)
+            {
+                var orderItemsToRestore = await _dbContext.OrderItems
+                    .Where(oi => oi.OrderId == order.Id && !oi.IsDeleted)
+                    .ToListAsync();
+
+                foreach (var item in orderItemsToRestore)
+                {
+                    var restoredRows = await _dbContext.Products
+                        .Where(p => p.Id == item.ProductId)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.StockQuantity, p => p.StockQuantity + item.Quantity)
+                            .SetProperty(p => p.UpdatedDate, updatedAtUtc));
+                    if (restoredRows != 1)
+                    {
+                        throw new InvalidOperationException("Unable to restore stock for cancelled order.");
+                    }
+                }
+            }
+
+            await transaction.CommitAsync();
+
             order.Status = request.Status;
             order.UpdatedByUserId = updatedByUserId;
             order.UpdatedReason = request.Reason;
-            order.UpdatedDate = DateTime.UtcNow;
-            await _unitOfWork.CommitAsync();
+            order.UpdatedDate = updatedAtUtc;
 
             await _realtimeSyncService.BroadcastOrderStatusChangedAsync(new OrderStatusChangedEvent
             {
