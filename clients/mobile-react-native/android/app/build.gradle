@@ -72,6 +72,12 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def releaseSigningStoreFile = project.findProperty('TERRAVISION_UPLOAD_STORE_FILE') ?: System.getenv('TERRAVISION_UPLOAD_STORE_FILE')
+def releaseSigningStorePassword = project.findProperty('TERRAVISION_UPLOAD_STORE_PASSWORD') ?: System.getenv('TERRAVISION_UPLOAD_STORE_PASSWORD')
+def releaseSigningKeyAlias = project.findProperty('TERRAVISION_UPLOAD_KEY_ALIAS') ?: System.getenv('TERRAVISION_UPLOAD_KEY_ALIAS')
+def releaseSigningKeyPassword = project.findProperty('TERRAVISION_UPLOAD_KEY_PASSWORD') ?: System.getenv('TERRAVISION_UPLOAD_KEY_PASSWORD')
+def hasReleaseSigningConfig = releaseSigningStoreFile && releaseSigningStorePassword && releaseSigningKeyAlias && releaseSigningKeyPassword
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -84,6 +90,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [usesCleartextTraffic: "false"]
     }
     signingConfigs {
         debug {
@@ -92,18 +99,35 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigningConfig) {
+            release {
+                storeFile file(releaseSigningStoreFile)
+                storePassword releaseSigningStorePassword
+                keyAlias releaseSigningKeyAlias
+                keyPassword releaseSigningKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (hasReleaseSigningConfig) {
+                signingConfig signingConfigs.release
+            }
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def releasePackageTasks = [':app:assembleRelease', ':app:bundleRelease', ':app:packageRelease']
+    if (!hasReleaseSigningConfig && taskGraph.allTasks.any { releasePackageTasks.contains(it.path) }) {
+        throw new GradleException('Release signing credentials are required. Set TERRAVISION_UPLOAD_STORE_FILE, TERRAVISION_UPLOAD_STORE_PASSWORD, TERRAVISION_UPLOAD_KEY_ALIAS, and TERRAVISION_UPLOAD_KEY_PASSWORD as Gradle properties or environment variables.')
     }
 }
 
