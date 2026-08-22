@@ -9,15 +9,20 @@ class TerraVisionAr: NSObject {
     true
   }
 
-  @objc(launchArSession:modelFormat:placementHint:suggestedScale:resolver:rejecter:)
+  @objc(launchArSession:modelFormat:placementHint:suggestedScale:productTitle:resolver:rejecter:)
   func launchArSession(
     modelUrl: String,
     modelFormat: String,
     placementHint: String,
     suggestedScale: NSNumber,
+    productTitle: String,
     resolve: @escaping RCTPromiseResolveBlock,
     reject: @escaping RCTPromiseRejectBlock
   ) {
+    _ = modelFormat
+    _ = placementHint
+    _ = suggestedScale
+    _ = productTitle
     guard modelUrl.lowercased().hasPrefix("https://"), let url = URL(string: modelUrl) else {
       reject("INVALID_URL", "AR model URL must be https.", nil)
       return

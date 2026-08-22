@@ -1,48 +1,160 @@
+import { HubConnection } from '@microsoft/signalr';
 import {
-  HubConnection,
-  HubConnectionBuilder,
-  HttpTransportType,
-  LogLevel
-} from '@microsoft/signalr';
+  AUTOMATIC_RECONNECT_DELAYS_MS,
+  buildHubConnection,
+  createHandlerRegistry,
+  delayBeforeConnectRetry,
+  INITIAL_CONNECT_MAX_ROUNDS,
+  isRealtimeUnauthorizedError,
+  registerStandardHubHandlers,
+  sleep,
+  startHubWithTransportFallback,
+  wireHubLifecycle
+} from '@terravision/shared';
 import { SIGNALR_HUB_URL } from '../config/env';
-import { tokenStore } from './tokenStore';
+import { tokenRefresh } from './apiClient';
+import type {
+  ChatMessageReceivedEvent,
+  ExchangeOfferReceivedEvent,
+  ExchangeOfferStatusChangedEvent,
+  ExchangeProductListedEvent
+} from '@terravision/shared';
 import { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '../types/realtime';
 
-type CartChangedHandler = (event: CartChangedEvent) => void;
-type OrderCreatedHandler = (event: OrderCreatedEvent) => void;
-type OrderStatusChangedHandler = (event: OrderStatusChangedEvent) => void;
+export type RealtimeConnectionStatus = 'connecting' | 'connected' | 'degraded' | 'offline';
+type StatusChangedHandler = (status: RealtimeConnectionStatus) => void;
 
 class RealtimeService {
   private connection: HubConnection | null = null;
-  private cartChangedHandlers: CartChangedHandler[] = [];
-  private orderCreatedHandlers: OrderCreatedHandler[] = [];
-  private orderStatusChangedHandlers: OrderStatusChangedHandler[] = [];
+  private connecting = false;
+  private readonly cartChangedHandlers = createHandlerRegistry<CartChangedEvent>();
+  private readonly orderCreatedHandlers = createHandlerRegistry<OrderCreatedEvent>();
+  private readonly orderStatusChangedHandlers = createHandlerRegistry<OrderStatusChangedEvent>();
+  private readonly exchangeOfferReceivedHandlers = createHandlerRegistry<ExchangeOfferReceivedEvent>();
+  private readonly exchangeOfferStatusHandlers = createHandlerRegistry<ExchangeOfferStatusChangedEvent>();
+  private readonly exchangeProductListedHandlers = createHandlerRegistry<ExchangeProductListedEvent>();
+  private readonly chatMessageReceivedHandlers = createHandlerRegistry<ChatMessageReceivedEvent>();
+  private readonly statusHandlers = createHandlerRegistry<RealtimeConnectionStatus>();
+  private readonly reconnectedHandlers = createHandlerRegistry<void>();
 
-  async connect(): Promise<void> {
-    if (this.connection?.state === 'Connected') {
+  private emitStatus(status: RealtimeConnectionStatus): void {
+    this.statusHandlers.emit(status);
+  }
+
+  private emitReconnected(): void {
+    this.reconnectedHandlers.emit(undefined);
+  }
+
+  private createConnection(transport: Parameters<typeof buildHubConnection>[0]['transport']): HubConnection {
+    const connection = buildHubConnection({
+      hubUrl: SIGNALR_HUB_URL,
+      transport,
+      getAccessToken: () => tokenRefresh.getValidAccessToken(),
+      automaticReconnectDelays: AUTOMATIC_RECONNECT_DELAYS_MS,
+      registerHandlers: (hub) => {
+        registerStandardHubHandlers(hub, {
+          onCartChanged: (event) => this.cartChangedHandlers.emit(event),
+          onOrderCreated: (event) => this.orderCreatedHandlers.emit(event),
+          onOrderStatusChanged: (event) => this.orderStatusChangedHandlers.emit(event),
+          onExchangeOfferReceived: (event) => this.exchangeOfferReceivedHandlers.emit(event),
+          onExchangeOfferStatusChanged: (event) => this.exchangeOfferStatusHandlers.emit(event),
+          onExchangeProductListed: (event) => this.exchangeProductListedHandlers.emit(event),
+          onChatMessageReceived: (event) => this.chatMessageReceivedHandlers.emit(event)
+        });
+      }
+    });
+
+    wireHubLifecycle(connection, {
+      onReconnecting: () => this.emitStatus('degraded'),
+      onReconnected: () => {
+        this.emitStatus('connected');
+        this.emitReconnected();
+      },
+      onClose: () => this.emitStatus('offline')
+    });
+
+    return connection;
+  }
+
+  private async stopAndClearConnection(): Promise<void> {
+    const existing = this.connection;
+    this.connection = null;
+    if (!existing) {
+      return;
+    }
+    await existing.stop().catch(() => undefined);
+  }
+
+  private async startWithTransportFallback(): Promise<void> {
+    this.connection = await startHubWithTransportFallback((transport) =>
+      this.createConnection(transport)
+    );
+    this.emitStatus('connected');
+  }
+
+  private async tryConnectOnce(): Promise<void> {
+    const token = await tokenRefresh.getValidAccessToken();
+    if (!token) {
+      this.emitStatus('offline');
       return;
     }
 
-    this.connection = new HubConnectionBuilder()
-      .withUrl(SIGNALR_HUB_URL, {
-        accessTokenFactory: async () => (await tokenStore.getToken()) ?? '',
-        transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling
-      })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Information)
-      .build();
+    try {
+      await this.startWithTransportFallback();
+    } catch (err) {
+      if (!isRealtimeUnauthorizedError(err)) {
+        throw err;
+      }
 
-    this.connection.on('cart.changed', (event: CartChangedEvent) => {
-      this.cartChangedHandlers.forEach((handler) => handler(event));
-    });
-    this.connection.on('order.created', (event: OrderCreatedEvent) => {
-      this.orderCreatedHandlers.forEach((handler) => handler(event));
-    });
-    this.connection.on('order.status.changed', (event: OrderStatusChangedEvent) => {
-      this.orderStatusChangedHandlers.forEach((handler) => handler(event));
-    });
+      await this.stopAndClearConnection();
+      const refreshed = await tokenRefresh.refreshAccessToken().catch(() => null);
+      if (!refreshed) {
+        this.emitStatus('offline');
+        return;
+      }
 
-    await this.connection.start();
+      await this.startWithTransportFallback();
+    }
+  }
+
+  async connect(): Promise<void> {
+    if (this.connection?.state === 'Connected' || this.connecting) {
+      return;
+    }
+    this.connecting = true;
+    this.emitStatus('connecting');
+
+    try {
+      if (this.connection) {
+        await this.connection.stop().catch(() => undefined);
+      }
+      this.connection = null;
+
+      let lastError: unknown;
+      for (let round = 0; round < INITIAL_CONNECT_MAX_ROUNDS; round += 1) {
+        const pause = delayBeforeConnectRetry(round);
+        if (pause > 0) {
+          await sleep(pause);
+          this.emitStatus('connecting');
+        }
+        try {
+          await this.tryConnectOnce();
+          return;
+        } catch (err) {
+          if (isRealtimeUnauthorizedError(err)) {
+            this.emitStatus('offline');
+            return;
+          }
+          lastError = err;
+          this.emitStatus('degraded');
+          await this.stopAndClearConnection();
+        }
+      }
+      this.emitStatus('offline');
+      throw lastError;
+    } finally {
+      this.connecting = false;
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -52,30 +164,59 @@ class RealtimeService {
 
     await this.connection.stop();
     this.connection = null;
+    this.emitStatus('offline');
   }
 
-  onCartChanged(handler: CartChangedHandler): () => void {
-    this.cartChangedHandlers.push(handler);
-
-    return () => {
-      this.cartChangedHandlers = this.cartChangedHandlers.filter((h) => h !== handler);
-    };
+  onCartChanged(handler: (event: CartChangedEvent) => void): () => void {
+    return this.cartChangedHandlers.add(handler);
   }
 
-  onOrderCreated(handler: OrderCreatedHandler): () => void {
-    this.orderCreatedHandlers.push(handler);
-
-    return () => {
-      this.orderCreatedHandlers = this.orderCreatedHandlers.filter((h) => h !== handler);
-    };
+  onOrderCreated(handler: (event: OrderCreatedEvent) => void): () => void {
+    return this.orderCreatedHandlers.add(handler);
   }
 
-  onOrderStatusChanged(handler: OrderStatusChangedHandler): () => void {
-    this.orderStatusChangedHandlers.push(handler);
+  onOrderStatusChanged(handler: (event: OrderStatusChangedEvent) => void): () => void {
+    return this.orderStatusChangedHandlers.add(handler);
+  }
 
-    return () => {
-      this.orderStatusChangedHandlers = this.orderStatusChangedHandlers.filter((h) => h !== handler);
-    };
+  onExchangeOfferReceived(handler: (event: ExchangeOfferReceivedEvent) => void): () => void {
+    return this.exchangeOfferReceivedHandlers.add(handler);
+  }
+
+  onExchangeOfferStatusChanged(handler: (event: ExchangeOfferStatusChangedEvent) => void): () => void {
+    return this.exchangeOfferStatusHandlers.add(handler);
+  }
+
+  onExchangeProductListed(handler: (event: ExchangeProductListedEvent) => void): () => void {
+    return this.exchangeProductListedHandlers.add(handler);
+  }
+
+  onChatMessageReceived(handler: (event: ChatMessageReceivedEvent) => void): () => void {
+    return this.chatMessageReceivedHandlers.add(handler);
+  }
+
+  async joinChatSession(sessionId: number): Promise<void> {
+    await this.connect();
+    if (!this.connection) {
+      throw new Error('SignalR bağlantısı yok.');
+    }
+    await this.connection.invoke('JoinChatSession', sessionId);
+  }
+
+  async leaveChatSession(sessionId: number): Promise<void> {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      return;
+    }
+    await this.connection.invoke('LeaveChatSession', sessionId).catch(() => undefined);
+  }
+
+  onStatusChanged(handler: StatusChangedHandler): () => void {
+    return this.statusHandlers.add(handler);
+  }
+
+  /** Fires after SignalR automatic reconnect succeeds (invalidate TanStack queries here). */
+  onReconnected(handler: () => void): () => void {
+    return this.reconnectedHandlers.add(handler);
   }
 }
 

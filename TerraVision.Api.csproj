@@ -4,6 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tools\**\*;TerraVision.Api.Tests\**\*</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +23,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="AWSSDK.S3" Version="3.7.416.21" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.7" />
+    <PackageReference Include="MailKit" Version="4.16.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.13.15" />
   </ItemGroup>
 

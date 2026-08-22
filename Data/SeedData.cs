@@ -16,7 +16,10 @@ namespace TerraVision.Api.Data
                 new Category { Id = 4, Name = "Bahçe Mobilyaları", IsActive = true, IsDeleted = false, CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
             );
 
-            // Seed user
+            // Seed admin — bcrypt(workFactor 11) for password "admin123" (matches AuthService.Verify)
+            var adminPasswordHash =
+                Encoding.UTF8.GetBytes("$2a$11$kQsHod4IMJ9h4sOxi2Nt.uofrxLaFz.f8ABxwJFo3.SvY1ngpGmwG");
+
             modelBuilder.Entity<User>().HasData(
                 new User 
                 { 
@@ -24,12 +27,301 @@ namespace TerraVision.Api.Data
                     FirstName = "Admin", 
                     LastName = "User", 
                     Email = "admin@terravision.com", 
-                    PasswordHash = Encoding.UTF8.GetBytes("admin123"),
-                    PasswordSalt = Encoding.UTF8.GetBytes("salt"),
+                    PasswordHash = adminPasswordHash,
+                    PasswordSalt = Array.Empty<byte>(),
                     Role = UserRole.Admin,
                     IsActive = true, 
                     IsDeleted = false, 
                     CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) 
+                },
+                new User
+                {
+                    Id = 2,
+                    FirstName = "Demo",
+                    LastName = "Customer",
+                    Email = "customer@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$LXAiIikolyu25wuU7VFIb.o/QHItfLKu9Vj4Gjjbvdmsl3qnAo456"),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Customer,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new User
+                {
+                    Id = 3,
+                    FirstName = "Demo",
+                    LastName = "Consultant",
+                    Email = "consultant@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$yVosCupKynNPZpg2Eq2XBuwPtgX0xdtJ8vEMDyqq9cCI9ZEzyqwp."),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Consultant,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                // Peyzaj danışmanları — şifre: consultant123
+                new User
+                {
+                    Id = 4,
+                    FirstName = "danışmanAli",
+                    LastName = "",
+                    Email = "danisman.ali@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$yVosCupKynNPZpg2Eq2XBuwPtgX0xdtJ8vEMDyqq9cCI9ZEzyqwp."),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Consultant,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new User
+                {
+                    Id = 5,
+                    FirstName = "danışmanAyşe",
+                    LastName = "",
+                    Email = "danisman.ayse@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$yVosCupKynNPZpg2Eq2XBuwPtgX0xdtJ8vEMDyqq9cCI9ZEzyqwp."),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Consultant,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new User
+                {
+                    Id = 6,
+                    FirstName = "danışmanSelin",
+                    LastName = "",
+                    Email = "danisman.selin@terravision.com",
+                    PasswordHash = Encoding.UTF8.GetBytes("$2a$11$yVosCupKynNPZpg2Eq2XBuwPtgX0xdtJ8vEMDyqq9cCI9ZEzyqwp."),
+                    PasswordSalt = Array.Empty<byte>(),
+                    Role = UserRole.Consultant,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                }
+            );
+
+            var seedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            modelBuilder.Entity<Product>().HasData(
+                new Product
+                {
+                    Id = 1,
+                    Name = "Monstera Deliciosa",
+                    Description = "İç mekan için popüler, geniş yapraklı dekoratif bitki.",
+                    Price = 1299.00m,
+                    StockQuantity = 12,
+                    MinStockLevel = 3,
+                    SKU = "PLT-MON-001",
+                    ImageUrl = "/assets/product-images/monstera-deliciosa.jpg",
+                    IsArCompatible = true,
+                    ArModelFileName = "demo-tree.glb",
+                    CategoryId = 1,
+                    WateringIntervalDays = 7,
+                    FertilizingIntervalDays = 30,
+                    CleaningIntervalDays = 14,
+                    CareInstructions = "Toprak yüzeyi kuruyunca sulayın; doğrudan güneşten kaçının.",
+                    CompareAtPrice = 1599.00m,
+                    IsFeatured = true,
+                    PromoLabel = "Fırsat",
+                    PromoSortOrder = 1,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new Product
+                {
+                    Id = 2,
+                    Name = "Fiddle Leaf Fig",
+                    Description = "Modern salonlar için ikonik kauçuk ağacı türü.",
+                    Price = 1899.50m,
+                    StockQuantity = 8,
+                    MinStockLevel = 2,
+                    SKU = "PLT-FIC-002",
+                    ImageUrl = "/assets/product-images/fiddle-leaf-fig.jpg",
+                    IsArCompatible = true,
+                    ArModelFileName = "demo-tree.glb",
+                    CategoryId = 1,
+                    WateringIntervalDays = 10,
+                    FertilizingIntervalDays = 45,
+                    CleaningIntervalDays = 21,
+                    CareInstructions = "Yaprakları nemli bezle silin; kışın sulamayı seyreltin.",
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new Product
+                {
+                    Id = 3,
+                    Name = "Lavanta Saksısı",
+                    Description = "Balkon ve bahçe için kokulu lavanta bitkisi.",
+                    Price = 349.90m,
+                    StockQuantity = 25,
+                    MinStockLevel = 5,
+                    SKU = "PLT-LAV-003",
+                    ImageUrl = "/assets/product-images/lavender-pot.jpg",
+                    IsArCompatible = true,
+                    ArModelFileName = "demo-tree.glb",
+                    CategoryId = 2,
+                    WateringIntervalDays = 5,
+                    FertilizingIntervalDays = 21,
+                    CleaningIntervalDays = null,
+                    CareInstructions = "Tam güneşte yetiştirin; çiçeklenme sonrası hafif budama yapın.",
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new Product
+                {
+                    Id = 4,
+                    Name = "Atatürk Çiçeği",
+                    Description = "Dekoratif çiçekli saksı bitkisi; iç mekan ve balkon için uygundur.",
+                    Price = 800.00m,
+                    StockQuantity = 15,
+                    MinStockLevel = 3,
+                    SKU = "PLT-ATK-004",
+                    ImageUrl = "/assets/product-images/lavender-pot.jpg",
+                    IsArCompatible = false,
+                    CategoryId = 1,
+                    WateringIntervalDays = 7,
+                    FertilizingIntervalDays = 30,
+                    CleaningIntervalDays = 14,
+                    CareInstructions = "Toprağı nemli tutun; direkt güneşten kaçının; çiçekler solunca solmuş kısımları temizleyin.",
+                    CompareAtPrice = 999.00m,
+                    IsFeatured = true,
+                    PromoLabel = "%20",
+                    PromoSortOrder = 0,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                }
+            );
+
+            modelBuilder.Entity<StoreCampaign>().HasData(
+                new StoreCampaign
+                {
+                    Id = 1,
+                    Title = "Bahar Kampanyası",
+                    Subtitle = "Seçili bitkilerde indirim — sınırlı süre",
+                    BadgeText = "KAMPANYA",
+                    SortOrder = 0,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                }
+            );
+
+            modelBuilder.Entity<StoreCampaignProduct>().HasData(
+                new StoreCampaignProduct { CampaignId = 1, ProductId = 4, SortOrder = 0 },
+                new StoreCampaignProduct { CampaignId = 1, ProductId = 1, SortOrder = 1 },
+                new StoreCampaignProduct { CampaignId = 1, ProductId = 3, SortOrder = 2 }
+            );
+
+            modelBuilder.Entity<ConsultationSession>().HasData(
+                new ConsultationSession
+                {
+                    Id = 1,
+                    CustomerId = 2,
+                    ConsultantId = 4,
+                    Title = "Peyzaj planı — danışmanAli",
+                    Status = ConsultationSessionStatus.Open,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new ConsultationSession
+                {
+                    Id = 2,
+                    CustomerId = 2,
+                    ConsultantId = 5,
+                    Title = "Peyzaj planı — danışmanAyşe",
+                    Status = ConsultationSessionStatus.Open,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new ConsultationSession
+                {
+                    Id = 3,
+                    CustomerId = 2,
+                    ConsultantId = 6,
+                    Title = "Peyzaj planı — danışmanSelin",
+                    Status = ConsultationSessionStatus.Open,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                }
+            );
+
+            modelBuilder.Entity<ChatMessage>().HasData(
+                new ChatMessage
+                {
+                    Id = 1,
+                    SessionId = 1,
+                    SenderId = 4,
+                    Content = "Merhaba! Ben danışmanAli. Bahçe ve peyzaj planınız için buradayım — sorularınızı bekliyorum.",
+                    Kind = ChatMessageKind.Text,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new ChatMessage
+                {
+                    Id = 2,
+                    SessionId = 2,
+                    SenderId = 5,
+                    Content = "Merhaba! Ben danışmanAyşe. İç ve dış mekân bitki seçimi için size yardımcı olabilirim.",
+                    Kind = ChatMessageKind.Text,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new ChatMessage
+                {
+                    Id = 3,
+                    SessionId = 3,
+                    SenderId = 6,
+                    Content = "Merhaba! Ben danışmanSelin. Balkon ve bahçe düzenleme teklifleri için yazabilirsiniz.",
+                    Kind = ChatMessageKind.Text,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                }
+            );
+
+            modelBuilder.Entity<SiteContactChannel>().HasData(
+                new SiteContactChannel
+                {
+                    Id = 1,
+                    ChannelKey = "support",
+                    Label = "Teknik destek",
+                    Email = "destek@terravision.com",
+                    SortOrder = 0,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new SiteContactChannel
+                {
+                    Id = 2,
+                    ChannelKey = "contact",
+                    Label = "Genel iletişim",
+                    Email = "iletisim@terravision.com",
+                    SortOrder = 1,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
+                },
+                new SiteContactChannel
+                {
+                    Id = 3,
+                    ChannelKey = "info",
+                    Label = "Kurumsal",
+                    Email = "bilgi@terravision.com",
+                    SortOrder = 2,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedDate = seedDate
                 }
             );
         }

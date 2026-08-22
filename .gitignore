@@ -3,6 +3,15 @@ obj/
 **/bin/
 **/obj/
 **/node_modules/
+clients/mobile-react-native/android/local.properties
+clients/mobile-react-native/src/config/api.config.local.ts
+clients/mobile-react-native/android/.gradle/
+clients/mobile-react-native/android/build/
+clients/mobile-react-native/android/app/.cxx/
+clients/mobile-react-native/android/app/build/
+clients/mobile-react-native/android/app/build/
+# Legacy nested RN repo (removed from git; use clients/mobile-react-native)
+clients/TerraVisionNative/
 **/.next/
 **/tsconfig.tsbuildinfo
 .vs/
@@ -11,7 +20,11 @@ obj/
 *.suo
 *.cache
 *.log
+appsettings.Development.local.json
 build_errors.txt
 build_out.txt
 run_error*.txt
 desktop.ini
+tmp.json
+tmp_out.json
+wwwroot/assets/exchange-images/

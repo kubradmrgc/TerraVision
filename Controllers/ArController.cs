@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
+using TerraVision.Api.Services;
+using TerraVision.Api.Settings;
+using IWebHostEnvironment = Microsoft.AspNetCore.Hosting.IWebHostEnvironment;
 
 namespace TerraVision.Api.Controllers
 {
@@ -11,14 +14,30 @@ namespace TerraVision.Api.Controllers
     public class ArController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly IArSessionService _arSessionService;
+        private readonly IMediaBlobStorage _mediaBlobStorage;
+        private readonly MediaStorageSettings _mediaSettings;
+        private readonly IWebHostEnvironment _environment;
 
-        public ArController(IProductService productService)
+        public ArController(
+            IProductService productService,
+            IArSessionService arSessionService,
+            IMediaBlobStorage mediaBlobStorage,
+            Microsoft.Extensions.Options.IOptions<MediaStorageSettings> mediaSettings,
+            IWebHostEnvironment environment)
         {
             _productService = productService;
+            _arSessionService = arSessionService;
+            _mediaBlobStorage = mediaBlobStorage;
+            _mediaSettings = mediaSettings.Value;
+            _environment = environment;
         }
 
         [HttpGet("products/{productId:int}/preview")]
-        public async Task<IActionResult> GetProductPreview(int productId, [FromQuery] string platform = "android")
+        public async Task<IActionResult> GetProductPreview(
+            int productId,
+            [FromQuery] string platform = "android",
+            [FromQuery] string? clientBaseUrl = null)
         {
             var product = await _productService.GetProductByIdAsync(productId);
             if (product == null || !product.IsArCompatible)
@@ -32,12 +51,36 @@ namespace TerraVision.Api.Controllers
 
             if (!string.IsNullOrWhiteSpace(product.ArModelFileName))
             {
-                modelUrl = $"/assets/ar-models/{product.ArModelFileName}";
+                modelUrl = _mediaBlobStorage.ResolveClientUrl(
+                    product.ArModelFileName,
+                    _mediaSettings.Prefixes.ArModels);
                 modelFormat = Path.GetExtension(product.ArModelFileName).TrimStart('.').ToLowerInvariant();
             }
             else
             {
-                modelUrl = $"/assets/ar-models/{product.SKU}.{modelFormat}";
+                modelUrl = _mediaBlobStorage.ResolveClientUrl(
+                    null,
+                    _mediaSettings.Prefixes.ArModels,
+                    $"{product.SKU}.{modelFormat}");
+            }
+
+            var allowDevLan = _environment.IsDevelopment();
+            if (!ArModelUrlRules.IsValidArModelUrl(modelUrl, allowDevLan))
+            {
+                if (allowDevLan)
+                {
+                    modelUrl = ArPreviewUrlResolver.ResolveForClient(modelUrl, Request, _mediaSettings, clientBaseUrl);
+                }
+            }
+
+            if (!ArModelUrlRules.IsValidArModelUrl(modelUrl, allowDevLan))
+            {
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    allowDevLan
+                        ? ArModelUrlRules.InvalidUrlMessage +
+                          " Geliştirme: mobil uygulama clientBaseUrl göndermeli veya MediaStorage:MobileDevBaseUrl (ör. http://10.0.2.2:5090) ayarlayın."
+                        : ArModelUrlRules.InvalidUrlMessage);
             }
 
             var response = new ArPreviewResponse
@@ -51,6 +94,81 @@ namespace TerraVision.Api.Controllers
             };
 
             return Ok(response);
+        }
+
+        [HttpPost("sessions")]
+        [Authorize(Roles = "Customer")]
+        [RequestSizeLimit(15 * 1024 * 1024)]
+        public async Task<IActionResult> SaveSession(
+            [FromForm] int productId,
+            [FromForm] string deviceModel,
+            [FromForm] decimal scaleX,
+            [FromForm] decimal scaleY,
+            [FromForm] decimal scaleZ,
+            [FromForm] decimal rotationY,
+            [FromForm] string? environmentNotes,
+            [FromForm] IFormFile? screenshot,
+            [FromForm] string? screenshotUrl,
+            CancellationToken cancellationToken)
+        {
+            if ((screenshot == null || screenshot.Length == 0) && string.IsNullOrWhiteSpace(screenshotUrl))
+            {
+                return BadRequest("Screenshot or screenshotUrl is required.");
+            }
+
+            var userId = GetCurrentUserId();
+            var request = new SaveArSessionRequestDto
+            {
+                ProductId = productId,
+                DeviceModel = deviceModel,
+                ScaleX = scaleX,
+                ScaleY = scaleY,
+                ScaleZ = scaleZ,
+                RotationY = rotationY,
+                EnvironmentNotes = environmentNotes
+            };
+
+            try
+            {
+                var session = await _arSessionService.SaveSessionAsync(userId, request, screenshot, screenshotUrl, cancellationToken);
+                return CreatedAtAction(nameof(GetMySessions), new { id = session.Id }, session);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("sessions/me")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> GetMySessions()
+        {
+            var userId = GetCurrentUserId();
+            var sessions = await _arSessionService.GetMySessionsAsync(userId);
+            return Ok(sessions);
+        }
+
+        [HttpGet("sessions")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllSessions()
+        {
+            var sessions = await _arSessionService.GetAllSessionsAsync();
+            return Ok(sessions);
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst("sub")?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Invalid user identity.");
+            }
+
+            return userId;
         }
     }
 }

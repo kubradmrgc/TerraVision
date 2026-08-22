@@ -1,60 +1,22 @@
-import axios, { AxiosError } from 'axios';
+import { createApiClient, type TokenStore } from '@terravision/shared';
 import { API_BASE_URL } from '../config/env';
-import { tokenStore } from './tokenStore';
+import { tokenStore as mobileTokenStore } from './tokenStore';
 
-export const apiClient = axios.create({
+const tokenStore: TokenStore = {
+  getAccessToken: () => mobileTokenStore.getToken(),
+  getRefreshToken: () => mobileTokenStore.getRefreshToken(),
+  setTokens: (accessToken, refreshToken) => mobileTokenStore.setTokens(accessToken, refreshToken),
+  clearTokens: () => mobileTokenStore.clearToken()
+};
+
+const { client, tokenRefresh, onUnauthorized: registerUnauthorized } = createApiClient({
   baseURL: API_BASE_URL,
-  timeout: 15000
+  tokenStore
 });
 
-let refreshPromise: Promise<string> | null = null;
+export const apiClient = client;
+export { tokenRefresh };
 
-async function refreshAccessToken(): Promise<string> {
-  if (!refreshPromise) {
-    refreshPromise = (async () => {
-      const refreshToken = await tokenStore.getRefreshToken();
-      if (!refreshToken) {
-        throw new Error('No refresh token');
-      }
-
-      const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken });
-      const token = response.data.token as string;
-      const newRefreshToken = response.data.refreshToken as string;
-      await tokenStore.setTokens(token, newRefreshToken);
-      return token;
-    })().finally(() => {
-      refreshPromise = null;
-    });
-  }
-
-  return refreshPromise;
+export function onUnauthorized(handler: () => void): void {
+  registerUnauthorized(handler);
 }
-
-apiClient.interceptors.request.use(async (config) => {
-  const token = await tokenStore.getToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const token = await refreshAccessToken();
-        originalRequest.headers = originalRequest.headers ?? {};
-        originalRequest.headers.Authorization = `Bearer ${token}`;
-        return apiClient(originalRequest);
-      } catch {
-        await tokenStore.clearToken();
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);

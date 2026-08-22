@@ -18,6 +18,7 @@ namespace TerraVision.Api.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAll()
         {
             var categories = await _categoryService.GetAllCategoriesAsync();

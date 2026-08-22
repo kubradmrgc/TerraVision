@@ -7,6 +7,34 @@ namespace TerraVision.Api.Data
     {
         public TerraVisionDbContext(DbContextOptions<TerraVisionDbContext> options) : base(options) { }
 
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            StampInMemoryAppointmentRowVersions();
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        public override int SaveChanges()
+        {
+            StampInMemoryAppointmentRowVersions();
+            return base.SaveChanges();
+        }
+
+        private void StampInMemoryAppointmentRowVersions()
+        {
+            if (Database.IsRelational())
+            {
+                return;
+            }
+
+            foreach (var entry in ChangeTracker.Entries<Appointment>())
+            {
+                if (entry.State is EntityState.Added or EntityState.Modified)
+                {
+                    entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
+                }
+            }
+        }
+
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<User> Users { get; set; }
@@ -15,6 +43,20 @@ namespace TerraVision.Api.Data
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+        public DbSet<ArSession> ArSessions { get; set; }
+        public DbSet<PlantCareCalendar> PlantCareCalendars { get; set; }
+        public DbSet<CareLog> CareLogs { get; set; }
+        public DbSet<ExchangeProduct> ExchangeProducts { get; set; }
+        public DbSet<ExchangeOffer> ExchangeOffers { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<StoreCampaign> StoreCampaigns { get; set; }
+        public DbSet<StoreCampaignProduct> StoreCampaignProducts { get; set; }
+        public DbSet<SiteContactChannel> SiteContactChannels { get; set; }
+        public DbSet<SiteFeedbackSubmission> SiteFeedbackSubmissions { get; set; }
+        public DbSet<ConsultationSession> ConsultationSessions { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<ChatProposalLine> ChatProposalLines { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,6 +73,26 @@ namespace TerraVision.Api.Data
                 .WithMany(u => u.ConsultantAppointments)
                 .HasForeignKey(a => a.ConsultantId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Appointment>()
+                .Property(a => a.RowVersion)
+                .IsRowVersion();
+
+            // One active booking per consultant + slot; cancelled appointments free the slot.
+            modelBuilder.Entity<Appointment>()
+                .HasIndex(a => new { a.ConsultantId, a.AppointmentDate })
+                .IsUnique()
+                .HasFilter("[Status] <> 4 AND [IsDeleted] = 0");
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.LinkedOrder)
+                .WithMany()
+                .HasForeignKey(a => a.LinkedOrderId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Appointment>()
+                .Property(a => a.OutcomeNotes)
+                .HasMaxLength(500);
 
             modelBuilder.Entity<Cart>()
                 .HasOne(c => c.User)
@@ -62,6 +124,41 @@ namespace TerraVision.Api.Data
                 .Property(p => p.Price)
                 .HasPrecision(18, 2);
 
+            modelBuilder.Entity<Product>()
+                .Property(p => p.CompareAtPrice)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.PromoLabel)
+                .HasMaxLength(80);
+
+            modelBuilder.Entity<StoreCampaign>()
+                .Property(c => c.Title)
+                .HasMaxLength(120);
+
+            modelBuilder.Entity<StoreCampaign>()
+                .Property(c => c.Subtitle)
+                .HasMaxLength(240);
+
+            modelBuilder.Entity<StoreCampaign>()
+                .Property(c => c.BadgeText)
+                .HasMaxLength(40);
+
+            modelBuilder.Entity<StoreCampaignProduct>()
+                .HasKey(cp => new { cp.CampaignId, cp.ProductId });
+
+            modelBuilder.Entity<StoreCampaignProduct>()
+                .HasOne(cp => cp.Campaign)
+                .WithMany(c => c.CampaignProducts)
+                .HasForeignKey(cp => cp.CampaignId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<StoreCampaignProduct>()
+                .HasOne(cp => cp.Product)
+                .WithMany(p => p.CampaignProducts)
+                .HasForeignKey(cp => cp.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.User)
                 .WithMany(u => u.Orders)
@@ -86,6 +183,275 @@ namespace TerraVision.Api.Data
 
             modelBuilder.Entity<OrderItem>()
                 .Property(oi => oi.UnitPrice)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Order>()
+                .Property(o => o.Notes)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .HasOne(h => h.Order)
+                .WithMany(o => o.StatusHistory)
+                .HasForeignKey(h => h.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .HasIndex(h => new { h.OrderId, h.CreatedDate });
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .Property(h => h.Reason)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<ArSession>()
+                .HasOne(s => s.User)
+                .WithMany(u => u.ArSessions)
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ArSession>()
+                .HasOne(s => s.Product)
+                .WithMany(p => p.ArSessions)
+                .HasForeignKey(s => s.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ArSession>()
+                .Property(s => s.DeviceModel)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<ArSession>()
+                .Property(s => s.ScreenshotUrl)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<ArSession>()
+                .Property(s => s.EnvironmentMetadata)
+                .HasMaxLength(2000);
+
+            modelBuilder.Entity<ArSession>()
+                .Property(s => s.ScaleX)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<ArSession>()
+                .Property(s => s.ScaleY)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<ArSession>()
+                .Property(s => s.ScaleZ)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<ArSession>()
+                .Property(s => s.RotationY)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<ArSession>()
+                .HasIndex(s => new { s.UserId, s.CreatedDate });
+
+            modelBuilder.Entity<PlantCareCalendar>()
+                .HasOne(c => c.User)
+                .WithMany(u => u.PlantCareCalendars)
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PlantCareCalendar>()
+                .HasOne(c => c.Product)
+                .WithMany(p => p.PlantCareCalendars)
+                .HasForeignKey(c => c.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PlantCareCalendar>()
+                .HasIndex(c => new { c.UserId, c.ProductId })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+
+            modelBuilder.Entity<CareLog>()
+                .HasOne(l => l.PlantCareCalendar)
+                .WithMany(c => c.CareLogs)
+                .HasForeignKey(l => l.PlantCareCalendarId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CareLog>()
+                .HasIndex(l => new { l.PlantCareCalendarId, l.CompletedAt });
+
+            modelBuilder.Entity<CareLog>()
+                .Property(l => l.Notes)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.CareInstructions)
+                .HasMaxLength(2000);
+
+            modelBuilder.Entity<ExchangeProduct>()
+                .HasOne(p => p.Owner)
+                .WithMany(u => u.ExchangeProducts)
+                .HasForeignKey(p => p.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ExchangeProduct>()
+                .Property(p => p.Title)
+                .HasMaxLength(120);
+
+            modelBuilder.Entity<ExchangeProduct>()
+                .Property(p => p.Description)
+                .HasMaxLength(2000);
+
+            modelBuilder.Entity<ExchangeProduct>()
+                .Property(p => p.PhotoUrlsJson)
+                .HasMaxLength(4000);
+
+            modelBuilder.Entity<ExchangeProduct>()
+                .Property(p => p.Price)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<ExchangeProduct>()
+                .HasIndex(p => new { p.Status, p.IsActive, p.IsDeleted, p.CreatedDate });
+
+            modelBuilder.Entity<ExchangeOffer>()
+                .HasOne(o => o.Product)
+                .WithMany(p => p.Offers)
+                .HasForeignKey(o => o.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ExchangeOffer>()
+                .HasOne(o => o.Sender)
+                .WithMany(u => u.ExchangeOffersSent)
+                .HasForeignKey(o => o.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ExchangeOffer>()
+                .Property(o => o.Message)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<ExchangeOffer>()
+                .HasIndex(o => new { o.ProductId, o.Status, o.IsDeleted });
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Notification>()
+                .Property(n => n.Title)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<Notification>()
+                .Property(n => n.Message)
+                .HasMaxLength(1000);
+
+            modelBuilder.Entity<Notification>()
+                .Property(n => n.RelatedEntityType)
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => new { n.UserId, n.IsRead, n.IsDeleted, n.CreatedDate });
+
+            modelBuilder.Entity<SiteContactChannel>()
+                .Property(c => c.ChannelKey)
+                .HasMaxLength(32);
+
+            modelBuilder.Entity<SiteContactChannel>()
+                .Property(c => c.Label)
+                .HasMaxLength(80);
+
+            modelBuilder.Entity<SiteContactChannel>()
+                .Property(c => c.Email)
+                .HasMaxLength(256);
+
+            modelBuilder.Entity<SiteContactChannel>()
+                .HasIndex(c => c.ChannelKey)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+
+            modelBuilder.Entity<SiteFeedbackSubmission>()
+                .Property(s => s.Email)
+                .HasMaxLength(256);
+
+            modelBuilder.Entity<SiteFeedbackSubmission>()
+                .Property(s => s.UserStory)
+                .HasMaxLength(2000);
+
+            modelBuilder.Entity<SiteFeedbackSubmission>()
+                .Property(s => s.PageUrl)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<SiteFeedbackSubmission>()
+                .HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<SiteFeedbackSubmission>()
+                .HasIndex(s => new { s.Status, s.IsDeleted, s.CreatedDate });
+
+            modelBuilder.Entity<ConsultationSession>()
+                .HasOne(s => s.Customer)
+                .WithMany()
+                .HasForeignKey(s => s.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ConsultationSession>()
+                .HasOne(s => s.Consultant)
+                .WithMany()
+                .HasForeignKey(s => s.ConsultantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ConsultationSession>()
+                .HasOne(s => s.Appointment)
+                .WithMany()
+                .HasForeignKey(s => s.AppointmentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<ConsultationSession>()
+                .Property(s => s.Title)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<ConsultationSession>()
+                .HasIndex(s => new { s.CustomerId, s.ConsultantId, s.IsDeleted });
+
+            modelBuilder.Entity<ChatMessage>()
+                .HasOne(m => m.Session)
+                .WithMany(s => s.Messages)
+                .HasForeignKey(m => m.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ChatMessage>()
+                .HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ChatMessage>()
+                .Property(m => m.Content)
+                .HasMaxLength(2000);
+
+            modelBuilder.Entity<ChatMessage>()
+                .Property(m => m.ProposalTitle)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<ChatMessage>()
+                .Property(m => m.ProposalNotes)
+                .HasMaxLength(1000);
+
+            modelBuilder.Entity<ChatMessage>()
+                .HasIndex(m => new { m.SessionId, m.IsDeleted, m.CreatedDate });
+
+            modelBuilder.Entity<ChatProposalLine>()
+                .HasOne(l => l.ChatMessage)
+                .WithMany(m => m.ProposalLines)
+                .HasForeignKey(l => l.ChatMessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ChatProposalLine>()
+                .HasOne(l => l.Product)
+                .WithMany()
+                .HasForeignKey(l => l.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ChatProposalLine>()
+                .Property(l => l.ProductName)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<ChatProposalLine>()
+                .Property(l => l.UnitPrice)
                 .HasPrecision(18, 2);
 
             SeedData.ApplyConfiguration(modelBuilder);

@@ -1,0 +1,23 @@
+{
+  "folders": [
+    {
+      "name": "TerraVision.Api",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "npm.autoDetect": "off",
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/android/.gradle/**": true,
+      "**/android/build/**": true,
+      "**/.next/**": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/android/.gradle": true,
+      "**/android/build": true,
+      "**/.next": true
+    }
+  }
+}

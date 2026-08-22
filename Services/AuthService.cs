@@ -31,17 +31,22 @@ namespace TerraVision.Api.Services
             var user = await _userRepository.SingleOrDefaultAsync(x => x.Email == request.Email);
             
             if (user == null)
-                throw new Exception("Invalid email or password.");
+                throw new UnauthorizedAccessException("Invalid email or password.");
 
-            // Support BCrypt hash and fallback plain text for initial seed records.
             var storedPassword = Encoding.UTF8.GetString(user.PasswordHash);
-            var isBcryptHash = storedPassword.StartsWith("$2a$") || storedPassword.StartsWith("$2b$") || storedPassword.StartsWith("$2y$");
-            bool isPasswordValid = isBcryptHash
-                ? BCrypt.Net.BCrypt.Verify(request.Password, storedPassword)
-                : request.Password == storedPassword;
+            var isBcryptHash = storedPassword.StartsWith("$2a$") ||
+                               storedPassword.StartsWith("$2b$") ||
+                               storedPassword.StartsWith("$2y$");
+            if (!isBcryptHash)
+            {
+                throw new InvalidOperationException(
+                    "Your password hash format is outdated. Reset password or apply database migrations.");
+            }
+
+            var isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, storedPassword);
             
             if (!isPasswordValid)
-                throw new Exception("Invalid email or password.");
+                throw new UnauthorizedAccessException("Invalid email or password.");
 
             return await BuildAndPersistAuthResponseAsync(user);
         }
@@ -51,7 +56,7 @@ namespace TerraVision.Api.Services
             var existingUser = await _userRepository.SingleOrDefaultAsync(x => x.Email == request.Email);
             
             if (existingUser != null)
-                throw new Exception("Email already exists.");
+                throw new InvalidOperationException("Email already exists.");
 
             string passwordHashString = BCrypt.Net.BCrypt.HashPassword(request.Password);
             byte[] passwordHash = System.Text.Encoding.UTF8.GetBytes(passwordHashString);
@@ -83,7 +88,7 @@ namespace TerraVision.Api.Services
 
             if (user == null)
             {
-                throw new Exception("Invalid or expired refresh token.");
+                throw new UnauthorizedAccessException("Invalid or expired refresh token.");
             }
 
             return await BuildAndPersistAuthResponseAsync(user);

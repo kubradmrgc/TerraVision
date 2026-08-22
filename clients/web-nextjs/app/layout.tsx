@@ -1,36 +1,34 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
-import Link from 'next/link';
+import { PlantScenery } from './components/PlantScenery';
+import { SiteFooterBar } from './components/SiteFooterBar';
+import { TopNav } from './components/TopNav';
+import { buildRootMetadata } from '@/config/siteSeo';
 
 export const metadata: Metadata = {
-  title: 'TerraVision',
-  description: 'TerraVision Web Client'
+  ...buildRootMetadata(),
+  icons: {
+    icon: '/brand/terravision-logo.png',
+    apple: '/brand/terravision-logo.png'
+  }
 };
+
+const themeInitScript = `(function(){try{var t=localStorage.getItem('tv-theme');if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr">
+    <html lang="tr" suppressHydrationWarning>
       <body>
-        <header
-          style={{
-            background: '#fff',
-            borderBottom: '1px solid #e4e4e7',
-            padding: '12px 20px',
-            display: 'flex',
-            gap: '20px',
-            alignItems: 'center'
-          }}
-        >
-          <strong>TerraVision</strong>
-          <nav style={{ display: 'flex', gap: '16px' }}>
-            <Link href="/">Ana</Link>
-            <Link href="/login">Giriş</Link>
-            <Link href="/products">Ürünler</Link>
-            <Link href="/cart">Sepet</Link>
-            <Link href="/admin/orders">Admin Sipariş</Link>
-          </nav>
-        </header>
-        <main style={{ maxWidth: 960, margin: '0 auto', padding: 20 }}>{children}</main>
+        <Script id="tv-theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
+        <PlantScenery />
+        <div className="tv-app-shell">
+          <TopNav />
+          <main className="tv-main tv-main--site">{children}</main>
+          <SiteFooterBar />
+        </div>
       </body>
     </html>
   );

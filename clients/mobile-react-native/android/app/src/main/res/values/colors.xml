@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#FBF8FC</color>
+    <color name="splash_background">#FBF8FC</color>
+    <color name="brand_primary">#004C22</color>
+    <color name="progress_track">#E0E8E3</color>
+    <color name="loading_status_text">#5A6B62</color>
+</resources>

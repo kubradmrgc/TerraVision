@@ -1,26 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { computeCartDisplayTotals, formatTryCurrency, getOrderStatusLabel } from '@terravision/shared';
+import { OptimizedMediaImage } from '@/components/OptimizedMediaImage';
+import { QuantityStepper } from '@/components/cart/QuantityStepper';
 import { cartService } from '@/services/cartService';
 import { orderService } from '@/services/orderService';
 import { authService } from '@/services/authService';
 import { realtimeService } from '@/services/realtimeService';
 import { tokenStore } from '@/services/tokenStore';
+import { formatCartActivityLabel, formatRelativeTimeTr } from '@/utils/activityFeed';
+import { getApiErrorMessage, isUnauthorized } from '@/utils/apiError';
 import type { CartDto } from '@/types/cart';
 import type { OrderDto } from '@/types/order';
 import type { CartChangedEvent, OrderCreatedEvent, OrderStatusChangedEvent } from '@/types/realtime';
-
-const orderStatusLabels: Record<number, string> = {
-  1: 'Pending',
-  2: 'Confirmed',
-  3: 'Shipped',
-  4: 'Delivered',
-  5: 'Cancelled'
-};
-
-const getOrderStatusLabel = (status: number): string => orderStatusLabels[status] ?? `Unknown(${status})`;
 
 export default function CartPage() {
   const router = useRouter();
@@ -31,7 +26,11 @@ export default function CartPage() {
   const [orderStatusEvents, setOrderStatusEvents] = useState<OrderStatusChangedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busyProductId, setBusyProductId] = useState<number | null>(null);
+  const [busyGlobal, setBusyGlobal] = useState(false);
+
+  const cartTotals = useMemo(() => computeCartDisplayTotals(cart), [cart]);
+  const itemCount = cartTotals.itemCount;
 
   const refreshCart = useCallback(async () => {
     const data = await cartService.getMyCart();
@@ -68,15 +67,25 @@ export default function CartPage() {
           setOrderStatusEvents((prev) => [ev, ...prev].slice(0, 25));
           void refreshOrders();
         });
+        const unsubReconnect = realtimeService.onReconnected(() => {
+          void refreshCart();
+          void refreshOrders();
+        });
         unsubscribe = () => {
           unsubCart();
           unsubOrderCreated();
           unsubOrderStatus();
+          unsubReconnect();
         };
         await refreshCart();
         await refreshOrders();
-      } catch {
-        setError('Sepet veya canlı bağlantı yüklenemedi.');
+      } catch (err) {
+        if (isUnauthorized(err)) {
+          tokenStore.clearTokens();
+          router.replace('/login');
+          return;
+        }
+        setError(getApiErrorMessage(err, 'Sepet veya anlık senkronizasyon yüklenemedi.'));
       } finally {
         setLoading(false);
       }
@@ -90,39 +99,52 @@ export default function CartPage() {
     };
   }, [router, refreshCart, refreshOrders]);
 
-  const handleUpdateQty = async (productId: number, qty: number) => {
-    setBusy(true);
+  const runLineAction = async (productId: number, action: () => Promise<CartDto>) => {
+    setBusyProductId(productId);
+    setError(null);
     try {
-      const updated = await cartService.updateItem(productId, qty);
+      const updated = await action();
       setCart(updated);
-    } catch {
-      setError('Adet güncellenemedi.');
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        tokenStore.clearTokens();
+        router.replace('/login');
+        return;
+      }
+      setError(getApiErrorMessage(err, 'Sepet güncellenemedi.'));
     } finally {
-      setBusy(false);
+      setBusyProductId(null);
     }
   };
 
-  const handleRemove = async (productId: number) => {
-    setBusy(true);
-    try {
-      const updated = await cartService.removeItem(productId);
-      setCart(updated);
-    } catch {
-      setError('Kalem kaldırılamadı.');
-    } finally {
-      setBusy(false);
-    }
+  const handleDecrease = (productId: number, quantity: number) => {
+    const nextQty = quantity - 1;
+    void runLineAction(productId, () => cartService.updateItem(productId, Math.max(nextQty, 0)));
+  };
+
+  const handleIncrease = (productId: number, quantity: number) => {
+    void runLineAction(productId, () => cartService.updateItem(productId, quantity + 1));
+  };
+
+  const handleRemove = (productId: number) => {
+    void runLineAction(productId, () => cartService.removeItem(productId));
   };
 
   const handleClear = async () => {
-    setBusy(true);
+    setBusyGlobal(true);
+    setError(null);
     try {
       const updated = await cartService.clearCart();
       setCart(updated);
-    } catch {
-      setError('Sepet temizlenemedi.');
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        tokenStore.clearTokens();
+        router.replace('/login');
+        return;
+      }
+      setError(getApiErrorMessage(err, 'Sepet temizlenemedi.'));
     } finally {
-      setBusy(false);
+      setBusyGlobal(false);
     }
   };
 
@@ -132,179 +154,155 @@ export default function CartPage() {
   };
 
   const handlePlaceOrder = async () => {
-    setBusy(true);
+    setBusyGlobal(true);
+    setError(null);
     try {
       await orderService.placeFromCart();
       await refreshCart();
       await refreshOrders();
-    } catch {
-      setError('Sipariş oluşturulamadı.');
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        tokenStore.clearTokens();
+        router.replace('/login');
+        return;
+      }
+      setError(getApiErrorMessage(err, 'Sipariş oluşturulamadı.'));
     } finally {
-      setBusy(false);
+      setBusyGlobal(false);
     }
   };
 
+  const isBusy = busyGlobal || busyProductId !== null;
+  const hasItems = (cart?.items.length ?? 0) > 0;
+
   if (loading) {
-    return <p>Sepet yükleniyor…</p>;
+    return <p className="tv-muted">Sepet yükleniyor…</p>;
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-        <h1 style={{ fontSize: 22, margin: 0 }}>Sepet</h1>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+    <div className="tv-cart-page">
+      <header className="tv-cart-page-header">
+        <div>
+          <span className="tv-login-pill">Mağaza</span>
+          <h1 className="tv-page-title">Sepetim</h1>
+          <p className="tv-page-lead">
+            {hasItems
+              ? `${itemCount} ürün · güncellemeler anında yansır`
+              : 'Sepetiniz boş. Ürünler sayfasından ekleyebilirsiniz.'}
+          </p>
+        </div>
+        <nav className="tv-page-actions tv-admin-breadcrumb" aria-label="Sepet gezinti">
           <Link href="/products">Ürünlere dön</Link>
-          <button type="button" onClick={() => void handleLogout()} style={{ background: 'none', border: '1px solid #d4d4d8', padding: '8px 12px', borderRadius: 8 }}>
+          <span aria-hidden="true">·</span>
+          <button type="button" className="tv-btn-secondary" onClick={() => void handleLogout()}>
             Çıkış
           </button>
-        </div>
-      </div>
-      {error && <p style={{ color: '#b91c1c', marginBottom: 12 }}>{error}</p>}
+        </nav>
+      </header>
 
-      <section
-        style={{
-          background: '#fff',
-          border: '1px solid #e4e4e7',
-          borderRadius: 10,
-          padding: 16,
-          marginBottom: 20
-        }}
-      >
-        <p style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700 }}>
-          Toplam: {cart?.totalAmount ?? 0} TL
+      {error ? (
+        <p className="tv-error" role="alert">
+          {error}
         </p>
-        <button
-          type="button"
-          disabled={busy || !cart?.items.length}
-          onClick={() => void handleClear()}
-          style={{
-            padding: '8px 14px',
-            borderRadius: 8,
-            border: '1px solid #166534',
-            background: '#fff',
-            color: '#166534',
-            fontWeight: 600,
-            marginBottom: 16
-          }}
-        >
-          Sepeti temizle
-        </button>
-        <button
-          type="button"
-          disabled={busy || !cart?.items.length}
-          onClick={() => void handlePlaceOrder()}
-          style={{
-            padding: '8px 14px',
-            borderRadius: 8,
-            border: 'none',
-            background: '#166534',
-            color: '#fff',
-            fontWeight: 600,
-            marginBottom: 16,
-            marginLeft: 8
-          }}
-        >
-          Sipariş oluştur
-        </button>
-        {(cart?.items ?? []).length === 0 ? (
-          <p style={{ color: '#71717a', margin: 0 }}>Sepet boş.</p>
+      ) : null}
+
+      <section className="tv-card tv-cart-summary">
+        <p className="tv-cart-summary-total">
+          Toplam: <span>{formatTryCurrency(cartTotals.total)}</span>
+        </p>
+        <div className="tv-cart-toolbar">
+          <button
+            type="button"
+            className="tv-btn-secondary"
+            disabled={isBusy || !hasItems}
+            onClick={() => void handleClear()}
+          >
+            Sepeti temizle
+          </button>
+          <button type="button" className="tv-submit" disabled={isBusy || !hasItems} onClick={() => void handlePlaceOrder()}>
+            Sipariş oluştur
+          </button>
+        </div>
+
+        {!hasItems ? (
+          <p className="tv-muted" style={{ margin: 0 }}>
+            Sepet boş.{' '}
+            <Link href="/products">Alışverişe başla</Link>
+          </p>
         ) : (
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {(cart?.items ?? []).map((item) => (
-              <li
-                key={item.productId}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 12,
-                  paddingBottom: 12,
-                  borderBottom: '1px solid #f4f4f5'
-                }}
-              >
-                <span>
-                  {item.productName} × {item.quantity} = {item.lineTotal} TL
-                </span>
-                <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void handleUpdateQty(item.productId, Math.max(item.quantity - 1, 0))}
-                    style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid #e4e4e7', background: '#fafafa' }}
-                  >
-                    −
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void handleUpdateQty(item.productId, item.quantity + 1)}
-                    style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid #e4e4e7', background: '#fafafa' }}
-                  >
-                    +
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void handleRemove(item.productId)}
-                    style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#fecaca', color: '#991b1b', fontWeight: 600 }}
-                  >
-                    Kaldır
-                  </button>
-                </span>
-              </li>
-            ))}
+          <ul className="tv-cart-list">
+            {(cart?.items ?? []).map((item) => {
+              const lineBusy = busyProductId === item.productId || busyGlobal;
+              return (
+                <li key={item.productId} className="tv-cart-item">
+                  {item.imageUrl?.trim() ? (
+                    <OptimizedMediaImage
+                      src={item.imageUrl}
+                      alt=""
+                      width={64}
+                      height={64}
+                      sizes="64px"
+                      className="tv-cart-item-thumb"
+                    />
+                  ) : (
+                    <div className="tv-cart-item-thumb tv-cart-item-thumb--empty" aria-hidden="true">
+                      TV
+                    </div>
+                  )}
+                  <div className="tv-cart-item-info">
+                    <p className="tv-cart-item-name">{item.productName}</p>
+                    <p className="tv-cart-item-meta">
+                      Birim {formatTryCurrency(item.unitPrice)} · {item.quantity} adet
+                    </p>
+                    <p className="tv-cart-item-price">{formatTryCurrency(item.lineTotal)}</p>
+                  </div>
+                  <QuantityStepper
+                    quantity={item.quantity}
+                    busy={lineBusy}
+                    onDecrease={() => handleDecrease(item.productId, item.quantity)}
+                    onIncrease={() => handleIncrease(item.productId, item.quantity)}
+                    onRemove={() => handleRemove(item.productId)}
+                  />
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
-      <section>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>Siparişlerim</h2>
-        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: 14, color: '#3f3f46' }}>
+      <section className="tv-subsection">
+        <h2 className="tv-section-title">Siparişlerim</h2>
+        <ul className="tv-event-list">
           {orders.length === 0 ? (
             <li>Henüz sipariş yok.</li>
           ) : (
             orders.map((order) => (
-              <li key={order.id} style={{ marginBottom: 6 }}>
-                #{order.id} · status {getOrderStatusLabel(order.status)} · total {order.totalAmount} TL
+              <li key={order.id}>
+                #{order.id} · {getOrderStatusLabel(order.status)} · {formatTryCurrency(order.totalAmount)}
               </li>
             ))
           )}
         </ul>
+      </section>
 
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>Canlı sepet olayları (SignalR)</h2>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 14, color: '#3f3f46' }}>
+      <section className="tv-subsection tv-activity-section">
+        <h2 className="tv-section-title">Sepet aktivite akışı</h2>
+        <p className="tv-activity-lead">
+          Sepetinizde yapılan değişiklikler anlık olarak burada listelenir (çoklu cihaz senkronizasyonu).
+        </p>
+        <ul className="tv-event-list tv-activity-list">
           {events.length === 0 ? (
-            <li>Henüz olay yok. Başka cihazdan sepeti değiştirince burada görünür.</li>
+            <li className="tv-activity-empty">
+              Henüz kayıt yok. Başka bir oturumdan sepete ürün eklediğinizde veya adet değiştirdiğinizde
+              güncellemeler burada görünür.
+            </li>
           ) : (
             events.map((ev, i) => (
-              <li key={i} style={{ marginBottom: 6 }}>
-                {ev.action} · ürün #{ev.productId} · adet {ev.quantity}
-              </li>
-            ))
-          )}
-        </ul>
-        <h2 style={{ fontSize: 18, margin: '16px 0 8px' }}>Canlı order.created olayları</h2>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 14, color: '#3f3f46' }}>
-          {orderCreatedEvents.length === 0 ? (
-            <li>Henüz order.created olayı yok.</li>
-          ) : (
-            orderCreatedEvents.map((ev, i) => (
-              <li key={i} style={{ marginBottom: 6 }}>
-                order #{ev.orderId} · status {getOrderStatusLabel(ev.status)} · total {ev.totalAmount}
-              </li>
-            ))
-          )}
-        </ul>
-
-        <h2 style={{ fontSize: 18, margin: '16px 0 8px' }}>Canlı order.status.changed olayları</h2>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 14, color: '#3f3f46' }}>
-          {orderStatusEvents.length === 0 ? (
-            <li>Henüz order.status.changed olayı yok.</li>
-          ) : (
-            orderStatusEvents.map((ev, i) => (
-              <li key={i} style={{ marginBottom: 6 }}>
-                order #{ev.orderId} · {getOrderStatusLabel(ev.previousStatus)} → {getOrderStatusLabel(ev.newStatus)}
+              <li key={`${ev.productId}-${ev.action}-${i}`} className="tv-activity-item">
+                <span className="tv-activity-badge">{formatCartActivityLabel(ev.action)}</span>
+                <span className="tv-activity-detail">
+                  Ürün #{ev.productId} · {ev.quantity} adet
+                </span>
               </li>
             ))
           )}

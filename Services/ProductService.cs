@@ -1,10 +1,12 @@
 using Mapster;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using TerraVision.Api.Entities;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.DTOs;
+using TerraVision.Api.Models.Realtime;
 
 namespace TerraVision.Api.Services
 {
@@ -14,18 +16,24 @@ namespace TerraVision.Api.Services
         private readonly ICategoryService _categoryService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IDistributedCache _distributedCache;
-        private const string ProductListCacheKey = "products:all:v1";
+        private readonly IMediaService _mediaService;
+        private readonly IRealtimeSyncService _realtimeSyncService;
+        private const string ProductListCacheKey = "products:all:v3";
 
         public ProductService(
             IRepository<Product> productRepository,
             ICategoryService categoryService,
             IUnitOfWork unitOfWork,
-            IDistributedCache distributedCache)
+            IDistributedCache distributedCache,
+            IMediaService mediaService,
+            IRealtimeSyncService realtimeSyncService)
         {
             _productRepository = productRepository;
             _categoryService = categoryService;
             _unitOfWork = unitOfWork;
             _distributedCache = distributedCache;
+            _mediaService = mediaService;
+            _realtimeSyncService = realtimeSyncService;
         }
 
         public async Task<IEnumerable<ProductDto>> GetAllProductsAsync()
@@ -74,6 +82,63 @@ namespace TerraVision.Api.Services
             return product.Adapt<ProductDto>();
         }
 
+        public async Task<ProductDto> CreateProductWithImageAsync(
+            CreateProductWithImageRequest request,
+            IFormFile image,
+            CancellationToken cancellationToken = default)
+        {
+            if (image == null || image.Length <= 0)
+            {
+                throw new ArgumentException("Product image is required.");
+            }
+
+            var upload = await _mediaService.UploadProductImageAsync(image, cancellationToken);
+            return await CreateProductAsync(new CreateProductRequest
+            {
+                Name = request.Name,
+                Description = request.Description,
+                Price = request.Price,
+                StockQuantity = request.StockQuantity,
+                MinStockLevel = request.MinStockLevel,
+                SKU = request.SKU,
+                ImageUrl = upload.Url,
+                IsArCompatible = request.IsArCompatible,
+                CategoryId = request.CategoryId,
+                WateringIntervalDays = request.WateringIntervalDays,
+                FertilizingIntervalDays = request.FertilizingIntervalDays,
+                CleaningIntervalDays = request.CleaningIntervalDays,
+                CareInstructions = request.CareInstructions
+            });
+        }
+
+        public async Task<ProductDto> SetImageUrlAsync(int productId, string imageUrl, bool overwriteExisting = false)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+            {
+                throw new ArgumentException("Image URL is required.");
+            }
+
+            var product = await _productRepository.SingleOrDefaultAsync(p => p.Id == productId && !p.IsDeleted);
+            if (product == null)
+            {
+                throw new KeyNotFoundException("Product not found");
+            }
+
+            if (!overwriteExisting && !string.IsNullOrWhiteSpace(product.ImageUrl))
+            {
+                throw new InvalidOperationException("Product already has an image. Use overwrite option to replace it.");
+            }
+
+            product.ImageUrl = imageUrl;
+            product.UpdatedDate = DateTime.UtcNow;
+
+            _productRepository.Update(product);
+            await _unitOfWork.CommitAsync();
+            await InvalidateProductCacheAsync();
+
+            return product.Adapt<ProductDto>();
+        }
+
         public async Task<ProductDto> UpdateProductAsync(UpdateProductRequest request)
         {
             var product = await _productRepository.SingleOrDefaultAsync(p => p.Id == request.Id && !p.IsDeleted);
@@ -85,12 +150,14 @@ namespace TerraVision.Api.Services
                 _ = await _categoryService.GetCategoryByIdAsync(request.CategoryId);
             }
 
+            var previousStock = product.StockQuantity;
             request.Adapt(product);
             product.UpdatedDate = DateTime.UtcNow;
 
             _productRepository.Update(product);
             await _unitOfWork.CommitAsync();
             await InvalidateProductCacheAsync();
+            await TryBroadcastLowStockAlertAsync(product, previousStock);
 
             return product.Adapt<ProductDto>();
         }
@@ -137,9 +204,30 @@ namespace TerraVision.Api.Services
             return product.Adapt<ProductDto>();
         }
 
-        private Task InvalidateProductCacheAsync()
+        public Task InvalidateProductCacheAsync()
         {
             return _distributedCache.RemoveAsync(ProductListCacheKey);
+        }
+
+        private async Task TryBroadcastLowStockAlertAsync(Product product, int previousStock)
+        {
+            if (!ProductStockAlertEvaluator.ShouldNotify(product, previousStock))
+            {
+                return;
+            }
+
+            await _realtimeSyncService.BroadcastProductLowStockAsync(new ProductLowStockEvent
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                StockQuantity = product.StockQuantity,
+                MinStockLevel = product.MinStockLevel,
+                Message = ProductStockAlertEvaluator.BuildMessage(
+                    product.Name,
+                    product.StockQuantity,
+                    product.MinStockLevel),
+                OccurredAtUtc = DateTime.UtcNow
+            });
         }
     }
 }

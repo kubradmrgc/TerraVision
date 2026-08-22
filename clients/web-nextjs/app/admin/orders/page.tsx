@@ -2,27 +2,17 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { orderService } from '../../../src/services/orderService';
-import { tokenStore } from '../../../src/services/tokenStore';
-import { OrderDto } from '../../../src/types/order';
+import { formatTryCurrency, ORDER_STATUS_LABELS } from '@terravision/shared';
+import { AdminPageShell } from '@/components/admin/AdminPageShell';
+import { AdminOrderStatusBadge, orderStatusLabelTr } from '@/components/admin/AdminStatusBadge';
+import { orderService } from '@/services/orderService';
+import { tokenStore } from '@/services/tokenStore';
+import { OrderDto } from '@/types/order';
 
-const orderStatusLabels: Record<number, string> = {
-  1: 'Pending',
-  2: 'Confirmed',
-  3: 'Shipped',
-  4: 'Delivered',
-  5: 'Cancelled'
-};
-
-const statusOptions = [
-  { value: 1, label: 'Pending' },
-  { value: 2, label: 'Confirmed' },
-  { value: 3, label: 'Shipped' },
-  { value: 4, label: 'Delivered' },
-  { value: 5, label: 'Cancelled' }
-];
-
-const getOrderStatusLabel = (status: number): string => orderStatusLabels[status] ?? `Unknown(${status})`;
+const statusOptions = Object.entries(ORDER_STATUS_LABELS).map(([value]) => ({
+  value: Number(value),
+  label: orderStatusLabelTr(Number(value))
+}));
 
 const getAllowedNextStatuses = (currentStatus: number): number[] => {
   switch (currentStatus) {
@@ -115,7 +105,7 @@ function AdminOrdersContent() {
       setTotalPages(data.totalPages || 1);
     } catch (err) {
       console.error(err);
-      setError('Siparişler yüklenemedi. Admin yetkisiyle giriş yaptığından emin ol.');
+      setError('Siparişler yüklenemedi. Yönetici hesabıyla giriş yaptığınızdan emin olun.');
     } finally {
       setLoading(false);
     }
@@ -124,7 +114,7 @@ function AdminOrdersContent() {
   useEffect(() => {
     const token = tokenStore.getToken();
     if (!token) {
-      router.replace('/login');
+      router.replace('/login/admin');
       return;
     }
 
@@ -182,7 +172,7 @@ function AdminOrdersContent() {
 
     if (!allowedStatuses.includes(nextStatus)) {
       setError(
-        `Order #${order.id} için ${getOrderStatusLabel(order.status)} -> ${getOrderStatusLabel(nextStatus)} geçişine izin yok.`
+        `#${order.id} siparişi için ${orderStatusLabelTr(order.status)} → ${orderStatusLabelTr(nextStatus)} geçişine izin yok.`
       );
       setSuccess(null);
       return;
@@ -198,12 +188,12 @@ function AdminOrdersContent() {
       });
 
       setOrders((prev: OrderDto[]) => prev.map((x: OrderDto) => (x.id === updated.id ? updated : x)));
-      setSuccess(`Order #${order.id} durumu ${getOrderStatusLabel(updated.status)} olarak güncellendi.`);
+      setSuccess(`#${order.id} siparişi “${orderStatusLabelTr(updated.status)}” olarak güncellendi.`);
       setReasonByOrderId((prev) => ({ ...prev, [order.id]: '' }));
       await loadOrders();
     } catch (err) {
       console.error(err);
-      setError(`Order #${order.id} için durum güncellenemedi.`);
+      setError(`#${order.id} siparişi için durum güncellenemedi.`);
     } finally {
       setUpdatingOrderId(null);
     }
@@ -217,190 +207,249 @@ function AdminOrdersContent() {
   };
 
   return (
-    <div>
-      <h1 style={{ fontSize: 24, marginBottom: 12 }}>Admin · Sipariş Yönetimi</h1>
-      <p style={{ color: '#52525b', marginBottom: 20 }}>
-        Bu sayfada tüm siparişleri görebilir ve durumlarını business rule kapsamında güncelleyebilirsin.
+    <AdminPageShell
+      title="Sipariş yönetimi"
+      lead="Tüm siparişleri filtreleyin, onaylayın ve kargo/teslim durumunu güncelleyin."
+      actions={
+        <button type="button" className="tv-btn tv-btn--primary" onClick={() => void loadOrders()} disabled={loading}>
+          {loading ? 'Yükleniyor…' : 'Yenile'}
+        </button>
+      }
+    >
+      <form
+        className="tv-card tv-admin-filters"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void loadOrders();
+        }}
+      >
+        <div className="tv-admin-filters-row">
+          <label>
+            Durum
+            <select
+              className="tv-input"
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <option value={0}>Tüm durumlar</option>
+              {statusOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Sipariş no
+            <input
+              className="tv-input"
+              placeholder="örn. 12"
+              value={filterOrderText}
+              onChange={(e) => {
+                setFilterOrderText(e.target.value);
+                setPage(1);
+              }}
+            />
+          </label>
+          <label>
+            Tarih
+            <select
+              className="tv-input"
+              value={filterDateRange}
+              onChange={(e) => {
+                setFilterDateRange(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <option value={0}>Tüm tarihler</option>
+              <option value={1}>Bugün</option>
+              <option value={7}>Son 7 gün</option>
+              <option value={30}>Son 30 gün</option>
+            </select>
+          </label>
+          <label>
+            Sayfa boyutu
+            <select
+              className="tv-input"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </label>
+        </div>
+        <div className="tv-admin-filters-actions">
+          <button type="submit" className="tv-btn tv-btn--primary" disabled={loading}>
+            Uygula
+          </button>
+          <button type="button" className="tv-btn" onClick={clearFilters}>
+            Temizle
+          </button>
+        </div>
+      </form>
+
+      <p className="tv-admin-result-meta">
+        {orders.length} kayıt gösteriliyor · toplam <strong>{totalCount}</strong>
       </p>
 
-      <button onClick={loadOrders} disabled={loading} style={{ marginBottom: 20 }}>
-        {loading ? 'Yükleniyor...' : 'Yenile'}
-      </button>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
-        <select
-          value={filterStatus}
-          onChange={(e) => {
-            setFilterStatus(Number(e.target.value));
-            setPage(1);
-          }}
-        >
-          <option value={0}>Tüm Durumlar</option>
-          {statusOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <input
-          placeholder="Sipariş no ara (örn: 12)"
-          value={filterOrderText}
-          onChange={(e) => {
-            setFilterOrderText(e.target.value);
-            setPage(1);
-          }}
-        />
-        <select
-          value={filterDateRange}
-          onChange={(e) => {
-            setFilterDateRange(Number(e.target.value));
-            setPage(1);
-          }}
-        >
-          <option value={0}>Tüm Tarihler</option>
-          <option value={1}>Bugün</option>
-          <option value={7}>Son 7 Gün</option>
-          <option value={30}>Son 30 Gün</option>
-        </select>
-        <select
-          value={pageSize}
-          onChange={(e) => {
-            setPageSize(Number(e.target.value));
-            setPage(1);
-          }}
-        >
-          <option value={10}>10 / sayfa</option>
-          <option value={20}>20 / sayfa</option>
-          <option value={50}>50 / sayfa</option>
-        </select>
-        <button onClick={clearFilters}>Filtreleri Temizle</button>
-      </div>
-      <p style={{ margin: '0 0 16px', color: '#52525b', fontSize: 14 }}>
-        {orders.length} sipariş gösteriliyor (toplam: {totalCount}).
-      </p>
-
-      {error && (
-        <p style={{ color: '#b91c1c', marginBottom: 16 }} role="alert">
+      {error ? (
+        <p className="tv-error" role="alert">
           {error}
         </p>
-      )}
-      {success && (
-        <p style={{ color: '#15803d', marginBottom: 16 }} role="status">
+      ) : null}
+      {success ? (
+        <p className="tv-success" role="status">
           {success}
         </p>
-      )}
+      ) : null}
 
-      {orders.length === 0 ? (
-        <p>Hiç sipariş bulunamadı.</p>
-      ) : (
-        <div style={{ display: 'grid', gap: 16 }}>
-          {orders.map((order) => (
-            <article key={order.id} style={{ border: '1px solid #e4e4e7', borderRadius: 10, padding: 14 }}>
-              {(() => {
-                const allowedStatuses = getAllowedNextStatuses(order.status);
-                const selectedStatus = targetStatusByOrderId[order.id] ?? order.status;
-                const canSubmit = allowedStatuses.includes(selectedStatus) && updatingOrderId !== order.id;
-
-                return (
-                  <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <strong>
-                  Order #{order.id} · User #{order.userId}
-                </strong>
-                <span>
-                  {getOrderStatusLabel(order.status)} · {order.totalAmount} TL
-                </span>
-              </div>
-
-              <p style={{ margin: '8px 0', color: '#52525b', fontSize: 13 }}>
-                Oluşturulma: {new Date(order.createdDate).toLocaleString('tr-TR')}
-              </p>
-              {(order.updatedByUserId || order.updatedReason) && (
-                <p style={{ margin: '0 0 8px', color: '#52525b', fontSize: 13 }}>
-                  Son güncelleme:
-                  {order.updatedByUserId ? ` admin #${order.updatedByUserId}` : ' admin bilinmiyor'}
-                  {order.updatedReason ? ` · neden: ${order.updatedReason}` : ''}
-                </p>
-              )}
-
-              <ul style={{ margin: '8px 0 12px', paddingLeft: 16 }}>
-                {order.items.map((item, idx) => (
-                  <li key={`${order.id}-${item.productId}-${idx}`} style={{ marginBottom: 4 }}>
-                    {item.productName} x {item.quantity} · {item.unitPrice} TL
-                  </li>
-                ))}
-              </ul>
-
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <select
-                  value={selectedStatus}
-                  onChange={(e) =>
-                    setTargetStatusByOrderId((prev) => ({ ...prev, [order.id]: Number(e.target.value) }))
-                  }
-                >
-                  {statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value} disabled={!allowedStatuses.includes(opt.value)}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  placeholder="Opsiyonel neden"
-                  value={reasonByOrderId[order.id] ?? ''}
-                  onChange={(e) => setReasonByOrderId((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                />
-
-                <button onClick={() => handleUpdateStatus(order)} disabled={!canSubmit}>
-                  {updatingOrderId === order.id ? 'Güncelleniyor...' : 'Durumu Güncelle'}
-                </button>
-              </div>
-              <p style={{ margin: '8px 0 0', color: '#71717a', fontSize: 12 }}>
-                İzinli geçişler: {allowedStatuses.map((status) => getOrderStatusLabel(status)).join(', ')}
-              </p>
-                  </>
-                );
-              })()}
-            </article>
-          ))}
+      {orders.length === 0 && !loading ? (
+        <div className="tv-card tv-admin-empty">
+          <p className="tv-muted">Kriterlere uygun sipariş bulunamadı.</p>
         </div>
+      ) : (
+        <ul className="tv-admin-order-list">
+          {orders.map((order) => {
+            const allowedStatuses = getAllowedNextStatuses(order.status);
+            const selectedStatus = targetStatusByOrderId[order.id] ?? order.status;
+            const canSubmit = allowedStatuses.includes(selectedStatus) && updatingOrderId !== order.id;
+
+            return (
+              <li key={order.id} className="tv-card tv-admin-order-card">
+                <div className="tv-admin-order-card-head">
+                  <div>
+                    <span className="tv-admin-order-id">Sipariş #{order.id}</span>
+                    <span className="tv-muted"> · Müşteri #{order.userId}</span>
+                  </div>
+                  <div className="tv-admin-order-card-meta">
+                    <AdminOrderStatusBadge status={order.status} />
+                    <strong className="tv-admin-order-total">{formatTryCurrency(order.totalAmount)}</strong>
+                  </div>
+                </div>
+
+                <p className="tv-muted tv-admin-order-date">
+                  Oluşturulma: {new Date(order.createdDate).toLocaleString('tr-TR')}
+                </p>
+                {order.updatedByUserId || order.updatedReason ? (
+                  <p className="tv-muted tv-admin-order-date">
+                    Son güncelleme
+                    {order.updatedByUserId ? ` · yönetici #${order.updatedByUserId}` : ''}
+                    {order.updatedReason ? ` · ${order.updatedReason}` : ''}
+                  </p>
+                ) : null}
+
+                <ul className="tv-admin-order-items">
+                  {order.items.map((item, idx) => (
+                    <li key={`${order.id}-${item.productId}-${idx}`}>
+                      {item.productName} × {item.quantity}
+                      <span className="tv-muted"> · {formatTryCurrency(item.unitPrice)}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="tv-admin-order-actions">
+                  <label className="tv-admin-field">
+                    <span>Yeni durum</span>
+                    <select
+                      className="tv-input"
+                      value={selectedStatus}
+                      onChange={(e) =>
+                        setTargetStatusByOrderId((prev) => ({ ...prev, [order.id]: Number(e.target.value) }))
+                      }
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value} disabled={!allowedStatuses.includes(opt.value)}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="tv-admin-field tv-admin-field--grow">
+                    <span>Not (iptal için zorunlu)</span>
+                    <input
+                      className="tv-input"
+                      placeholder="Opsiyonel açıklama"
+                      value={reasonByOrderId[order.id] ?? ''}
+                      onChange={(e) => setReasonByOrderId((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="tv-btn tv-btn--primary"
+                    disabled={!canSubmit}
+                    onClick={() => void handleUpdateStatus(order)}
+                  >
+                    {updatingOrderId === order.id ? 'Kaydediliyor…' : 'Güncelle'}
+                  </button>
+                </div>
+                <p className="tv-admin-order-hint">
+                  İzinli: {allowedStatuses.map((s) => orderStatusLabelTr(s)).join(' → ')}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
       )}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 16, flexWrap: 'wrap' }}>
-        <button onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1 || loading}>
+
+      <nav className="tv-admin-pagination" aria-label="Sipariş sayfalama">
+        <button
+          type="button"
+          className="tv-btn"
+          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+          disabled={page <= 1 || loading}
+        >
           Önceki
         </button>
         {paginationTokens.map((token, idx) =>
           token === '...' ? (
-            <span key={`dots-${idx}`} style={{ color: '#71717a' }}>
-              ...
+            <span key={`dots-${idx}`} className="tv-muted">
+              …
             </span>
           ) : (
             <button
               key={`page-${token}`}
+              type="button"
+              className={`tv-btn${token === page ? ' tv-btn--primary' : ''}`}
               onClick={() => setPage(token)}
               disabled={loading || token === page}
-              style={{
-                fontWeight: token === page ? 700 : 400,
-                border: token === page ? '1px solid #0f172a' : undefined
-              }}
             >
               {token}
             </button>
           )
         )}
-        <span style={{ color: '#52525b', fontSize: 14 }}>
+        <span className="tv-muted">
           Sayfa {page} / {Math.max(1, totalPages)}
         </span>
-        <button onClick={() => setPage((prev) => Math.min(Math.max(1, totalPages), prev + 1))} disabled={page >= totalPages || loading}>
+        <button
+          type="button"
+          className="tv-btn"
+          onClick={() => setPage((prev) => Math.min(Math.max(1, totalPages), prev + 1))}
+          disabled={page >= totalPages || loading}
+        >
           Sonraki
         </button>
-      </div>
-    </div>
+      </nav>
+    </AdminPageShell>
   );
 }
 
 export default function AdminOrdersPage() {
   return (
-    <Suspense fallback={<div>Yukleniyor...</div>}>
+    <Suspense
+      fallback={
+        <AdminPageShell title="Sipariş yönetimi" lead="Yükleniyor…">
+          <p className="tv-muted">Sipariş listesi hazırlanıyor…</p>
+        </AdminPageShell>
+      }
+    >
       <AdminOrdersContent />
     </Suspense>
   );

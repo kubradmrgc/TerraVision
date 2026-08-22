@@ -44,8 +44,9 @@ namespace TerraVision.Api.Services
             }
 
             var cart = await GetOrCreateCartAsync(userId);
+            // Unique index is on (CartId, ProductId) regardless of IsDeleted — revive soft-deleted rows instead of inserting.
             var existingItem = await _dbContext.CartItems
-                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId && !ci.IsDeleted);
+                .SingleOrDefaultAsync(ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId);
 
             if (existingItem == null)
             {
@@ -58,10 +59,20 @@ namespace TerraVision.Api.Services
             }
             else
             {
-                existingItem.Quantity += request.Quantity;
+                if (existingItem.IsDeleted)
+                {
+                    existingItem.IsDeleted = false;
+                    existingItem.Quantity = request.Quantity;
+                }
+                else
+                {
+                    existingItem.Quantity += request.Quantity;
+                }
+
                 existingItem.UpdatedDate = DateTime.UtcNow;
             }
 
+            TouchCartActivity(cart);
             await _unitOfWork.CommitAsync();
             await PublishCartChangedAsync(userId, request.ProductId, request.Quantity, "added");
             return await BuildCartDtoAsync(cart.Id, userId);
@@ -89,6 +100,7 @@ namespace TerraVision.Api.Services
                 item.UpdatedDate = DateTime.UtcNow;
             }
 
+            TouchCartActivity(cart);
             await _unitOfWork.CommitAsync();
             await PublishCartChangedAsync(userId, request.ProductId, Math.Max(request.Quantity, 0), "updated");
             return await BuildCartDtoAsync(cart.Id, userId);
@@ -107,6 +119,7 @@ namespace TerraVision.Api.Services
 
             item.IsDeleted = true;
             item.UpdatedDate = DateTime.UtcNow;
+            TouchCartActivity(cart);
             await _unitOfWork.CommitAsync();
             await PublishCartChangedAsync(userId, productId, 0, "removed");
             return await BuildCartDtoAsync(cart.Id, userId);
@@ -125,9 +138,18 @@ namespace TerraVision.Api.Services
                 item.UpdatedDate = DateTime.UtcNow;
             }
 
+            TouchCartActivity(cart);
             await _unitOfWork.CommitAsync();
             await PublishCartChangedAsync(userId, 0, 0, "cleared");
             return await BuildCartDtoAsync(cart.Id, userId);
+        }
+
+        private static void TouchCartActivity(Cart cart)
+        {
+            var now = DateTime.UtcNow;
+            cart.LastActivityAtUtc = now;
+            cart.AbandonedNotifiedAtUtc = null;
+            cart.UpdatedDate = now;
         }
 
         private async Task<Cart> GetOrCreateCartAsync(int userId)
@@ -155,6 +177,7 @@ namespace TerraVision.Api.Services
                     {
                         ProductId = p.Id,
                         ProductName = p.Name,
+                        ImageUrl = p.ImageUrl,
                         UnitPrice = p.Price,
                         Quantity = ci.Quantity
                     })

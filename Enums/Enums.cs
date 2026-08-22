@@ -5,6 +5,15 @@ namespace TerraVision.Api.Enums
         Pending = 1, Approved = 2, Completed = 3, Cancelled = 4 
     }
 
+    /// <summary>Post-visit outcome recorded by consultant or admin.</summary>
+    public enum AppointmentOutcome
+    {
+        None = 0,
+        ConvertedToSale = 1,
+        NoSale = 2,
+        FollowUpRequired = 3
+    }
+
     public enum UserRole 
     { 
         Customer = 1, Consultant = 2, Admin = 3 
@@ -17,5 +26,57 @@ namespace TerraVision.Api.Enums
         Shipped = 3,
         Delivered = 4,
         Cancelled = 5
+    }
+
+    public enum CareActionType
+    {
+        Watering = 1,
+        Fertilizing = 2,
+        Cleaning = 3
+    }
+
+    public enum CareTaskUrgency
+    {
+        None = 0,
+        Upcoming = 1,
+        DueToday = 2,
+        Overdue = 3
+    }
+
+    public enum ExchangeCondition
+    {
+        New = 1,
+        Used = 2,
+        Healthy = 3
+    }
+
+    public enum ExchangeProductStatus
+    {
+        Available = 1,
+        Pending = 2,
+        Completed = 3
+    }
+
+    public enum ExchangeOfferType
+    {
+        Swap = 1,
+        Buy = 2
+    }
+
+    public enum ExchangeOfferStatus
+    {
+        Pending = 1,
+        Accepted = 2,
+        Rejected = 3
+    }
+
+    public enum NotificationType
+    {
+        OrderCreated = 1,
+        OrderStatusChanged = 2,
+        AppointmentCreated = 3,
+        AppointmentStatusChanged = 4,
+        ExchangeOfferReceived = 5,
+        ExchangeOfferStatusChanged = 6
     }
 }

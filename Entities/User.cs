@@ -20,5 +20,10 @@ namespace TerraVision.Api.Entities
         public virtual ICollection<Order> Orders { get; set; } = new HashSet<Order>();
         public virtual ICollection<Appointment> CustomerAppointments { get; set; } = new HashSet<Appointment>();
         public virtual ICollection<Appointment> ConsultantAppointments { get; set; } = new HashSet<Appointment>();
+        public virtual ICollection<ArSession> ArSessions { get; set; } = new HashSet<ArSession>();
+        public virtual ICollection<PlantCareCalendar> PlantCareCalendars { get; set; } = new HashSet<PlantCareCalendar>();
+        public virtual ICollection<ExchangeProduct> ExchangeProducts { get; set; } = new HashSet<ExchangeProduct>();
+        public virtual ICollection<ExchangeOffer> ExchangeOffersSent { get; set; } = new HashSet<ExchangeOffer>();
+        public virtual ICollection<Notification> Notifications { get; set; } = new HashSet<Notification>();
     }
 }

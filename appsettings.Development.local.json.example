@@ -1,0 +1,6 @@
+{
+  "MediaStorage": {
+    "PublicBaseUrl": "https://YOUR-PUBLIC-TUNNEL.trycloudflare.com",
+    "MobileDevBaseUrl": "http://10.0.2.2:5090"
+  }
+}
