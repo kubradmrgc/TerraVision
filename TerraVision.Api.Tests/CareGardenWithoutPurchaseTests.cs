@@ -11,10 +11,12 @@ namespace TerraVision.Api.Tests;
 public class CareGardenWithoutPurchaseTests : IClassFixture<TerraVisionApiFactory>
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private readonly TerraVisionApiFactory _factory;
     private readonly HttpClient _client;
 
     public CareGardenWithoutPurchaseTests(TerraVisionApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -49,18 +51,8 @@ public class CareGardenWithoutPurchaseTests : IClassFixture<TerraVisionApiFactor
 
     private async Task<AuthContext> RegisterAsync(string email, UserRole role)
     {
-        _client.DefaultRequestHeaders.Authorization = null;
-        var response = await _client.PostAsJsonAsync("/api/Auth/register", new
-        {
-            firstName = "Test",
-            lastName = "User",
-            email,
-            password = "TestPwd!1",
-            role = (int)role
-        });
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<AuthResponseDto>(JsonOptions);
-        return new AuthContext(body!.Token, body.UserId);
+        var created = await TestAuth.CreateUserAsync(_factory, _client, email, role);
+        return new AuthContext(created.Token, created.UserId);
     }
 
     private void SetBearer(string token) =>
@@ -92,12 +84,6 @@ public class CareGardenWithoutPurchaseTests : IClassFixture<TerraVisionApiFactor
     }
 
     private sealed record AuthContext(string Token, int UserId);
-
-    private sealed class AuthResponseDto
-    {
-        public string Token { get; set; } = string.Empty;
-        public int UserId { get; set; }
-    }
 
     private sealed class CategoryDto
     {

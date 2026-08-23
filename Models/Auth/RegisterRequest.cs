@@ -8,6 +8,7 @@ namespace TerraVision.Api.Models.Auth
         public string LastName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+        // Ignored server-side; public register always assigns Customer.
         public UserRole Role { get; set; } = UserRole.Customer;
     }
 }
