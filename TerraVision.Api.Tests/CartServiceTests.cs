@@ -11,10 +11,12 @@ namespace TerraVision.Api.Tests;
 public class CartServiceTests : IClassFixture<TerraVisionApiFactory>
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private readonly TerraVisionApiFactory _factory;
     private readonly HttpClient _client;
 
     public CartServiceTests(TerraVisionApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -45,19 +47,8 @@ public class CartServiceTests : IClassFixture<TerraVisionApiFactory>
 
     private async Task<string> RegisterAsync(string email, UserRole role)
     {
-        _client.DefaultRequestHeaders.Authorization = null;
-        var response = await _client.PostAsJsonAsync("/api/Auth/register", new
-        {
-            firstName = "Test",
-            lastName = "User",
-            email,
-            password = "TestPwd!1",
-            role = (int)role
-        });
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<AuthResponseDto>(JsonOptions);
-        Assert.NotNull(body?.Token);
-        return body!.Token;
+        var created = await TestAuth.CreateUserAsync(_factory, _client, email, role);
+        return created.Token;
     }
 
     private async Task<int> CreateProductAsync(string adminToken)
@@ -86,9 +77,4 @@ public class CartServiceTests : IClassFixture<TerraVisionApiFactory>
 
     private void SetBearer(string token) =>
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-    private sealed class AuthResponseDto
-    {
-        public string Token { get; set; } = string.Empty;
-    }
 }

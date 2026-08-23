@@ -364,6 +364,11 @@ namespace TerraVision.Api.Services
                 await _careService.ProvisionCalendarsForDeliveredOrderAsync(order.Id);
             }
 
+            if (previousStatus != request.Status && request.Status == OrderStatus.Cancelled)
+            {
+                await RestockOrderItemsAsync(order.Id);
+            }
+
             await _unitOfWork.CommitAsync();
 
             await _realtimeSyncService.BroadcastOrderStatusChangedAsync(new OrderStatusChangedEvent
@@ -434,6 +439,35 @@ namespace TerraVision.Api.Services
                 Items = items,
                 StatusHistory = history
             };
+        }
+
+        private async Task RestockOrderItemsAsync(int orderId)
+        {
+            var items = await _dbContext.OrderItems
+                .Where(oi => oi.OrderId == orderId && !oi.IsDeleted)
+                .ToListAsync();
+
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            var productIds = items.Select(i => i.ProductId).Distinct().ToList();
+            var products = await _dbContext.Products
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id);
+
+            var now = DateTime.UtcNow;
+            foreach (var item in items)
+            {
+                if (!products.TryGetValue(item.ProductId, out var product))
+                {
+                    continue;
+                }
+
+                product.StockQuantity += item.Quantity;
+                product.UpdatedDate = now;
+            }
         }
 
         private static string DescribeOrderStatus(OrderStatus status) => status switch
