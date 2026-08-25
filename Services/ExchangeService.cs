@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TerraVision.Api.Data;
@@ -16,6 +17,7 @@ namespace TerraVision.Api.Services
         private readonly IRepository<ExchangeOffer> _offerRepository;
         private readonly IRepository<User> _userRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly TerraVisionDbContext _dbContext;
         private readonly IRealtimeSyncService _realtimeSyncService;
         private readonly INotificationService _notificationService;
 
@@ -24,6 +26,7 @@ namespace TerraVision.Api.Services
             IRepository<ExchangeOffer> offerRepository,
             IRepository<User> userRepository,
             IUnitOfWork unitOfWork,
+            TerraVisionDbContext dbContext,
             IRealtimeSyncService realtimeSyncService,
             INotificationService notificationService)
         {
@@ -31,6 +34,7 @@ namespace TerraVision.Api.Services
             _offerRepository = offerRepository;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
+            _dbContext = dbContext;
             _realtimeSyncService = realtimeSyncService;
             _notificationService = notificationService;
         }
@@ -272,6 +276,10 @@ namespace TerraVision.Api.Services
                 throw new ArgumentException("Status must be Accepted or Rejected.");
             }
 
+            await using var transaction = _dbContext.Database.IsRelational()
+                ? await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+                : null;
+
             var offer = await _offerRepository
                 .Find(o => o.Id == request.Id && !o.IsDeleted)
                 .Include(o => o.Product)
@@ -293,19 +301,59 @@ namespace TerraVision.Api.Services
                 throw new InvalidOperationException("This offer has already been resolved.");
             }
 
+            var rejectedSiblings = new List<ExchangeOffer>();
+
+            if (request.Status == ExchangeOfferStatus.Accepted)
+            {
+                if (offer.Product.Status != ExchangeProductStatus.Available)
+                {
+                    throw new InvalidOperationException("This listing is no longer accepting offers.");
+                }
+
+                offer.Product.Status = ExchangeProductStatus.Pending;
+                offer.Product.UpdatedDate = DateTime.UtcNow;
+                _productRepository.Update(offer.Product);
+
+                rejectedSiblings = await _offerRepository
+                    .Find(o =>
+                        o.ProductId == offer.ProductId &&
+                        o.Id != offer.Id &&
+                        !o.IsDeleted &&
+                        o.Status == ExchangeOfferStatus.Pending)
+                    .Include(o => o.Sender)
+                    .Include(o => o.Product)
+                    .ToListAsync(cancellationToken);
+
+                var rejectedAt = DateTime.UtcNow;
+                foreach (var sibling in rejectedSiblings)
+                {
+                    sibling.Status = ExchangeOfferStatus.Rejected;
+                    sibling.UpdatedDate = rejectedAt;
+                    _offerRepository.Update(sibling);
+                }
+            }
+
             offer.Status = request.Status;
             offer.UpdatedDate = DateTime.UtcNow;
             _offerRepository.Update(offer);
 
-            if (request.Status == ExchangeOfferStatus.Accepted)
+            await _unitOfWork.CommitAsync();
+            if (transaction != null)
             {
-                offer.Product.Status = ExchangeProductStatus.Pending;
-                offer.Product.UpdatedDate = DateTime.UtcNow;
-                _productRepository.Update(offer.Product);
+                await transaction.CommitAsync(cancellationToken);
             }
 
-            await _unitOfWork.CommitAsync();
+            await NotifyOfferStatusChangedAsync(offer, cancellationToken);
+            foreach (var sibling in rejectedSiblings)
+            {
+                await NotifyOfferStatusChangedAsync(sibling, cancellationToken);
+            }
 
+            return await MapOfferAsync(offer, offer.Product, offer.Sender, cancellationToken);
+        }
+
+        private async Task NotifyOfferStatusChangedAsync(ExchangeOffer offer, CancellationToken cancellationToken)
+        {
             await _realtimeSyncService.BroadcastExchangeOfferStatusChangedAsync(new Models.Realtime.ExchangeOfferStatusChangedEvent
             {
                 OfferId = offer.Id,
@@ -322,8 +370,6 @@ namespace TerraVision.Api.Services
                 relatedEntityType: "ExchangeOffer",
                 relatedEntityId: offer.Id,
                 cancellationToken: cancellationToken);
-
-            return await MapOfferAsync(offer, offer.Product, offer.Sender, cancellationToken);
         }
 
         private static void ValidateProductRequest(string title, string description, decimal price, List<string> photoUrls)

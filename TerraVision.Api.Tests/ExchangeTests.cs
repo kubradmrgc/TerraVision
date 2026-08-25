@@ -142,6 +142,75 @@ public class ExchangeTests : IClassFixture<TerraVisionApiFactory>
     }
 
     [Fact]
+    public async Task AcceptOffer_RejectsSiblingOffers_AndBlocksSecondAccept()
+    {
+        var ownerToken = await RegisterAndLoginAsync($"owner_acc_{Guid.NewGuid():N}@t.test");
+        var buyerAToken = await RegisterAndLoginAsync($"buyerA_{Guid.NewGuid():N}@t.test");
+        var buyerBToken = await RegisterAndLoginAsync($"buyerB_{Guid.NewGuid():N}@t.test");
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+        var create = await _client.PostAsJsonAsync("/api/exchange/products", new
+        {
+            title = "Tek ilan, iki teklif",
+            description = "Benzersiz bitki",
+            price = 0m,
+            condition = (int)ExchangeCondition.Healthy,
+            photoUrls = new[] { "https://example.test/unique-plant.jpg" }
+        });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var productId = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", buyerAToken);
+        var offerAResponse = await _client.PostAsJsonAsync("/api/exchange/offers", new
+        {
+            productId,
+            offerType = (int)ExchangeOfferType.Swap,
+            message = "A teklifi"
+        });
+        Assert.Equal(HttpStatusCode.Created, offerAResponse.StatusCode);
+        var offerAId = (await offerAResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", buyerBToken);
+        var offerBResponse = await _client.PostAsJsonAsync("/api/exchange/offers", new
+        {
+            productId,
+            offerType = (int)ExchangeOfferType.Swap,
+            message = "B teklifi"
+        });
+        Assert.Equal(HttpStatusCode.Created, offerBResponse.StatusCode);
+        var offerBId = (await offerBResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+        var acceptA = await _client.PutAsJsonAsync($"/api/exchange/offers/{offerAId}/status", new
+        {
+            id = offerAId,
+            status = (int)ExchangeOfferStatus.Accepted
+        });
+        Assert.Equal(HttpStatusCode.OK, acceptA.StatusCode);
+
+        var received = await _client.GetFromJsonAsync<JsonElement>("/api/exchange/offers/received");
+        Assert.Equal(JsonValueKind.Array, received.ValueKind);
+        var receivedOffers = received.EnumerateArray().ToDictionary(o => o.GetProperty("id").GetInt32());
+        Assert.Equal((int)ExchangeOfferStatus.Accepted, receivedOffers[offerAId].GetProperty("status").GetInt32());
+        Assert.Equal((int)ExchangeOfferStatus.Rejected, receivedOffers[offerBId].GetProperty("status").GetInt32());
+
+        var listing = await _client.GetFromJsonAsync<JsonElement>($"/api/exchange/products/{productId}");
+        Assert.Equal((int)ExchangeProductStatus.Pending, listing.GetProperty("status").GetInt32());
+
+        var acceptB = await _client.PutAsJsonAsync($"/api/exchange/offers/{offerBId}/status", new
+        {
+            id = offerBId,
+            status = (int)ExchangeOfferStatus.Accepted
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, acceptB.StatusCode);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", buyerBToken);
+        var sentB = await _client.GetFromJsonAsync<JsonElement>("/api/exchange/offers/sent");
+        var buyerBOffer = sentB.EnumerateArray().Single(o => o.GetProperty("id").GetInt32() == offerBId);
+        Assert.Equal((int)ExchangeOfferStatus.Rejected, buyerBOffer.GetProperty("status").GetInt32());
+    }
+
+    [Fact]
     public async Task CreateOffer_RejectsMessageWithLinks()
     {
         var ownerToken = await RegisterAndLoginAsync($"owner3_{Guid.NewGuid():N}@t.test");
