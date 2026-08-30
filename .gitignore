@@ -16,6 +16,7 @@ clients/TerraVisionNative/
 **/tsconfig.tsbuildinfo
 .vs/
 .vscode/
+.cursor/
 *.user
 *.suo
 *.cache
