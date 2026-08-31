@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.Options;
 using TerraVision.Api.Entities;
+using TerraVision.Api.Enums;
 using TerraVision.Api.Interfaces;
 using TerraVision.Api.Models.Auth;
 using TerraVision.Api.Settings;
@@ -66,7 +67,8 @@ namespace TerraVision.Api.Services
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Email = request.Email,
-                Role = request.Role,
+                // Public registration is unauthenticated — never honor a client-supplied role.
+                Role = UserRole.Customer,
                 PasswordHash = passwordHash,
                 // Salt is typically handled inside the BCrypt hash format itself now, 
                 // but setting to empty or a basic value to avoid EF Core empty array issues if required

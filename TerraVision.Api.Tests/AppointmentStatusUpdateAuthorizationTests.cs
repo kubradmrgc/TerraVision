@@ -14,10 +14,12 @@ public class AppointmentStatusUpdateAuthorizationTests : IClassFixture<TerraVisi
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
+    private readonly TerraVisionApiFactory _factory;
     private readonly HttpClient _client;
 
     public AppointmentStatusUpdateAuthorizationTests(TerraVisionApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -100,19 +102,8 @@ public class AppointmentStatusUpdateAuthorizationTests : IClassFixture<TerraVisi
 
     private async Task<AuthContext> RegisterAsync(string email, UserRole role)
     {
-        _client.DefaultRequestHeaders.Authorization = null;
-        var response = await _client.PostAsJsonAsync("/api/Auth/register", new
-        {
-            firstName = "Test",
-            lastName = "User",
-            email,
-            password = "TestPwd!1",
-            role = (int)role
-        });
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<AuthResponseDto>(JsonOptions);
-        Assert.NotNull(body?.Token);
-        return new AuthContext(body!.Token, body.UserId);
+        var created = await TestAuth.CreateUserAsync(_factory, _client, email, role);
+        return new AuthContext(created.Token, created.UserId);
     }
 
     private async Task<int> CreateAppointmentAsync(string customerToken, int consultantUserId)
@@ -147,12 +138,6 @@ public class AppointmentStatusUpdateAuthorizationTests : IClassFixture<TerraVisi
     }
 
     private sealed record AuthContext(string Token, int UserId);
-
-    private sealed class AuthResponseDto
-    {
-        public string Token { get; set; } = string.Empty;
-        public int UserId { get; set; }
-    }
 
     private sealed class AppointmentCreatedDto
     {
